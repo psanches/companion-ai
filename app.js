@@ -1,4 +1,3 @@
-
 const $ = s => document.querySelector(s);
 
 const messagesEl = $("#messages");
@@ -21,8 +20,8 @@ let state = {
   ...JSON.parse(localStorage.getItem(STORAGE) || "{}")
 };
 
-// Usa somente o Worker.
-// A chave da OpenAI NÃO fica no navegador.
+// Sempre usa o Worker.
+// A chave da OpenAI nunca fica no navegador.
 state.provider = "worker";
 state.apiKey = "";
 
@@ -86,8 +85,7 @@ $("#saveBtn").onclick = () => {
   state.apiKey = "";
 
   if ($("#model")) {
-    state.model =
-      $("#model").value.trim() || "gpt-5-mini";
+    state.model = $("#model").value.trim() || "gpt-5-mini";
   }
 
   save();
@@ -103,7 +101,7 @@ $("#clearBtn").onclick = () => {
 };
 
 async function getReply(text) {
-  const response = await fetch("/", {
+  const response = await fetch("/api/chat", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
