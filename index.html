@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="Companion AI - chat pessoal com memória local">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <title>Companion AI</title>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <h1>Companion AI</h1>
+        <small>Seu companheiro com memória local</small>
+      </div>
+      <button id="settingsBtn" aria-label="Configurações">⚙️</button>
+    </header>
+
+    <section id="messages" class="messages" aria-live="polite"></section>
+
+    <form id="chatForm" class="composer">
+      <textarea id="messageInput" rows="1" placeholder="Digite sua mensagem..." required></textarea>
+      <button type="submit">Enviar</button>
+    </form>
+  </main>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="settings">
+      <h2>Configurações</h2>
+      <label>Nome
+        <input id="userName" placeholder="Como quer ser chamado?">
+      </label>
+      <label>Provedor de IA
+        <select id="provider">
+          <option value="demo">Modo local (demonstração)</option>
+          <option value="openai">OpenAI API</option>
+        </select>
+      </label>
+      <label>Chave da API
+        <input id="apiKey" type="password" autocomplete="off" placeholder="Não recomendado em site público">
+      </label>
+      <label>Modelo
+        <input id="model" value="gpt-5-mini">
+      </label>
+      <p class="warning">A chave fica somente neste navegador, mas não use uma chave secreta em dispositivo compartilhado ou site público. Para produção, use um backend.</p>
+      <div class="row">
+        <button id="clearBtn" type="button" class="danger">Apagar memória</button>
+        <button id="saveBtn" value="default">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

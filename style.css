@@ -1,0 +1,13 @@
+:root{font-family:system-ui,-apple-system,sans-serif;color-scheme:dark;background:#0b1020;color:#f8fafc}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b1020,#111827);min-height:100dvh}
+.app{height:100dvh;max-width:800px;margin:auto;display:grid;grid-template-rows:auto 1fr auto}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 16px;border-bottom:1px solid #263247;background:#111827dd;backdrop-filter:blur(8px)}
+h1{font-size:1.25rem;margin:0}small{color:#94a3b8}header button{font-size:1.3rem;background:#1e293b;border:0;border-radius:12px;padding:10px}
+.messages{overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:86%;padding:12px 14px;border-radius:16px;white-space:pre-wrap;line-height:1.45}
+.user{align-self:flex-end;background:#2563eb}.assistant{align-self:flex-start;background:#1e293b}.system{align-self:center;color:#94a3b8;font-size:.9rem}
+.composer{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px;background:#111827;border-top:1px solid #263247}
+textarea,input,select{width:100%;background:#0f172a;color:#fff;border:1px solid #334155;border-radius:12px;padding:12px;font:inherit}
+textarea{resize:none;max-height:140px}button{cursor:pointer;background:#2563eb;color:#fff;border:0;border-radius:12px;padding:11px 16px;font-weight:700}
+dialog{width:min(92vw,520px);border:1px solid #334155;border-radius:18px;background:#111827;color:#fff}
+dialog::backdrop{background:#000a}.settings{display:grid;gap:14px}.settings h2{margin:0}.settings label{display:grid;gap:6px}.row{display:flex;justify-content:space-between;gap:10px}.danger{background:#991b1b}.warning{font-size:.82rem;color:#fbbf24;margin:0}
