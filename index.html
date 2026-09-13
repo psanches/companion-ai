@@ -2,57 +2,244 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
-  <meta name="description" content="Companion AI - chat pessoal com memória local">
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#111827"
+  >
+
+  <meta
+    name="description"
+    content="Companion AI - chat pessoal com memória"
+  >
+
+  <link
+    rel="manifest"
+    href="manifest.json"
+  >
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
   <title>Companion AI</title>
 </head>
+
 <body>
+
   <main class="app">
+
     <header>
       <div>
         <h1>Companion AI</h1>
-        <small>Seu companheiro com memória local</small>
+        <small>
+          Seu companheiro com memória
+        </small>
       </div>
-      <button id="settingsBtn" aria-label="Configurações">⚙️</button>
+
+      <div class="header-actions">
+        <button
+          id="memoryBtn"
+          type="button"
+          aria-label="Minha memória"
+          title="Minha memória"
+        >
+          🧠
+        </button>
+
+        <button
+          id="settingsBtn"
+          type="button"
+          aria-label="Configurações"
+          title="Configurações"
+        >
+          ⚙️
+        </button>
+      </div>
     </header>
 
-    <section id="messages" class="messages" aria-live="polite"></section>
 
-    <form id="chatForm" class="composer">
-      <textarea id="messageInput" rows="1" placeholder="Digite sua mensagem..." required></textarea>
-      <button type="submit">Enviar</button>
+    <section
+      id="messages"
+      class="messages"
+      aria-live="polite"
+    ></section>
+
+
+    <form
+      id="chatForm"
+      class="composer"
+    >
+
+      <textarea
+        id="messageInput"
+        rows="1"
+        placeholder="Digite sua mensagem..."
+        required
+      ></textarea>
+
+      <button type="submit">
+        Enviar
+      </button>
+
     </form>
+
   </main>
 
-  <dialog id="settingsDialog">
-    <form method="dialog" class="settings">
-      <h2>Configurações</h2>
-      <label>Nome
-        <input id="userName" placeholder="Como quer ser chamado?">
-      </label>
-      <label>Provedor de IA
-        <select id="provider">
-          <option value="demo">Modo local (demonstração)</option>
-          <option value="openai">OpenAI API</option>
-        </select>
-      </label>
-      <label>Chave da API
-        <input id="apiKey" type="password" autocomplete="off" placeholder="Não recomendado em site público">
-      </label>
-      <label>Modelo
-        <input id="model" value="gpt-5-mini">
-      </label>
-      <p class="warning">A chave fica somente neste navegador, mas não use uma chave secreta em dispositivo compartilhado ou site público. Para produção, use um backend.</p>
-      <div class="row">
-        <button id="clearBtn" type="button" class="danger">Apagar memória</button>
-        <button id="saveBtn" value="default">Salvar</button>
+
+  <!-- MINHA MEMÓRIA -->
+
+  <dialog id="memoryDialog">
+
+    <div class="settings memory-panel">
+
+      <div class="dialog-header">
+        <h2>🧠 Minha memória</h2>
+
+        <button
+          id="closeMemoryBtn"
+          type="button"
+          aria-label="Fechar"
+        >
+          ✕
+        </button>
       </div>
-    </form>
+
+      <p class="memory-info">
+        Estas são as informações que o Companion
+        guardou para usar em conversas futuras.
+      </p>
+
+      <div
+        id="memoryStatus"
+        class="memory-status"
+      >
+        Carregando memória...
+      </div>
+
+      <textarea
+        id="memoryText"
+        rows="12"
+        placeholder="Nenhuma memória salva ainda."
+      ></textarea>
+
+      <div class="row">
+
+        <button
+          id="deleteMemoryBtn"
+          type="button"
+          class="danger"
+        >
+          Apagar memória
+        </button>
+
+        <button
+          id="saveMemoryBtn"
+          type="button"
+        >
+          Salvar alterações
+        </button>
+
+      </div>
+
+    </div>
+
   </dialog>
 
+
+  <!-- CONFIGURAÇÕES -->
+
+  <dialog id="settingsDialog">
+
+    <form
+      method="dialog"
+      class="settings"
+    >
+
+      <h2>Configurações</h2>
+
+      <label>
+        Nome
+
+        <input
+          id="userName"
+          placeholder="Como quer ser chamado?"
+        >
+      </label>
+
+
+      <label>
+        Provedor de IA
+
+        <select id="provider">
+          <option value="worker">
+            Companion AI
+          </option>
+        </select>
+      </label>
+
+
+      <label>
+        Chave da API
+
+        <input
+          id="apiKey"
+          type="password"
+          autocomplete="off"
+          disabled
+          placeholder="Protegida no servidor"
+        >
+      </label>
+
+
+      <label>
+        Modelo
+
+        <input
+          id="model"
+          value="gpt-5-mini"
+        >
+      </label>
+
+
+      <p class="warning">
+        Sua chave da OpenAI fica protegida no
+        servidor Cloudflare e não é armazenada
+        neste navegador.
+      </p>
+
+
+      <div class="row">
+
+        <button
+          id="clearBtn"
+          type="button"
+          class="danger"
+        >
+          Apagar conversa
+        </button>
+
+        <button
+          id="saveBtn"
+          value="default"
+        >
+          Salvar
+        </button>
+
+      </div>
+
+    </form>
+
+  </dialog>
+
+
   <script src="app.js"></script>
+
 </body>
 </html>
