@@ -101,15 +101,19 @@ $("#clearBtn").onclick = () => {
 };
 
 async function getReply(text) {
-  const response = await fetch("https://round-lab-f54f.psanchesnle.workers.dev/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      message: text
-    })
-  });
+  const response = await fetch(
+    "https://round-lab-f54f.psanchesnle.workers.dev/",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: text,
+        history: state.messages.slice(-12)
+      })
+    }
+  );
 
   let data;
 
