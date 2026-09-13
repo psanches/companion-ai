@@ -101,7 +101,7 @@ $("#clearBtn").onclick = () => {
 };
 
 async function getReply(text) {
-  const response = await fetch("/api/chat", {
+ https://round-lab-f54f.psanchesnle.workers.dev
     method: "POST",
     headers: {
       "Content-Type": "application/json"
