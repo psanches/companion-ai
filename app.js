@@ -6,6 +6,20 @@ const input = $("#messageInput");
 const dialog = $("#settingsDialog");
 
 const STORAGE = "companion-ai-v2";
+const CLIENT_ID_KEY = "companion-ai-client-id";
+
+function getClientId() {
+  let id = localStorage.getItem(CLIENT_ID_KEY);
+
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(CLIENT_ID_KEY, id);
+  }
+
+  return id;
+}
+
+const clientId = getClientId();
 
 const defaults = {
   name: "",
@@ -109,6 +123,7 @@ async function getReply(text) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
+        clientId: clientId,
         message: text,
         history: state.messages.slice(-12)
       })
