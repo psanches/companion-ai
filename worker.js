@@ -60,9 +60,7 @@ export default {
       }
 
       return Response.json(
-        {
-          reply: data.output_text || "Sem resposta."
-        },
+        { reply: data.output_text || "Sem resposta." },
         { headers: corsHeaders }
       );
 
