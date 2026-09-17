@@ -353,15 +353,17 @@ form.onsubmit = async e => {
 
     wait.remove();
 
-    const reply =
-      data?.reply ||
-      "Sem resposta.";
+   const reply =
+  data?.reply ||
+  "Sem resposta.";
 
-    add(
-      "assistant",
-      reply,
-      false
-    );
+speakLumi(reply);
+
+add(
+  "assistant",
+  reply,
+  false
+);
 
     if (
       Array.isArray(data?.history)
@@ -598,4 +600,27 @@ if (voiceButton && SpeechRecognition) {
   voiceButton.disabled = true;
   voiceButton.title =
     "Reconhecimento de voz não disponível neste navegador";
+}
+
+/* LUMI FALA AS RESPOSTAS */
+
+function speakLumi(text) {
+  if (
+    !("speechSynthesis" in window) ||
+    !text
+  ) {
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const speech =
+    new SpeechSynthesisUtterance(text);
+
+  speech.lang = "pt-BR";
+  speech.rate = 1;
+  speech.pitch = 1;
+  speech.volume = 1;
+
+  window.speechSynthesis.speak(speech);
 }
