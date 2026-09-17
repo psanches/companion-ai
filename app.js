@@ -9,6 +9,7 @@ const memoryDialog = $("#memoryDialog");
 
 const STORAGE = "companion-ai-v2";
 const CLIENT_ID_KEY = "companion-ai-client-id";
+const SYNC_KEY = "companion-ai-sync-key";
 
 const WORKER_URL =
   "https://round-lab-f54f.psanchesnle.workers.dev/";
@@ -26,21 +27,25 @@ function getClientId() {
 
 const clientId = getClientId();
 
+function getMemoryId() {
+  const syncKey =
+    localStorage.getItem(SYNC_KEY)?.trim();
+
+  return syncKey || clientId;
+}
+
 const defaults = {
   name: "",
-  provider: "worker",
-  apiKey: "",
   model: "gpt-5-mini",
   messages: []
 };
 
 let state = {
   ...defaults,
-  ...JSON.parse(localStorage.getItem(STORAGE) || "{}")
+  ...JSON.parse(
+    localStorage.getItem(STORAGE) || "{}"
+  )
 };
-
-state.provider = "worker";
-state.apiKey = "";
 
 function save() {
   localStorage.setItem(
@@ -76,11 +81,7 @@ function render() {
   messagesEl.innerHTML = "";
 
   state.messages.forEach(m => {
-    add(
-      m.role,
-      m.content,
-      false
-    );
+    add(m.role, m.content, false);
   });
 
   if (!state.messages.length) {
@@ -102,40 +103,93 @@ render();
 
 $("#settingsBtn").onclick = () => {
   $("#userName").value =
-    state.name;
+    state.name || "";
 
-  if ($("#provider")) {
-    $("#provider").value =
-      "worker";
-  }
+  $("#model").value =
+    state.model || "gpt-5-mini";
 
-  if ($("#apiKey")) {
-    $("#apiKey").value = "";
-  }
+  $("#syncKey").value =
+    localStorage.getItem(SYNC_KEY) || "";
 
-  if ($("#model")) {
-    $("#model").value =
-      state.model;
-  }
+  $("#syncStatus").textContent = "";
 
   settingsDialog.showModal();
 };
+
+
+$("#generateKeyBtn").onclick = () => {
+  const random =
+    crypto.randomUUID()
+      .replace(/-/g, "")
+      .slice(0, 12)
+      .toUpperCase();
+
+  const key =
+    `COMPANION-${random}`;
+
+  $("#syncKey").value = key;
+
+  $("#syncStatus").textContent =
+    "Chave criada. Clique em Salvar.";
+};
+
+
+$("#copyKeyBtn").onclick = async () => {
+  const key =
+    $("#syncKey").value.trim();
+
+  if (!key) {
+    $("#syncStatus").textContent =
+      "Crie ou digite uma chave primeiro.";
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(key);
+
+    $("#syncStatus").textContent =
+      "Chave copiada.";
+  } catch (error) {
+    $("#syncStatus").textContent =
+      "Não foi possível copiar automaticamente.";
+  }
+};
+
 
 $("#saveBtn").onclick = () => {
   state.name =
     $("#userName").value.trim();
 
-  state.provider = "worker";
-  state.apiKey = "";
+  state.model =
+    $("#model").value.trim() ||
+    "gpt-5-mini";
 
-  if ($("#model")) {
-    state.model =
-      $("#model").value.trim() ||
-      "gpt-5-mini";
+  const oldKey =
+    localStorage.getItem(SYNC_KEY) || "";
+
+  const newKey =
+    $("#syncKey").value.trim();
+
+  if (newKey) {
+    localStorage.setItem(
+      SYNC_KEY,
+      newKey
+    );
+  } else {
+    localStorage.removeItem(SYNC_KEY);
   }
 
   save();
+
+  if (oldKey !== newKey) {
+    $("#syncStatus").textContent =
+      "Chave salva. A memória sincronizada será usada a partir de agora.";
+  } else {
+    $("#syncStatus").textContent =
+      "Configurações salvas.";
+  }
 };
+
 
 $("#clearBtn").onclick = () => {
   if (
@@ -159,12 +213,14 @@ async function getReply(text) {
       WORKER_URL,
       {
         method: "POST",
+
         headers: {
           "Content-Type":
             "application/json"
         },
+
         body: JSON.stringify({
-          clientId,
+          clientId: getMemoryId(),
           message: text,
           history:
             state.messages.slice(-12)
@@ -195,6 +251,7 @@ async function getReply(text) {
   );
 }
 
+
 form.onsubmit = async e => {
   e.preventDefault();
 
@@ -207,10 +264,7 @@ form.onsubmit = async e => {
 
   input.value = "";
 
-  add(
-    "user",
-    text
-  );
+  add("user", text);
 
   const wait =
     document.createElement("div");
@@ -258,10 +312,13 @@ $("#memoryBtn").onclick =
     $("#memoryText").value = "";
 
     try {
+      const memoryId =
+        getMemoryId();
+
       const response =
         await fetch(
           `${WORKER_URL}memory?clientId=${encodeURIComponent(
-            clientId
+            memoryId
           )}`
         );
 
@@ -311,12 +368,15 @@ $("#saveMemoryBtn").onclick =
           `${WORKER_URL}memory`,
           {
             method: "PUT",
+
             headers: {
               "Content-Type":
                 "application/json"
             },
+
             body: JSON.stringify({
-              clientId,
+              clientId:
+                getMemoryId(),
               memory
             })
           }
@@ -363,12 +423,15 @@ $("#deleteMemoryBtn").onclick =
           `${WORKER_URL}memory`,
           {
             method: "DELETE",
+
             headers: {
               "Content-Type":
                 "application/json"
             },
+
             body: JSON.stringify({
-              clientId
+              clientId:
+                getMemoryId()
             })
           }
         );
@@ -397,9 +460,7 @@ $("#deleteMemoryBtn").onclick =
 
 // SERVICE WORKER
 
-if (
-  "serviceWorker" in navigator
-) {
+if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("./sw.js")
     .catch(() => {});
