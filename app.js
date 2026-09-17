@@ -91,8 +91,19 @@ function render() {
         state.name
           ? ", " + state.name
           : ""
-      }! Eu sou o Companion AI. Posso conversar com você e lembrar de informações importantes.`
+      }!`Olá${
+  state.name
+    ? ", " + state.name
+    : ""
+state.name
+    ? ", " + state.name
+    : ""
+}! Eu sou a Lumi, sua assistente no Companion AI. Posso conversar com você e lembrar de informações importantes.`
     );
+  }
+}
+
+async function loadSharedHistory() {
   }
 }
 
