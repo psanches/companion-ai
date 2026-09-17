@@ -557,4 +557,65 @@ hr {
       0 0 60px
       rgba(0,0,0,.4);
   }
+}/* AJUSTES FINAIS DA INTERFACE */
+
+.companion-profile {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.companion-avatar {
+  display: grid !important;
+  place-items: center !important;
+
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+
+  flex: 0 0 48px !important;
+
+  border-radius: 50% !important;
+
+  background: linear-gradient(
+    145deg,
+    #60a5fa,
+    #2563eb 55%,
+    #4338ca
+  ) !important;
+
+  color: white !important;
+  font-size: 24px !important;
+  line-height: 48px !important;
+
+  text-align: center !important;
+  overflow: hidden;
+}
+
+.composer {
+  width: 100% !important;
+}
+
+.composer-box {
+  display: flex !important;
+  width: 100% !important;
+  max-width: none !important;
+  align-items: center !important;
+}
+
+.composer textarea {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.send-button {
+  flex: 0 0 44px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
 }
