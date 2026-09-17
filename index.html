@@ -1,36 +1,15 @@
+
 <!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width,initial-scale=1,viewport-fit=cover"
-  >
-
-  <meta
-    name="theme-color"
-    content="#111827"
-  >
-
-  <meta
-    name="description"
-    content="Companion AI - chat pessoal com memória"
-  >
-
-  <link
-    rel="manifest"
-    href="manifest.json"
-  >
-
-  <link
-    rel="stylesheet"
-    href="style.css"
-  >
-
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111827">
   <title>Companion AI</title>
-</head>
 
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
 <body>
 
   <main class="app">
@@ -38,206 +17,128 @@
     <header>
       <div>
         <h1>Companion AI</h1>
-        <small>
-          Seu companheiro com memória
-        </small>
+        <small>Seu companheiro com memória</small>
       </div>
 
       <div class="header-actions">
-        <button
-          id="memoryBtn"
-          type="button"
-          aria-label="Minha memória"
-          title="Minha memória"
-        >
-          🧠
-        </button>
-
-        <button
-          id="settingsBtn"
-          type="button"
-          aria-label="Configurações"
-          title="Configurações"
-        >
-          ⚙️
-        </button>
+        <button id="memoryBtn" type="button" title="Minha memória">🧠</button>
+        <button id="settingsBtn" type="button" title="Configurações">⚙️</button>
       </div>
     </header>
 
+    <section id="messages" class="messages"></section>
 
-    <section
-      id="messages"
-      class="messages"
-      aria-live="polite"
-    ></section>
+    <form id="chatForm" class="composer">
+      <textarea id="messageInput"
+                rows="1"
+                placeholder="Digite sua mensagem..."
+                required></textarea>
 
-
-    <form
-      id="chatForm"
-      class="composer"
-    >
-
-      <textarea
-        id="messageInput"
-        rows="1"
-        placeholder="Digite sua mensagem..."
-        required
-      ></textarea>
-
-      <button type="submit">
-        Enviar
-      </button>
-
+      <button type="submit">Enviar</button>
     </form>
 
   </main>
 
-
-  <!-- MINHA MEMÓRIA -->
+  <!-- MEMÓRIA -->
 
   <dialog id="memoryDialog">
 
-    <div class="settings memory-panel">
+    <div class="settings">
 
       <div class="dialog-header">
         <h2>🧠 Minha memória</h2>
-
-        <button
-          id="closeMemoryBtn"
-          type="button"
-          aria-label="Fechar"
-        >
-          ✕
-        </button>
+        <button id="closeMemoryBtn" type="button">✕</button>
       </div>
 
-      <p class="memory-info">
-        Estas são as informações que o Companion
-        guardou para usar em conversas futuras.
+      <p>
+        Informações que o Companion lembra de você.
       </p>
 
-      <div
-        id="memoryStatus"
-        class="memory-status"
-      >
-        Carregando memória...
-      </div>
+      <div id="memoryStatus">Carregando...</div>
 
-      <textarea
-        id="memoryText"
-        rows="12"
-        placeholder="Nenhuma memória salva ainda."
-      ></textarea>
+      <textarea id="memoryText" rows="10"></textarea>
 
       <div class="row">
-
-        <button
-          id="deleteMemoryBtn"
-          type="button"
-          class="danger"
-        >
-          Apagar memória
+        <button id="deleteMemoryBtn"
+                class="danger"
+                type="button">
+          Apagar
         </button>
 
-        <button
-          id="saveMemoryBtn"
-          type="button"
-        >
-          Salvar alterações
+        <button id="saveMemoryBtn"
+                type="button">
+          Salvar
         </button>
-
       </div>
 
     </div>
 
   </dialog>
 
-
   <!-- CONFIGURAÇÕES -->
 
   <dialog id="settingsDialog">
 
-    <form
-      method="dialog"
-      class="settings"
-    >
+    <div class="settings">
 
       <h2>Configurações</h2>
 
       <label>
         Nome
-
-        <input
-          id="userName"
-          placeholder="Como quer ser chamado?"
-        >
+        <input id="userName">
       </label>
-
-
-      <label>
-        Provedor de IA
-
-        <select id="provider">
-          <option value="worker">
-            Companion AI
-          </option>
-        </select>
-      </label>
-
-
-      <label>
-        Chave da API
-
-        <input
-          id="apiKey"
-          type="password"
-          autocomplete="off"
-          disabled
-          placeholder="Protegida no servidor"
-        >
-      </label>
-
 
       <label>
         Modelo
-
-        <input
-          id="model"
-          value="gpt-5-mini"
-        >
+        <input id="model" value="gpt-5-mini">
       </label>
 
+      <hr>
 
-      <p class="warning">
-        Sua chave da OpenAI fica protegida no
-        servidor Cloudflare e não é armazenada
-        neste navegador.
+      <h3>🔄 Sincronizar PC e Celular</h3>
+
+      <p class="sync-info">
+        Use a mesma chave nos dois aparelhos para compartilhar a mesma memória.
       </p>
 
+      <label>
+        Minha chave de sincronização
+        <input id="syncKey"
+               placeholder="Ex.: PEDRO-2026-AB12">
+      </label>
 
       <div class="row">
+        <button id="generateKeyBtn"
+                type="button">
+          Gerar chave
+        </button>
 
-        <button
-          id="clearBtn"
-          type="button"
-          class="danger"
-        >
+        <button id="copyKeyBtn"
+                type="button">
+          Copiar
+        </button>
+      </div>
+
+      <p id="syncStatus"></p>
+
+      <hr>
+
+      <div class="row">
+        <button id="clearBtn"
+                class="danger"
+                type="button">
           Apagar conversa
         </button>
 
-        <button
-          id="saveBtn"
-          value="default"
-        >
+        <button id="saveBtn"
+                type="button">
           Salvar
         </button>
-
       </div>
 
-    </form>
+    </div>
 
   </dialog>
-
 
   <script src="app.js"></script>
 
