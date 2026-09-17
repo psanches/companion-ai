@@ -619,3 +619,18 @@ hr {
   height: 44px !important;
   border-radius: 50% !important;
 }
+/* ÍCONE DA LUMI */
+
+.companion-avatar {
+  padding: 0 !important;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+
+.companion-avatar img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+}
