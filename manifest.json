@@ -1,0 +1,11 @@
+{
+  "name": "Companion AI",
+  "short_name": "Companion",
+  "description": "Seu assistente pessoal com memória sincronizada",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101827",
+  "theme_color": "#101827",
+  "orientation": "portrait-primary"
+}
