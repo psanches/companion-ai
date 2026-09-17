@@ -548,3 +548,54 @@ if ("serviceWorker" in navigator) {
     .register("./sw.js")
     .catch(() => {});
 }
+
+/* VOZ DA LUMI */
+
+const voiceButton = $("#voiceButton");
+
+const SpeechRecognition =
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
+
+if (voiceButton && SpeechRecognition) {
+  const recognition =
+    new SpeechRecognition();
+
+  recognition.lang = "pt-BR";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    voiceButton.textContent = "🔴";
+    voiceButton.title = "Ouvindo...";
+  };
+
+  recognition.onresult = event => {
+    const text =
+      event.results[0][0].transcript;
+
+    input.value = text;
+    input.focus();
+  };
+
+  recognition.onerror = event => {
+    console.error(
+      "Erro no reconhecimento de voz:",
+      event.error
+    );
+  };
+
+  recognition.onend = () => {
+    voiceButton.textContent = "🎙️";
+    voiceButton.title = "Falar com a Lumi";
+  };
+
+  voiceButton.onclick = () => {
+    recognition.start();
+  };
+
+} else if (voiceButton) {
+  voiceButton.disabled = true;
+  voiceButton.title =
+    "Reconhecimento de voz não disponível neste navegador";
+}
