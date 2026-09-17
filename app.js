@@ -96,7 +96,50 @@ function render() {
   }
 }
 
-render();
+async function loadSharedHistory() {
+  try {
+    const response =
+      await fetch(
+        `${WORKER_URL}history?clientId=${encodeURIComponent(
+          getMemoryId()
+        )}`
+      );
+
+    const data =
+      await response.json();
+
+    if (
+      response.ok &&
+      Array.isArray(data?.history) &&
+      data.history.length
+    ) {
+      state.messages =
+        data.history
+          .filter(
+            item =>
+              item &&
+              typeof item.content === "string" &&
+              (
+                item.role === "user" ||
+                item.role === "assistant"
+              )
+          )
+          .slice(-30);
+
+      save();
+    }
+
+  } catch (error) {
+    console.error(
+      "Não foi possível carregar o histórico compartilhado:",
+      error
+    );
+  }
+
+  render();
+}
+
+loadSharedHistory();
 
 
 // CONFIGURAÇÕES
@@ -156,7 +199,7 @@ $("#copyKeyBtn").onclick = async () => {
 };
 
 
-$("#saveBtn").onclick = () => {
+$("#saveBtn").onclick = async () => {
   state.name =
     $("#userName").value.trim();
 
@@ -183,7 +226,12 @@ $("#saveBtn").onclick = () => {
 
   if (oldKey !== newKey) {
     $("#syncStatus").textContent =
-      "Chave salva. A memória sincronizada será usada a partir de agora.";
+      "Chave salva. Carregando dados sincronizados...";
+
+    await loadSharedHistory();
+
+    $("#syncStatus").textContent =
+      "Sincronização ativada.";
   } else {
     $("#syncStatus").textContent =
       "Configurações salvas.";
@@ -191,16 +239,51 @@ $("#saveBtn").onclick = () => {
 };
 
 
-$("#clearBtn").onclick = () => {
+$("#clearBtn").onclick = async () => {
   if (
-    confirm(
-      "Apagar todo o histórico salvo neste aparelho?"
+    !confirm(
+      "Apagar o histórico compartilhado da conversa nos aparelhos sincronizados?"
     )
   ) {
+    return;
+  }
+
+  try {
+    const response =
+      await fetch(
+        `${WORKER_URL}history`,
+        {
+          method: "DELETE",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+            clientId: getMemoryId()
+          })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+        "Erro ao apagar histórico."
+      );
+    }
+
     state.messages = [];
     save();
     render();
     settingsDialog.close();
+
+  } catch (error) {
+    $("#syncStatus").textContent =
+      error.message;
   }
 };
 
@@ -245,10 +328,7 @@ async function getReply(text) {
     );
   }
 
-  return (
-    data?.reply ||
-    "Sem resposta."
-  );
+  return data;
 }
 
 
@@ -278,15 +358,40 @@ form.onsubmit = async e => {
   messagesEl.appendChild(wait);
 
   try {
-    const reply =
+    const data =
       await getReply(text);
 
     wait.remove();
 
+    const reply =
+      data?.reply ||
+      "Sem resposta.";
+
     add(
       "assistant",
-      reply
+      reply,
+      false
     );
+
+    if (
+      Array.isArray(data?.history)
+    ) {
+      state.messages =
+        data.history.slice(-30);
+
+      save();
+      render();
+    } else {
+      state.messages.push({
+        role: "assistant",
+        content: reply
+      });
+
+      state.messages =
+        state.messages.slice(-40);
+
+      save();
+    }
 
   } catch (err) {
     wait.remove();
@@ -312,13 +417,10 @@ $("#memoryBtn").onclick =
     $("#memoryText").value = "";
 
     try {
-      const memoryId =
-        getMemoryId();
-
       const response =
         await fetch(
           `${WORKER_URL}memory?clientId=${encodeURIComponent(
-            memoryId
+            getMemoryId()
           )}`
         );
 
@@ -457,8 +559,6 @@ $("#deleteMemoryBtn").onclick =
     }
   };
 
-
-// SERVICE WORKER
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
