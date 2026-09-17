@@ -1,79 +1,203 @@
-
 <!doctype html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#111827">
-  <title>Companion AI</title>
 
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#111827"
+  >
+
+  <meta
+    name="description"
+    content="Companion AI - seu assistente pessoal com memória"
+  >
+
+  <link
+    rel="manifest"
+    href="manifest.json"
+  >
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
+  <title>Companion AI</title>
 </head>
+
 <body>
 
   <main class="app">
 
-    <header>
-      <div>
-        <h1>Companion AI</h1>
-        <small>Seu companheiro com memória</small>
+    <!-- CABEÇALHO -->
+
+    <header class="app-header">
+
+      <div class="companion-profile">
+
+        <div
+          class="companion-avatar"
+          aria-hidden="true"
+        >
+          ✦
+        </div>
+
+        <div class="companion-info">
+
+          <h1>Companion AI</h1>
+
+          <div class="companion-status">
+            <span class="online-dot"></span>
+            <span>Online</span>
+            <span class="status-separator">•</span>
+            <span>Memória sincronizada</span>
+          </div>
+
+        </div>
+
       </div>
 
       <div class="header-actions">
-        <button id="memoryBtn" type="button" title="Minha memória">🧠</button>
-        <button id="settingsBtn" type="button" title="Configurações">⚙️</button>
+
+        <button
+          id="memoryBtn"
+          type="button"
+          aria-label="Minha memória"
+          title="Minha memória"
+        >
+          🧠
+        </button>
+
+        <button
+          id="settingsBtn"
+          type="button"
+          aria-label="Configurações"
+          title="Configurações"
+        >
+          ⚙️
+        </button>
+
       </div>
+
     </header>
 
-    <section id="messages" class="messages"></section>
 
-    <form id="chatForm" class="composer">
-      <textarea id="messageInput"
-                rows="1"
-                placeholder="Digite sua mensagem..."
-                required></textarea>
+    <!-- CONVERSA -->
 
-      <button type="submit">Enviar</button>
+    <section
+      id="messages"
+      class="messages"
+      aria-live="polite"
+    ></section>
+
+
+    <!-- ÁREA DE DIGITAÇÃO -->
+
+    <form
+      id="chatForm"
+      class="composer"
+    >
+
+      <div class="composer-box">
+
+        <textarea
+          id="messageInput"
+          rows="1"
+          placeholder="Mensagem para o Companion..."
+          aria-label="Mensagem"
+          required
+        ></textarea>
+
+        <button
+          type="submit"
+          class="send-button"
+          aria-label="Enviar mensagem"
+          title="Enviar"
+        >
+          ➤
+        </button>
+
+      </div>
+
     </form>
 
   </main>
 
-  <!-- MEMÓRIA -->
+
+  <!-- MINHA MEMÓRIA -->
 
   <dialog id="memoryDialog">
 
-    <div class="settings">
+    <div class="settings memory-panel">
 
       <div class="dialog-header">
-        <h2>🧠 Minha memória</h2>
-        <button id="closeMemoryBtn" type="button">✕</button>
+
+        <div>
+          <h2>🧠 Minha memória</h2>
+
+          <small>
+            Sincronizada entre seus aparelhos
+          </small>
+        </div>
+
+        <button
+          id="closeMemoryBtn"
+          type="button"
+          aria-label="Fechar"
+        >
+          ✕
+        </button>
+
       </div>
 
-      <p>
-        Informações que o Companion lembra de você.
+      <p class="memory-info">
+        Estas são as informações que o Companion
+        guardou para usar em conversas futuras.
       </p>
 
-      <div id="memoryStatus">Carregando...</div>
+      <div
+        id="memoryStatus"
+        class="memory-status"
+      >
+        Carregando memória...
+      </div>
 
-      <textarea id="memoryText" rows="10"></textarea>
+      <textarea
+        id="memoryText"
+        rows="12"
+        placeholder="Nenhuma memória salva ainda."
+      ></textarea>
 
       <div class="row">
-        <button id="deleteMemoryBtn"
-                class="danger"
-                type="button">
-          Apagar
+
+        <button
+          id="deleteMemoryBtn"
+          type="button"
+          class="danger"
+        >
+          Apagar memória
         </button>
 
-        <button id="saveMemoryBtn"
-                type="button">
-          Salvar
+        <button
+          id="saveMemoryBtn"
+          type="button"
+        >
+          Salvar alterações
         </button>
+
       </div>
 
     </div>
 
   </dialog>
+
 
   <!-- CONFIGURAÇÕES -->
 
@@ -81,64 +205,113 @@
 
     <div class="settings">
 
-      <h2>Configurações</h2>
+      <div class="dialog-title">
+
+        <div>
+          <h2>⚙️ Configurações</h2>
+          <small>Personalize seu Companion</small>
+        </div>
+
+      </div>
+
 
       <label>
-        Nome
-        <input id="userName">
+        Seu nome
+
+        <input
+          id="userName"
+          placeholder="Como quer ser chamado?"
+        >
       </label>
+
 
       <label>
         Modelo
-        <input id="model" value="gpt-5-mini">
+
+        <input
+          id="model"
+          value="gpt-5-mini"
+        >
       </label>
+
 
       <hr>
 
-      <h3>🔄 Sincronizar PC e Celular</h3>
+
+      <h3>🔄 Sincronização</h3>
 
       <p class="sync-info">
-        Use a mesma chave nos dois aparelhos para compartilhar a mesma memória.
+        A mesma chave permite compartilhar memória
+        e histórico entre seu PC e celular.
       </p>
 
+
       <label>
-        Minha chave de sincronização
-        <input id="syncKey"
-               placeholder="Ex.: PEDRO-2026-AB12">
+        Chave de sincronização
+
+        <input
+          id="syncKey"
+          type="password"
+          autocomplete="off"
+          placeholder="Sua chave pessoal"
+        >
       </label>
 
+
       <div class="row">
-        <button id="generateKeyBtn"
-                type="button">
+
+        <button
+          id="generateKeyBtn"
+          type="button"
+        >
           Gerar chave
         </button>
 
-        <button id="copyKeyBtn"
-                type="button">
+        <button
+          id="copyKeyBtn"
+          type="button"
+        >
           Copiar
         </button>
+
       </div>
+
 
       <p id="syncStatus"></p>
 
+
       <hr>
 
+
+      <div class="privacy-note">
+        🔒 Sua chave da OpenAI permanece protegida
+        no servidor Cloudflare.
+      </div>
+
+
       <div class="row">
-        <button id="clearBtn"
-                class="danger"
-                type="button">
+
+        <button
+          id="clearBtn"
+          type="button"
+          class="danger"
+        >
           Apagar conversa
         </button>
 
-        <button id="saveBtn"
-                type="button">
+        <button
+          id="saveBtn"
+          type="button"
+        >
           Salvar
         </button>
+
       </div>
 
     </div>
 
   </dialog>
+
 
   <script src="app.js"></script>
 
