@@ -91,19 +91,9 @@ function render() {
         state.name
           ? ", " + state.name
           : ""
-      }!`Olá${
-  state.name
-    ? ", " + state.name
-    : ""
-state.name
-    ? ", " + state.name
-    : ""
-}! Eu sou a Lumi, sua assistente no Companion AI. Posso conversar com você e lembrar de informações importantes.`
+      }! Eu sou a Lumi, sua assistente no Companion AI. Posso conversar com você e lembrar de informações importantes.`,
+      false
     );
-  }
-}
-
-async function loadSharedHistory() {
   }
 }
 
@@ -152,9 +142,6 @@ async function loadSharedHistory() {
 
 loadSharedHistory();
 
-
-// CONFIGURAÇÕES
-
 $("#settingsBtn").onclick = () => {
   $("#userName").value =
     state.name || "";
@@ -169,7 +156,6 @@ $("#settingsBtn").onclick = () => {
 
   settingsDialog.showModal();
 };
-
 
 $("#generateKeyBtn").onclick = () => {
   const random =
@@ -186,7 +172,6 @@ $("#generateKeyBtn").onclick = () => {
   $("#syncStatus").textContent =
     "Chave criada. Clique em Salvar.";
 };
-
 
 $("#copyKeyBtn").onclick = async () => {
   const key =
@@ -208,7 +193,6 @@ $("#copyKeyBtn").onclick = async () => {
       "Não foi possível copiar automaticamente.";
   }
 };
-
 
 $("#saveBtn").onclick = async () => {
   state.name =
@@ -248,7 +232,6 @@ $("#saveBtn").onclick = async () => {
       "Configurações salvas.";
   }
 };
-
 
 $("#clearBtn").onclick = async () => {
   if (
@@ -298,9 +281,6 @@ $("#clearBtn").onclick = async () => {
   }
 };
 
-
-// CHAT
-
 async function getReply(text) {
   const response =
     await fetch(
@@ -341,7 +321,6 @@ async function getReply(text) {
 
   return data;
 }
-
 
 form.onsubmit = async e => {
   e.preventDefault();
@@ -414,9 +393,6 @@ form.onsubmit = async e => {
   }
 };
 
-
-// MINHA MEMÓRIA
-
 $("#memoryBtn").onclick =
   async () => {
 
@@ -459,12 +435,10 @@ $("#memoryBtn").onclick =
     }
   };
 
-
 $("#closeMemoryBtn").onclick =
   () => {
     memoryDialog.close();
   };
-
 
 $("#saveMemoryBtn").onclick =
   async () => {
@@ -513,7 +487,6 @@ $("#saveMemoryBtn").onclick =
         error.message;
     }
   };
-
 
 $("#deleteMemoryBtn").onclick =
   async () => {
@@ -569,7 +542,6 @@ $("#deleteMemoryBtn").onclick =
         error.message;
     }
   };
-
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
