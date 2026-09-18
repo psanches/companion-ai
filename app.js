@@ -603,11 +603,13 @@ if (voiceButton && SpeechRecognition) {
 }
 
 /* LUMI FALA AS RESPOSTAS */
+let lumiSoundEnabled = true;
 
 function speakLumi(text) {
   if (
     !("speechSynthesis" in window) ||
-    !text
+    !text ||
+!lumiSoundEnabled
   ) {
     return;
   }
@@ -624,3 +626,31 @@ function speakLumi(text) {
 
   window.speechSynthesis.speak(speech);
 }
+/* BOTÃO DE SOM DA LUMI */
+
+const soundButton = $("#soundButton");
+
+if (soundButton) {
+  soundButton.onclick = () => {
+    lumiSoundEnabled = !lumiSoundEnabled;
+
+    if (lumiSoundEnabled) {
+      soundButton.textContent = "🔊";
+      soundButton.title = "Desligar voz da Lumi";
+      soundButton.setAttribute(
+        "aria-label",
+        "Desligar voz da Lumi"
+      );
+    } else {
+      window.speechSynthesis?.cancel();
+
+      soundButton.textContent = "🔇";
+      soundButton.title = "Ligar voz da Lumi";
+      soundButton.setAttribute(
+        "aria-label",
+        "Ligar voz da Lumi"
+      );
+    }
+  };
+}
+
