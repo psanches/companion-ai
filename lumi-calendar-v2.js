@@ -167,5 +167,112 @@ export async function refreshGoogleToken(
     );
   }
 
+  
+
   return data;
+}
+
+/*
+  LUMI - SESSÃO GOOGLE
+  Funções auxiliares de segurança.
+
+  A sessão é independente da chave
+  de sincronização do Companion AI.
+*/
+
+export function createCalendarSessionToken() {
+  const bytes = new Uint8Array(32);
+
+  crypto.getRandomValues(bytes);
+
+  return Array.from(bytes)
+    .map(byte =>
+      byte.toString(16).padStart(2, "0")
+    )
+    .join("");
+}
+
+/*
+  Cria um identificador seguro para
+  armazenar a sessão no Cloudflare KV.
+*/
+
+export async function hashCalendarSession(token) {
+  const bytes = new TextEncoder().encode(token);
+
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    bytes
+  );
+
+  return Array.from(new Uint8Array(digest))
+    .map(byte =>
+      byte.toString(16).padStart(2, "0")
+    )
+    .join("");
+}
+
+/*
+  Armazena uma sessão temporária.
+
+  Não armazena o token de sessão em
+  texto simples como chave do KV.
+*/
+
+export async function saveCalendarSession(
+  env,
+  sessionToken,
+  sessionData
+) {
+  const sessionId =
+    await hashCalendarSession(sessionToken);
+
+  await env.GoogleCalendar.put(
+    `session:${sessionId}`,
+    JSON.stringify(sessionData),
+    {
+      expirationTtl: 3600
+    }
+  );
+}
+
+/*
+  Recupera uma sessão existente.
+*/
+
+export async function getCalendarSession(
+  env,
+  sessionToken
+) {
+  if (!sessionToken) {
+    return null;
+  }
+
+  const sessionId =
+    await hashCalendarSession(sessionToken);
+
+  return await env.GoogleCalendar.get(
+    `session:${sessionId}`,
+    "json"
+  );
+}
+
+/*
+  Encerra a sessão.
+*/
+
+export async function deleteCalendarSession(
+  env,
+  sessionToken
+) {
+  if (!sessionToken) {
+    return;
+  }
+
+  const sessionId =
+    await hashCalendarSession(sessionToken);
+
+  await env.GoogleCalendar.delete(
+    `session:${sessionId}`
+  );
 }
