@@ -316,3 +316,64 @@ export async function getGoogleCalendarEvents(
   const endDate = new Date(
     `${nextDay}T00:00:00-03:00`
   );
+  
+  const url = new URL(
+    "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+  );
+
+  url.searchParams.set(
+    "timeMin",
+    startDate.toISOString()
+  );
+
+  url.searchParams.set(
+    "timeMax",
+    endDate.toISOString()
+  );
+
+  url.searchParams.set(
+    "singleEvents",
+    "true"
+  );
+
+  url.searchParams.set(
+    "orderBy",
+    "startTime"
+  );
+
+  url.searchParams.set(
+    "timeZone",
+    timeZone
+  );
+
+  url.searchParams.set(
+    "maxResults",
+    "100"
+  );
+
+  const response = await fetch(
+    url.toString(),
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      "Não foi possível consultar o Google Agenda."
+    );
+  }
+
+  const data = await response.json();
+
+  return (data.items || []).map(event => ({
+    id: event.id,
+    title: event.summary || "Compromisso sem título",
+    start: event.start?.dateTime || event.start?.date,
+    end: event.end?.dateTime || event.end?.date,
+    location: event.location || "",
+    description: event.description || ""
+  }));
+}
