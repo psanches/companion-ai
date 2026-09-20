@@ -1,379 +1,599 @@
 
-/*
-  LUMI - GOOGLE CALENDAR
-  Módulo de autenticação OAuth 2.0
+import {
+  authenticateUser
+} from "./auth.js";
 
-  Este arquivo prepara a conexão com o Google.
-  Ainda não deve ser publicado como Worker independente.
-*/
+// ========================================
+// LUMI — COMPANION AI
+// Backend autenticado com Supabase
+// ========================================
 
-const GOOGLE_CALLBACK =
-  "https://round-lab-f54f.psanchesnle.workers.dev/auth/google/callback";
-
-const GOOGLE_SCOPE =
-  "https://www.googleapis.com/auth/calendar.readonly";
-
-const GOOGLE_AUTH_URL =
-  "https://accounts.google.com/o/oauth2/v2/auth";
-
-const GOOGLE_TOKEN_URL =
-  "https://oauth2.googleapis.com/token";
-
-/*
-  Gera um identificador aleatório para
-  proteger o processo de autorização.
-*/
-
-export function generateOAuthState() {
-  const bytes = new Uint8Array(32);
-
-  crypto.getRandomValues(bytes);
-
-  return Array.from(bytes)
-    .map(byte =>
-      byte.toString(16).padStart(2, "0")
-    )
-    .join("");
-}
-
-/*
-  Cria o endereço de autorização do Google.
-*/
-
-export function getGoogleAuthorizationUrl(
-  clientId,
-  state
-) {
-  const url = new URL(GOOGLE_AUTH_URL);
-
-  url.searchParams.set(
-    "client_id",
-    clientId
-  );
-
-  url.searchParams.set(
-    "redirect_uri",
-    GOOGLE_CALLBACK
-  );
-
-  url.searchParams.set(
-    "response_type",
-    "code"
-  );
-
-  url.searchParams.set(
-    "scope",
-    GOOGLE_SCOPE
-  );
-
-  url.searchParams.set(
-    "access_type",
-    "offline"
-  );
-
-  url.searchParams.set(
-    "prompt",
-    "consent"
-  );
-
-  url.searchParams.set(
-    "state",
-    state
-  );
-
-  return url.toString();
-}
-
-/*
-  Troca o código de autorização
-  pelos tokens fornecidos pelo Google.
-*/
-
-export async function exchangeGoogleCode(
-  code,
-  env
-) {
-  const response = await fetch(
-    GOOGLE_TOKEN_URL,
+function json(data, status = 200, cors = {}) {
+  return new Response(
+    JSON.stringify(data),
     {
-      method: "POST",
-
+      status,
       headers: {
+        ...cors,
         "Content-Type":
-          "application/x-www-form-urlencoded"
-      },
-
-      body: new URLSearchParams({
-        code,
-        client_id:
-          env.GOOGLE_CLIENT_ID,
-        client_secret:
-          env.GOOGLE_CLIENT_SECRET,
-        redirect_uri:
-          GOOGLE_CALLBACK,
-        grant_type:
-          "authorization_code"
-      })
-    }
-  );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      "Falha na autorização do Google."
-    );
-  }
-
-  return data;
-}
-
-/*
-  Renova o token de acesso.
-*/
-
-export async function refreshGoogleToken(
-  refreshToken,
-  env
-) {
-  const response = await fetch(
-    GOOGLE_TOKEN_URL,
-    {
-      method: "POST",
-
-      headers: {
-        "Content-Type":
-          "application/x-www-form-urlencoded"
-      },
-
-      body: new URLSearchParams({
-        client_id:
-          env.GOOGLE_CLIENT_ID,
-        client_secret:
-          env.GOOGLE_CLIENT_SECRET,
-        refresh_token:
-          refreshToken,
-        grant_type:
-          "refresh_token"
-      })
-    }
-  );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      "Não foi possível renovar o acesso ao Google."
-    );
-  }
-
-  
-
-  return data;
-}
-
-/*
-  LUMI - SESSÃO GOOGLE
-  Funções auxiliares de segurança.
-
-  A sessão é independente da chave
-  de sincronização do Companion AI.
-*/
-
-export function createCalendarSessionToken() {
-  const bytes = new Uint8Array(32);
-
-  crypto.getRandomValues(bytes);
-
-  return Array.from(bytes)
-    .map(byte =>
-      byte.toString(16).padStart(2, "0")
-    )
-    .join("");
-}
-
-/*
-  Cria um identificador seguro para
-  armazenar a sessão no Cloudflare KV.
-*/
-
-export async function hashCalendarSession(token) {
-  const bytes = new TextEncoder().encode(token);
-
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    bytes
-  );
-
-  return Array.from(new Uint8Array(digest))
-    .map(byte =>
-      byte.toString(16).padStart(2, "0")
-    )
-    .join("");
-}
-
-/*
-  Armazena uma sessão temporária.
-
-  Não armazena o token de sessão em
-  texto simples como chave do KV.
-*/
-
-export async function saveCalendarSession(
-  env,
-  sessionToken,
-  sessionData
-) {
-  const sessionId =
-    await hashCalendarSession(sessionToken);
-
-  await env.GoogleCalendar.put(
-    `session:${sessionId}`,
-    JSON.stringify(sessionData),
-    {
-      expirationTtl: 3600
-    }
-  );
-}
-
-/*
-  Recupera uma sessão existente.
-*/
-
-export async function getCalendarSession(
-  env,
-  sessionToken
-) {
-  if (!sessionToken) {
-    return null;
-  }
-
-  const sessionId =
-    await hashCalendarSession(sessionToken);
-
-  return await env.GoogleCalendar.get(
-    `session:${sessionId}`,
-    "json"
-  );
-}
-
-/*
-  Encerra a sessão.
-*/
-
-export async function deleteCalendarSession(
-  env,
-  sessionToken
-) {
-  if (!sessionToken) {
-    return;
-  }
-
-  const sessionId =
-    await hashCalendarSession(sessionToken);
-
-  await env.GoogleCalendar.delete(
-    `session:${sessionId}`
-  );
-}
-
-/*
-  LUMI - CONSULTA AO GOOGLE AGENDA
-
-  Consulta os compromissos de um dia.
-  Acesso somente de leitura.
-*/
-
-export async function getGoogleCalendarEvents(
-  accessToken,
-  date,
-  timeZone = "America/Sao_Paulo"
-) {
-  if (!accessToken) {
-    throw new Error(
-      "Google Agenda não está conectado."
-    );
-  }
-
-   // Define o início e o fim do dia
-  // no fuso horário de São Paulo.
-
-  const startDate = new Date(
-    `${date}T00:00:00-03:00`
-  );
-
-  const nextDate = new Date(
-    `${date}T12:00:00Z`
-  );
-
-  nextDate.setUTCDate(
-    nextDate.getUTCDate() + 1
-  );
-
-  const nextDay =
-    nextDate.toISOString().slice(0, 10);
-
-  const endDate = new Date(
-    `${nextDay}T00:00:00-03:00`
-  );
-  
-  const url = new URL(
-    "https://www.googleapis.com/calendar/v3/calendars/primary/events"
-  );
-
-  url.searchParams.set(
-    "timeMin",
-    startDate.toISOString()
-  );
-
-  url.searchParams.set(
-    "timeMax",
-    endDate.toISOString()
-  );
-
-  url.searchParams.set(
-    "singleEvents",
-    "true"
-  );
-
-  url.searchParams.set(
-    "orderBy",
-    "startTime"
-  );
-
-  url.searchParams.set(
-    "timeZone",
-    timeZone
-  );
-
-  url.searchParams.set(
-    "maxResults",
-    "100"
-  );
-
-  const response = await fetch(
-    url.toString(),
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`
+          "application/json; charset=utf-8"
       }
     }
   );
+}
 
-  if (!response.ok) {
-    throw new Error(
-      "Não foi possível consultar o Google Agenda."
-    );
+// ========================================
+// HISTÓRICO
+// ========================================
+
+function normalizeHistory(history, limit = 30) {
+  if (!Array.isArray(history)) {
+    return [];
   }
 
-  const data = await response.json();
-
-  return (data.items || []).map(event => ({
-    id: event.id,
-    title: event.summary || "Compromisso sem título",
-    start: event.start?.dateTime || event.start?.date,
-    end: event.end?.dateTime || event.end?.date,
-    location: event.location || "",
-    description: event.description || ""
-  }));
+  return history
+    .filter(item =>
+      item &&
+      ["user", "assistant"].includes(item.role) &&
+      typeof item.content === "string"
+    )
+    .map(item => ({
+      role: item.role,
+      content: item.content.slice(0, 6000)
+    }))
+    .slice(-limit);
 }
+
+// ========================================
+// EXTRAIR RESPOSTA DA OPENAI
+// ========================================
+
+function extractText(data) {
+  let text = "";
+
+  for (const item of data.output || []) {
+    for (const content of item.content || []) {
+      if (
+        content.type === "output_text" &&
+        typeof content.text === "string"
+      ) {
+        text += content.text;
+      }
+    }
+  }
+
+  return text.trim() ||
+    data.output_text ||
+    "";
+}
+
+// ========================================
+// WORKER PRINCIPAL
+// ========================================
+
+export default {
+  async fetch(request, env) {
+
+    const cors = {
+      "Access-Control-Allow-Origin": "*",
+
+      "Access-Control-Allow-Methods":
+        "GET, POST, PUT, DELETE, OPTIONS",
+
+      "Access-Control-Allow-Headers":
+        "Content-Type, Authorization",
+
+      "Cache-Control": "no-store"
+    };
+
+    // Responder ao preflight CORS
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: cors
+      });
+    }
+
+    const url = new URL(request.url);
+
+    // Verificação pública de funcionamento
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/"
+    ) {
+      return json(
+        {
+          status: "ok",
+          message: "Lumi API funcionando"
+        },
+        200,
+        cors
+      );
+    }
+
+    // ====================================
+    // CONFIGURAÇÃO DO SERVIDOR
+    // ====================================
+
+    if (!env.Memory) {
+      return json(
+        {
+          error:
+            "Binding KV Memory não configurado"
+        },
+        503,
+        cors
+      );
+    }
+
+    if (
+      !env.SUPABASE_URL ||
+      !env.SUPABASE_PUBLISHABLE_KEY
+    ) {
+      return json(
+        {
+          error:
+            "Configuração do Supabase incompleta"
+        },
+        503,
+        cors
+      );
+    }
+
+    // ====================================
+    // AUTENTICAÇÃO
+    // ====================================
+
+    let user;
+
+    try {
+      user = await authenticateUser(
+        request,
+        env
+      );
+
+    } catch (error) {
+      console.error(
+        "Erro de autenticação:",
+        error
+      );
+
+      return json(
+        {
+          error:
+            "Serviço de autenticação indisponível"
+        },
+        503,
+        cors
+      );
+    }
+
+    if (!user?.id) {
+      return json(
+        {
+          error:
+            "Faça login para continuar"
+        },
+        401,
+        cors
+      );
+    }
+
+    // ====================================
+    // IDENTIDADE INDIVIDUAL
+    // ====================================
+
+    // A identidade vem do Supabase.
+    // Nunca usar clientId enviado pelo navegador.
+
+    const memoryKey =
+      `memory:user:${user.id}`;
+
+    const historyKey =
+      `history:user:${user.id}`;
+
+    try {
+
+      // ==================================
+      // MEMÓRIA — CONSULTAR
+      // ==================================
+
+      if (
+        url.pathname === "/memory" &&
+        request.method === "GET"
+      ) {
+        const memory =
+          await env.Memory.get(memoryKey) || "";
+
+        return json(
+          { memory },
+          200,
+          cors
+        );
+      }
+
+      // ==================================
+      // MEMÓRIA — SALVAR
+      // ==================================
+
+      if (
+        url.pathname === "/memory" &&
+        request.method === "PUT"
+      ) {
+        const body = await request.json();
+
+        if (typeof body.memory !== "string") {
+          return json(
+            {
+              error: "Memória inválida"
+            },
+            400,
+            cors
+          );
+        }
+
+        const memory =
+          body.memory.trim().slice(0, 12000);
+
+        if (memory) {
+          await env.Memory.put(
+            memoryKey,
+            memory
+          );
+        } else {
+          await env.Memory.delete(memoryKey);
+        }
+
+        return json(
+          { ok: true },
+          200,
+          cors
+        );
+      }
+
+      // ==================================
+      // MEMÓRIA — APAGAR
+      // ==================================
+
+      if (
+        url.pathname === "/memory" &&
+        request.method === "DELETE"
+      ) {
+        await env.Memory.delete(memoryKey);
+
+        return json(
+          { ok: true },
+          200,
+          cors
+        );
+      }
+
+      // ==================================
+      // HISTÓRICO — CONSULTAR
+      // ==================================
+
+      if (
+        url.pathname === "/history" &&
+        request.method === "GET"
+      ) {
+        const stored =
+          await env.Memory.get(
+            historyKey,
+            "json"
+          );
+
+        return json(
+          {
+            history: normalizeHistory(stored)
+          },
+          200,
+          cors
+        );
+      }
+
+      // ==================================
+      // HISTÓRICO — APAGAR
+      // ==================================
+
+      if (
+        url.pathname === "/history" &&
+        request.method === "DELETE"
+      ) {
+        await env.Memory.delete(historyKey);
+
+        return json(
+          { ok: true },
+          200,
+          cors
+        );
+      }
+
+      // ==================================
+      // CHAT DA LUMI
+      // ==================================
+
+      if (
+        url.pathname === "/" &&
+        request.method === "POST"
+      ) {
+
+        if (!env.OPENAI_API_KEY) {
+          return json(
+            {
+              error:
+                "OPENAI_API_KEY não configurada"
+            },
+            503,
+            cors
+          );
+        }
+
+        const body = await request.json();
+
+        const message =
+          typeof body.message === "string"
+            ? body.message.trim()
+            : "";
+
+        if (!message) {
+          return json(
+            {
+              error:
+                "Mensagem não informada"
+            },
+            400,
+            cors
+          );
+        }
+
+        // Carregar memória individual
+
+        const memory =
+          (
+            await env.Memory.get(memoryKey)
+          ) || "";
+
+        // Carregar histórico individual
+
+        const storedHistory =
+          await env.Memory.get(
+            historyKey,
+            "json"
+          );
+
+        const history =
+          normalizeHistory(
+            storedHistory,
+            20
+          );
+
+        history.push({
+          role: "user",
+          content: message.slice(0, 6000)
+        });
+
+        // ==================================
+        // INSTRUÇÕES DA LUMI
+        // ==================================
+
+        const instructions = `
+Você é Lumi, a assistente pessoal do Companion AI.
+
+Converse em português brasileiro de maneira natural,
+acolhedora, objetiva e pouco repetitiva.
+
+Quando o pedido estiver claro, responda diretamente.
+
+Não faça perguntas desnecessárias.
+
+Não invente lembranças ou informações pessoais.
+
+Use a memória persistente somente quando relevante.
+
+Nunca afirme ter executado ações externas sem que
+uma integração real tenha executado essas ações.
+
+Se não houver integração disponível para uma tarefa,
+explique a limitação de maneira breve.
+
+Não exponha dados pessoais de outros usuários.
+
+MEMÓRIA PERSISTENTE DO USUÁRIO:
+
+${memory.slice(0, 8000) || "(nenhuma memória registrada)"}
+`;
+
+        // ==================================
+        // CONSULTAR OPENAI
+        // ==================================
+
+        const response = await fetch(
+          "https://api.openai.com/v1/responses",
+          {
+            method: "POST",
+
+            headers: {
+              "Authorization":
+                `Bearer ${env.OPENAI_API_KEY}`,
+
+              "Content-Type":
+                "application/json"
+            },
+
+            body: JSON.stringify({
+              model: "gpt-5-mini",
+              instructions,
+              input: history,
+              store: false
+            })
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          console.error(
+            "Erro da OpenAI:",
+            response.status
+          );
+
+          return json(
+            {
+              error:
+                "Não foi possível obter a resposta da Lumi"
+            },
+            502,
+            cors
+          );
+        }
+
+        const reply = extractText(data);
+
+        if (!reply) {
+          return json(
+            {
+              error:
+                "A Lumi não retornou uma resposta"
+            },
+            502,
+            cors
+          );
+        }
+
+        // ==================================
+        // SALVAR HISTÓRICO
+        // ==================================
+
+        const newHistory =
+          normalizeHistory(
+            [
+              ...history,
+              {
+                role: "assistant",
+                content: reply
+              }
+            ],
+            30
+          );
+
+        await env.Memory.put(
+          historyKey,
+          JSON.stringify(newHistory)
+        );
+
+        // ==================================
+        // ATUALIZAR MEMÓRIA
+        // ==================================
+
+        try {
+
+          const memoryResponse = await fetch(
+            "https://api.openai.com/v1/responses",
+            {
+              method: "POST",
+
+              headers: {
+                "Authorization":
+                  `Bearer ${env.OPENAI_API_KEY}`,
+
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+                model: "gpt-5-mini",
+                store: false,
+
+                instructions: `
+Você atualiza a memória persistente de um usuário.
+
+Preserve informações pessoais importantes e
+preferências explícitas.
+
+Não invente fatos.
+
+Não registre instruções temporárias como memórias.
+
+Retorne somente a memória atualizada em texto simples.
+`,
+
+                input: `
+MEMÓRIA ANTERIOR:
+${memory.slice(0, 8000)}
+
+NOVA MENSAGEM:
+${message.slice(0, 6000)}
+
+RESPOSTA:
+${reply.slice(0, 6000)}
+`
+              })
+            }
+          );
+
+          if (memoryResponse.ok) {
+
+            const memoryData =
+              await memoryResponse.json();
+
+            const updatedMemory =
+              extractText(memoryData).trim();
+
+            if (updatedMemory) {
+              await env.Memory.put(
+                memoryKey,
+                updatedMemory.slice(0, 12000)
+              );
+            }
+          }
+
+        } catch (error) {
+          console.error(
+            "Erro ao atualizar memória:",
+            error
+          );
+        }
+
+        // ==================================
+        // RESPOSTA AO APLICATIVO
+        // ==================================
+
+        return json(
+          {
+            reply,
+            history: newHistory
+          },
+          200,
+          cors
+        );
+      }
+
+      return json(
+        {
+          error:
+            "Rota ou método não permitido"
+        },
+        405,
+        cors
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Erro interno da Lumi:",
+        error
+      );
+
+      return json(
+        {
+          error:
+            "Erro interno no servidor"
+        },
+        500,
+        cors
+      );
+    }
+  }
+};
