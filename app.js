@@ -1,4 +1,22 @@
-const $ = s => document.querySelector(s);
+
+import {
+  requireLogin,
+  authenticatedFetch,
+  supabase
+} from "./lumi-auth.js";
+
+// ========================================
+// LUMI — COMPANION AI
+// Aplicativo com autenticação Supabase
+// ========================================
+
+const $ = selector =>
+  document.querySelector(selector);
+
+const WORKER_URL =
+  "https://companion-ai.psanchesnle.workers.dev/";
+
+const STORAGE = "companion-ai-v3";
 
 const messagesEl = $("#messages");
 const form = $("#chatForm");
@@ -7,52 +25,67 @@ const input = $("#messageInput");
 const settingsDialog = $("#settingsDialog");
 const memoryDialog = $("#memoryDialog");
 
-const STORAGE = "companion-ai-v2";
-const CLIENT_ID_KEY = "companion-ai-client-id";
-const SYNC_KEY = "companion-ai-sync-key";
-
-const WORKER_URL =
-  "https://round-lab-f54f.psanchesnle.workers.dev/";
-
-function getClientId() {
-  let id = localStorage.getItem(CLIENT_ID_KEY);
-
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(CLIENT_ID_KEY, id);
-  }
-
-  return id;
-}
-
-const clientId = getClientId();
-
-function getMemoryId() {
-  const syncKey =
-    localStorage.getItem(SYNC_KEY)?.trim();
-
-  return syncKey || clientId;
-}
-
 const defaults = {
   name: "",
   model: "gpt-5-mini",
   messages: []
 };
 
-let state = {
-  ...defaults,
-  ...JSON.parse(
-    localStorage.getItem(STORAGE) || "{}"
-  )
-};
+let state = { ...defaults };
+
+let currentUser = null;
+let lumiSoundEnabled = true;
+let ready = false;
+
+// ========================================
+// IDENTIDADE E ARMAZENAMENTO
+// ========================================
+
+function storageKey() {
+  if (!currentUser) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  return `${STORAGE}:${currentUser.id}`;
+}
 
 function save() {
+  if (!currentUser) return;
+
   localStorage.setItem(
-    STORAGE,
+    storageKey(),
     JSON.stringify(state)
   );
 }
+
+function loadLocalState() {
+  const saved = localStorage.getItem(
+    storageKey()
+  );
+
+  if (!saved) {
+    state = { ...defaults, messages: [] };
+    return;
+  }
+
+  try {
+    const data = JSON.parse(saved);
+
+    state = {
+      ...defaults,
+      ...data,
+      messages: Array.isArray(data.messages)
+        ? data.messages
+        : []
+    };
+  } catch {
+    state = { ...defaults, messages: [] };
+  }
+}
+
+// ========================================
+// INTERFACE DO CHAT
+// ========================================
 
 function add(role, content, persist = true) {
   const el = document.createElement("div");
@@ -61,6 +94,7 @@ function add(role, content, persist = true) {
   el.textContent = content;
 
   messagesEl.appendChild(el);
+
   messagesEl.scrollTop =
     messagesEl.scrollHeight;
 
@@ -80,233 +114,47 @@ function add(role, content, persist = true) {
 function render() {
   messagesEl.innerHTML = "";
 
-  state.messages.forEach(m => {
-    add(m.role, m.content, false);
+  state.messages.forEach(message => {
+    add(
+      message.role,
+      message.content,
+      false
+    );
   });
 
   if (!state.messages.length) {
     add(
       "assistant",
-      `Olá${
-        state.name
-          ? ", " + state.name
-          : ""
-      }! Eu sou a Lumi, sua assistente no Companion AI. Posso conversar com você e lembrar de informações importantes.`,
+      `Olá${state.name
+        ? ", " + state.name
+        : ""}! Eu sou a Lumi, sua assistente no Companion AI. Como posso ajudar você hoje?`,
       false
     );
   }
 }
 
-async function loadSharedHistory() {
-  try {
-    const response =
-      await fetch(
-        `${WORKER_URL}history?clientId=${encodeURIComponent(
-          getMemoryId()
-        )}`
-      );
+// ========================================
+// REQUISIÇÕES AUTENTICADAS
+// ========================================
 
-    const data =
-      await response.json();
-
-    if (
-      response.ok &&
-      Array.isArray(data?.history) &&
-      data.history.length
-    ) {
-      state.messages =
-        data.history
-          .filter(
-            item =>
-              item &&
-              typeof item.content === "string" &&
-              (
-                item.role === "user" ||
-                item.role === "assistant"
-              )
-          )
-          .slice(-30);
-
-      save();
-    }
-
-  } catch (error) {
-    console.error(
-      "Não foi possível carregar o histórico compartilhado:",
-      error
+async function api(path, options = {}) {
+  if (!ready || !currentUser) {
+    throw new Error(
+      "Faça login para continuar."
     );
   }
 
-  render();
-}
-
-loadSharedHistory();
-
-$("#settingsBtn").onclick = () => {
-  $("#userName").value =
-    state.name || "";
-
-  $("#model").value =
-    state.model || "gpt-5-mini";
-
-  $("#syncKey").value =
-    localStorage.getItem(SYNC_KEY) || "";
-
-  $("#syncStatus").textContent = "";
-
-  settingsDialog.showModal();
-};
-
-$("#generateKeyBtn").onclick = () => {
-  const random =
-    crypto.randomUUID()
-      .replace(/-/g, "")
-      .slice(0, 12)
-      .toUpperCase();
-
-  const key =
-    `COMPANION-${random}`;
-
-  $("#syncKey").value = key;
-
-  $("#syncStatus").textContent =
-    "Chave criada. Clique em Salvar.";
-};
-
-$("#copyKeyBtn").onclick = async () => {
-  const key =
-    $("#syncKey").value.trim();
-
-  if (!key) {
-    $("#syncStatus").textContent =
-      "Crie ou digite uma chave primeiro.";
-    return;
-  }
-
-  try {
-    await navigator.clipboard.writeText(key);
-
-    $("#syncStatus").textContent =
-      "Chave copiada.";
-  } catch (error) {
-    $("#syncStatus").textContent =
-      "Não foi possível copiar automaticamente.";
-  }
-};
-
-$("#saveBtn").onclick = async () => {
-  state.name =
-    $("#userName").value.trim();
-
-  state.model =
-    $("#model").value.trim() ||
-    "gpt-5-mini";
-
-  const oldKey =
-    localStorage.getItem(SYNC_KEY) || "";
-
-  const newKey =
-    $("#syncKey").value.trim();
-
-  if (newKey) {
-    localStorage.setItem(
-      SYNC_KEY,
-      newKey
-    );
-  } else {
-    localStorage.removeItem(SYNC_KEY);
-  }
-
-  save();
-
-  if (oldKey !== newKey) {
-    $("#syncStatus").textContent =
-      "Chave salva. Carregando dados sincronizados...";
-
-    await loadSharedHistory();
-
-    $("#syncStatus").textContent =
-      "Sincronização ativada.";
-  } else {
-    $("#syncStatus").textContent =
-      "Configurações salvas.";
-  }
-};
-
-$("#clearBtn").onclick = async () => {
-  if (
-    !confirm(
-      "Apagar o histórico compartilhado da conversa nos aparelhos sincronizados?"
-    )
-  ) {
-    return;
-  }
-
-  try {
-    const response =
-      await fetch(
-        `${WORKER_URL}history`,
-        {
-          method: "DELETE",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body: JSON.stringify({
-            clientId: getMemoryId()
-          })
-        }
-      );
-
-    const data =
-      await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data?.error ||
-        "Erro ao apagar histórico."
-      );
-    }
-
-    state.messages = [];
-    save();
-    render();
-    settingsDialog.close();
-
-  } catch (error) {
-    $("#syncStatus").textContent =
-      error.message;
-  }
-};
-
-async function getReply(text) {
   const response =
-    await fetch(
-      WORKER_URL,
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type":
-            "application/json"
-        },
-
-        body: JSON.stringify({
-          clientId: getMemoryId(),
-          message: text,
-          history:
-            state.messages.slice(-12)
-        })
-      }
+    await authenticatedFetch(
+      new URL(path, WORKER_URL).href,
+      options
     );
 
   let data;
 
   try {
     data = await response.json();
-  } catch (error) {
+  } catch {
     throw new Error(
       "O servidor não retornou uma resposta válida."
     );
@@ -315,22 +163,71 @@ async function getReply(text) {
   if (!response.ok) {
     throw new Error(
       data?.error ||
-      "Erro ao conectar com a IA."
+      "Erro de comunicação com o servidor."
     );
   }
 
   return data;
 }
 
-form.onsubmit = async e => {
-  e.preventDefault();
+// ========================================
+// HISTÓRICO
+// ========================================
 
-  const text =
-    input.value.trim();
+async function loadSharedHistory() {
+  try {
+    const data = await api("history");
 
-  if (!text) {
-    return;
+    if (Array.isArray(data.history)) {
+      state.messages = data.history
+        .filter(item =>
+          item &&
+          typeof item.content === "string" &&
+          ["user", "assistant"].includes(
+            item.role
+          )
+        )
+        .slice(-40);
+
+      save();
+    }
+  } catch (error) {
+    console.error(
+      "Erro ao carregar histórico:",
+      error
+    );
   }
+
+  render();
+}
+
+// ========================================
+// RESPOSTAS DA LUMI
+// ========================================
+
+async function getReply(text) {
+  return api("", {
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      message: text,
+      history: state.messages.slice(-12)
+    })
+  });
+}
+
+form.onsubmit = async event => {
+  event.preventDefault();
+
+  if (!ready) return;
+
+  const text = input.value.trim();
+
+  if (!text) return;
 
   input.value = "";
 
@@ -339,200 +236,197 @@ form.onsubmit = async e => {
   const wait =
     document.createElement("div");
 
-  wait.className =
-    "msg assistant";
-
-  wait.textContent =
-    "Pensando…";
+  wait.className = "msg assistant";
+  wait.textContent = "Pensando…";
 
   messagesEl.appendChild(wait);
 
   try {
-    const data =
-      await getReply(text);
+    const data = await getReply(text);
 
     wait.remove();
 
-   const reply =
-  data?.reply ||
-  "Sem resposta.";
+    const reply =
+      data?.reply || "Sem resposta.";
 
-speakLumi(reply);
-
-add(
-  "assistant",
-  reply,
-  false
-);
-
-    if (
-      Array.isArray(data?.history)
-    ) {
+    if (Array.isArray(data?.history)) {
       state.messages =
-        data.history.slice(-30);
+        data.history.slice(-40);
 
       save();
       render();
     } else {
-      state.messages.push({
-        role: "assistant",
-        content: reply
-      });
-
-      state.messages =
-        state.messages.slice(-40);
-
-      save();
+      add("assistant", reply);
     }
 
-  } catch (err) {
+    speakLumi(reply);
+
+  } catch (error) {
     wait.remove();
 
     add(
       "system",
-      err.message
+      error.message,
+      false
     );
   }
 };
 
-$("#memoryBtn").onclick =
-  async () => {
+// ========================================
+// CONFIGURAÇÕES
+// ========================================
 
-    memoryDialog.showModal();
+$("#settingsBtn").onclick = () => {
+  $("#userName").value =
+    state.name || "";
+
+  $("#model").value =
+    state.model || "gpt-5-mini";
+
+  $("#syncKey").value = "";
+
+  $("#syncStatus").textContent =
+    "A sincronização será feita pela sua conta.";
+
+  settingsDialog.showModal();
+};
+
+$("#saveBtn").onclick = () => {
+  state.name =
+    $("#userName").value.trim();
+
+  state.model =
+    $("#model").value ||
+    "gpt-5-mini";
+
+  save();
+
+  $("#syncStatus").textContent =
+    "Configurações salvas.";
+
+  render();
+};
+
+// As chaves antigas não serão usadas.
+// Cada conta terá sua própria identidade.
+
+$("#generateKeyBtn").onclick = () => {
+  $("#syncStatus").textContent =
+    "Sua conta substitui a chave de sincronização.";
+};
+
+$("#copyKeyBtn").onclick = () => {
+  $("#syncStatus").textContent =
+    "Não é necessário copiar uma chave.";
+};
+
+// ========================================
+// APAGAR HISTÓRICO
+// ========================================
+
+$("#clearBtn").onclick = async () => {
+  const confirmed = confirm(
+    "Deseja apagar o histórico da sua conta?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await api("history", {
+      method: "DELETE"
+    });
+
+    state.messages = [];
+
+    save();
+    render();
+
+    settingsDialog.close();
+
+  } catch (error) {
+    $("#syncStatus").textContent =
+      error.message;
+  }
+};
+
+// ========================================
+// MEMÓRIA PERSISTENTE
+// ========================================
+
+$("#memoryBtn").onclick = async () => {
+  memoryDialog.showModal();
+
+  $("#memoryStatus").textContent =
+    "Carregando memória...";
+
+  $("#memoryText").value = "";
+
+  try {
+    const data = await api("memory");
+
+    $("#memoryText").value =
+      data?.memory || "";
 
     $("#memoryStatus").textContent =
-      "Carregando memória...";
+      data?.memory
+        ? "Memória carregada."
+        : "Nenhuma memória salva ainda.";
 
-    $("#memoryText").value = "";
+  } catch (error) {
+    $("#memoryStatus").textContent =
+      error.message;
+  }
+};
 
-    try {
-      const response =
-        await fetch(
-          `${WORKER_URL}memory?clientId=${encodeURIComponent(
-            getMemoryId()
-          )}`
-        );
+$("#closeMemoryBtn").onclick = () => {
+  memoryDialog.close();
+};
 
-      const data =
-        await response.json();
+$("#saveMemoryBtn").onclick = async () => {
+  const memory =
+    $("#memoryText").value.trim();
 
-      if (!response.ok) {
-        throw new Error(
-          data?.error ||
-          "Erro ao carregar memória."
-        );
-      }
+  $("#memoryStatus").textContent =
+    "Salvando memória...";
 
-      $("#memoryText").value =
-        data?.memory || "";
+  try {
+    await api("memory", {
+      method: "PUT",
 
-      $("#memoryStatus").textContent =
-        data?.memory
-          ? "Memória carregada."
-          : "Nenhuma memória salva ainda.";
+      headers: {
+        "Content-Type": "application/json"
+      },
 
-    } catch (error) {
-      $("#memoryStatus").textContent =
-        error.message;
-    }
-  };
-
-$("#closeMemoryBtn").onclick =
-  () => {
-    memoryDialog.close();
-  };
-
-$("#saveMemoryBtn").onclick =
-  async () => {
-
-    const memory =
-      $("#memoryText").value.trim();
+      body: JSON.stringify({
+        memory
+      })
+    });
 
     $("#memoryStatus").textContent =
-      "Salvando...";
+      "Memória salva.";
 
-    try {
-      const response =
-        await fetch(
-          `${WORKER_URL}memory`,
-          {
-            method: "PUT",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body: JSON.stringify({
-              clientId:
-                getMemoryId(),
-              memory
-            })
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error ||
-          "Erro ao salvar memória."
-        );
-      }
-
-      $("#memoryStatus").textContent =
-        "Memória salva.";
-
-    } catch (error) {
-      $("#memoryStatus").textContent =
-        error.message;
-    }
-  };
+  } catch (error) {
+    $("#memoryStatus").textContent =
+      error.message;
+  }
+};
 
 $("#deleteMemoryBtn").onclick =
   async () => {
 
-    const confirmed =
-      confirm(
-        "Apagar toda a memória persistente do Companion?"
-      );
+    const confirmed = confirm(
+      "Deseja apagar toda a memória da sua conta?"
+    );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     $("#memoryStatus").textContent =
       "Apagando memória...";
 
     try {
-      const response =
-        await fetch(
-          `${WORKER_URL}memory`,
-          {
-            method: "DELETE",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body: JSON.stringify({
-              clientId:
-                getMemoryId()
-            })
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error ||
-          "Erro ao apagar memória."
-        );
-      }
+      await api("memory", {
+        method: "DELETE"
+      });
 
       $("#memoryText").value = "";
 
@@ -545,13 +439,9 @@ $("#deleteMemoryBtn").onclick =
     }
   };
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker
-    .register("./sw.js")
-    .catch(() => {});
-}
-
-/* VOZ DA LUMI */
+// ========================================
+// RECONHECIMENTO DE VOZ
+// ========================================
 
 const voiceButton = $("#voiceButton");
 
@@ -598,18 +488,20 @@ if (voiceButton && SpeechRecognition) {
 
 } else if (voiceButton) {
   voiceButton.disabled = true;
+
   voiceButton.title =
-    "Reconhecimento de voz não disponível neste navegador";
+    "Reconhecimento de voz indisponível.";
 }
 
-/* LUMI FALA AS RESPOSTAS */
-let lumiSoundEnabled = true;
+// ========================================
+// SÍNTESE DE VOZ
+// ========================================
 
 function speakLumi(text) {
   if (
     !("speechSynthesis" in window) ||
     !text ||
-!lumiSoundEnabled
+    !lumiSoundEnabled
   ) {
     return;
   }
@@ -626,42 +518,92 @@ function speakLumi(text) {
 
   window.speechSynthesis.speak(speech);
 }
-/* BOTÃO DE SOM DA LUMI */
 
 const soundButton = $("#soundButton");
 
 if (soundButton) {
   soundButton.onclick = () => {
-    lumiSoundEnabled = !lumiSoundEnabled;
+    lumiSoundEnabled =
+      !lumiSoundEnabled;
 
     if (lumiSoundEnabled) {
       soundButton.textContent = "🔊";
-      soundButton.title = "Desligar voz da Lumi";
-      soundButton.setAttribute(
-        "aria-label",
-        "Desligar voz da Lumi"
-      );
+      soundButton.title =
+        "Desligar voz da Lumi";
     } else {
       window.speechSynthesis?.cancel();
 
       soundButton.textContent = "🔇";
-      soundButton.title = "Ligar voz da Lumi";
-      soundButton.setAttribute(
-        "aria-label",
-        "Ligar voz da Lumi"
-      );
+      soundButton.title =
+        "Ligar voz da Lumi";
     }
+
+    soundButton.setAttribute(
+      "aria-label",
+      soundButton.title
+    );
   };
 }
-/* ENTER ENVIA A MENSAGEM */
 
-input.addEventListener("keydown", event => {
-  if (
-    event.key === "Enter" &&
-    !event.shiftKey
-  ) {
-    event.preventDefault();
-    form.requestSubmit();
+// ========================================
+// ENTER ENVIA A MENSAGEM
+// ========================================
+
+input.addEventListener(
+  "keydown",
+  event => {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+
+      form.requestSubmit();
+    }
   }
-});
+);
 
+// ========================================
+// INICIALIZAÇÃO
+// ========================================
+
+async function initializeLumi() {
+  form.querySelector(
+    'button[type="submit"]'
+  )?.setAttribute("disabled", "");
+
+  input.disabled = true;
+
+  try {
+    currentUser = await requireLogin();
+
+    if (!currentUser) return;
+
+    loadLocalState();
+
+    ready = true;
+    input.disabled = false;
+
+    form.querySelector(
+      'button[type="submit"]'
+    )?.removeAttribute("disabled");
+
+    render();
+
+    await loadSharedHistory();
+
+  } catch (error) {
+    console.error(
+      "Erro ao iniciar a Lumi:",
+      error
+    );
+
+    add(
+      "system",
+      "Não foi possível iniciar a Lumi. Verifique sua conexão.",
+      false
+    );
+  }
+}
+
+initializeLumi();
