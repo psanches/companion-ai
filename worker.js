@@ -1,286 +1,415 @@
+
+import {
+  authenticateUser
+} from "./auth.js";
+
+// ========================================
+// LUMI — COMPANION AI
+// Backend autenticado com Supabase
+// ========================================
+
+function json(data, status = 200, cors = {}) {
+  return new Response(
+    JSON.stringify(data),
+    {
+      status,
+      headers: {
+        ...cors,
+        "Content-Type":
+          "application/json; charset=utf-8"
+      }
+    }
+  );
+}
+
+// ========================================
+// HISTÓRICO
+// ========================================
+
+function normalizeHistory(history, limit = 30) {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+
+  return history
+    .filter(item =>
+      item &&
+      ["user", "assistant"].includes(item.role) &&
+      typeof item.content === "string"
+    )
+    .map(item => ({
+      role: item.role,
+      content: item.content.slice(0, 6000)
+    }))
+    .slice(-limit);
+}
+
+// ========================================
+// EXTRAIR RESPOSTA DA OPENAI
+// ========================================
+
+function extractText(data) {
+  let text = "";
+
+  for (const item of data.output || []) {
+    for (const content of item.content || []) {
+      if (
+        content.type === "output_text" &&
+        typeof content.text === "string"
+      ) {
+        text += content.text;
+      }
+    }
+  }
+
+  return text.trim() ||
+    data.output_text ||
+    "";
+}
+
+// ========================================
+// WORKER PRINCIPAL
+// ========================================
+
 export default {
   async fetch(request, env) {
+
     const cors = {
       "Access-Control-Allow-Origin": "*",
+
       "Access-Control-Allow-Methods":
         "GET, POST, PUT, DELETE, OPTIONS",
+
       "Access-Control-Allow-Headers":
-        "Content-Type",
+        "Content-Type, Authorization",
+
+      "Cache-Control": "no-store"
     };
+
+    // Responder ao preflight CORS
 
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
-        headers: cors,
+        headers: cors
       });
     }
 
     const url = new URL(request.url);
 
-    if (url.pathname === "/memory") {
-      return handleMemory(
-        request,
-        env,
-        cors,
-        url
-      );
-    }
+    // Verificação pública de funcionamento
 
-    if (url.pathname === "/history") {
-      return handleHistory(
-        request,
-        env,
-        cors,
-        url
-      );
-    }
-
-    if (request.method === "GET") {
-      return new Response(
-        "Companion AI funcionando",
+    if (
+      request.method === "GET" &&
+      url.pathname === "/"
+    ) {
+      return json(
         {
-          status: 200,
-          headers: cors,
-        }
+          status: "ok",
+          message: "Lumi API funcionando"
+        },
+        200,
+        cors
       );
     }
 
-    if (request.method !== "POST") {
-      return new Response(
-        "Método não permitido",
+    // ====================================
+    // CONFIGURAÇÃO DO SERVIDOR
+    // ====================================
+
+    if (!env.Memory) {
+      return json(
         {
-          status: 405,
-          headers: cors,
-        }
+          error:
+            "Binding KV Memory não configurado"
+        },
+        503,
+        cors
       );
     }
+
+    if (
+      !env.SUPABASE_URL ||
+      !env.SUPABASE_PUBLISHABLE_KEY
+    ) {
+      return json(
+        {
+          error:
+            "Configuração do Supabase incompleta"
+        },
+        503,
+        cors
+      );
+    }
+
+    // ====================================
+    // AUTENTICAÇÃO
+    // ====================================
+
+    let user;
 
     try {
-      if (!env.OPENAI_API_KEY) {
-        return jsonResponse(
-          {
-            error:
-              "OPENAI_API_KEY não configurada",
-          },
-          500,
+      user = await authenticateUser(
+        request,
+        env
+      );
+
+    } catch (error) {
+      console.error(
+        "Erro de autenticação:",
+        error
+      );
+
+      return json(
+        {
+          error:
+            "Serviço de autenticação indisponível"
+        },
+        503,
+        cors
+      );
+    }
+
+    if (!user?.id) {
+      return json(
+        {
+          error:
+            "Faça login para continuar"
+        },
+        401,
+        cors
+      );
+    }
+
+    // ====================================
+    // IDENTIDADE INDIVIDUAL
+    // ====================================
+
+    // A identidade vem do Supabase.
+    // Nunca usar clientId enviado pelo navegador.
+
+    const memoryKey =
+      `memory:user:${user.id}`;
+
+    const historyKey =
+      `history:user:${user.id}`;
+
+    try {
+
+      // ==================================
+      // MEMÓRIA — CONSULTAR
+      // ==================================
+
+      if (
+        url.pathname === "/memory" &&
+        request.method === "GET"
+      ) {
+        const memory =
+          await env.Memory.get(memoryKey) || "";
+
+        return json(
+          { memory },
+          200,
           cors
         );
       }
 
-      if (!env.Memory) {
-        return jsonResponse(
-          {
-            error:
-              "Binding KV Memory não configurado",
-          },
-          500,
+      // ==================================
+      // MEMÓRIA — SALVAR
+      // ==================================
+
+      if (
+        url.pathname === "/memory" &&
+        request.method === "PUT"
+      ) {
+        const body = await request.json();
+
+        if (typeof body.memory !== "string") {
+          return json(
+            {
+              error: "Memória inválida"
+            },
+            400,
+            cors
+          );
+        }
+
+        const memory =
+          body.memory.trim().slice(0, 12000);
+
+        if (memory) {
+          await env.Memory.put(
+            memoryKey,
+            memory
+          );
+        } else {
+          await env.Memory.delete(memoryKey);
+        }
+
+        return json(
+          { ok: true },
+          200,
           cors
         );
       }
 
-      const body =
-        await request.json();
+      // ==================================
+      // MEMÓRIA — APAGAR
+      // ==================================
 
-      const message =
-        typeof body?.message === "string"
-          ? body.message.trim()
-          : "";
+      if (
+        url.pathname === "/memory" &&
+        request.method === "DELETE"
+      ) {
+        await env.Memory.delete(memoryKey);
 
-      const clientId =
-        typeof body?.clientId === "string"
-          ? body.clientId.trim()
-          : "";
-
-      const localHistory =
-        Array.isArray(body?.history)
-          ? body.history
-          : [];
-
-      if (!message) {
-        return jsonResponse(
-          {
-            error:
-              "Mensagem não informada",
-          },
-          400,
+        return json(
+          { ok: true },
+          200,
           cors
         );
       }
 
-      if (!clientId) {
-        return jsonResponse(
-          {
-            error:
-              "Identificador do Companion não informado",
-          },
-          400,
-          cors
-        );
-      }
+      // ==================================
+      // HISTÓRICO — CONSULTAR
+      // ==================================
 
-      const identity =
-        await getIdentity(
-          env,
-          clientId
-        );
-
-      if (!identity) {
-        return jsonResponse(
-          {
-            error:
-              "Identificador inválido",
-          },
-          400,
-          cors
-        );
-      }
-
-      const memoryKey =
-        `memory:v2:${identity}`;
-
-      const historyKey =
-        `history:v2:${identity}`;
-
-      let memory =
-        (
-          await env.Memory.get(
-            memoryKey
-          )
-        ) || "";
-
-      memory =
-        memory.slice(0, 8000);
-
-      let storedHistory = [];
-
-      try {
-        const saved =
+      if (
+        url.pathname === "/history" &&
+        request.method === "GET"
+      ) {
+        const stored =
           await env.Memory.get(
             historyKey,
             "json"
           );
 
-        if (Array.isArray(saved)) {
-          storedHistory = saved;
-        }
-      } catch (error) {
-        console.error(
-          "Erro ao ler histórico:",
-          error
+        return json(
+          {
+            history: normalizeHistory(stored)
+          },
+          200,
+          cors
         );
       }
 
-      let conversation =
-        storedHistory.length
-          ? storedHistory
-          : localHistory;
-
-      conversation =
-        normalizeHistory(
-          conversation,
-          20
-        );
-
-      const last =
-        conversation[
-          conversation.length - 1
-        ];
+      // ==================================
+      // HISTÓRICO — APAGAR
+      // ==================================
 
       if (
-        !last ||
-        last.role !== "user" ||
-        last.content !== message
+        url.pathname === "/history" &&
+        request.method === "DELETE"
       ) {
-        conversation.push({
-          role: "user",
-          content: message,
-        });
+        await env.Memory.delete(historyKey);
+
+        return json(
+          { ok: true },
+          200,
+          cors
+        );
       }
 
- const instructions = `Você é Lumi, a assistente pessoal do aplicativo Companion AI.
+      // ==================================
+      // CHAT DA LUMI
+      // ==================================
 
-Ao falar sobre si mesma com o usuário, use sempre a primeira pessoa.
+      if (
+        url.pathname === "/" &&
+        request.method === "POST"
+      ) {
 
-Se precisar se apresentar, diga: "Eu sou a Lumi, sua assistente no Companion AI."
+        if (!env.OPENAI_API_KEY) {
+          return json(
+            {
+              error:
+                "OPENAI_API_KEY não configurada"
+            },
+            503,
+            cors
+          );
+        }
 
-Converse de forma natural, clara, acolhedora, objetiva e pouco repetitiva.
+        const body = await request.json();
 
-REGRA PRINCIPAL DE RESPOSTA:
+        const message =
+          typeof body.message === "string"
+            ? body.message.trim()
+            : "";
 
-Quando o pedido do usuário estiver suficientemente claro, responda imediatamente.
+        if (!message) {
+          return json(
+            {
+              error:
+                "Mensagem não informada"
+            },
+            400,
+            cors
+          );
+        }
 
-Não faça perguntas adicionais apenas para oferecer opções, confirmar preferências opcionais ou prolongar a conversa.
+        // Carregar memória individual
 
-Não transforme uma solicitação simples em um questionário ou menu de opções.
+        const memory =
+          (
+            await env.Memory.get(memoryKey)
+          ) || "";
 
-Use padrões razoáveis quando detalhes opcionais não forem informados.
+        // Carregar histórico individual
 
-Faça uma pergunta de esclarecimento somente quando faltar uma informação realmente necessária para responder corretamente.
+        const storedHistory =
+          await env.Memory.get(
+            historyKey,
+            "json"
+          );
 
-Quando uma pergunta for necessária, faça apenas a pergunta essencial.
+        const history =
+          normalizeHistory(
+            storedHistory,
+            20
+          );
 
-Evite terminar rotineiramente com frases como:
-"Quer que eu...?"
-"Posso...?"
-"Qual prefere?"
-"Quer que eu siga?"
-"Quer que eu faça isso agora?"
+        history.push({
+          role: "user",
+          content: message.slice(0, 6000)
+        });
 
-Não repita informações pessoais apenas para demonstrar que possui memória.
+        // ==================================
+        // INSTRUÇÕES DA LUMI
+        // ==================================
 
-CAPACIDADES E AÇÕES EXTERNAS:
-IMPORTANTE: mensagens anteriores do usuário dizendo "autorizo", "dou acesso", "sim" ou semelhantes NÃO significam que uma integração técnica foi criada.
+        const instructions = `
+Você é Lumi, a assistente pessoal do Companion AI.
 
-Nunca presuma que existem tokens, credenciais, permissões ou contas conectadas apenas porque o usuário disse que autorizou.
+Converse em português brasileiro de maneira natural,
+acolhedora, objetiva e pouco repetitiva.
 
-Somente considere um serviço externo conectado quando o próprio sistema fornecer explicitamente essa capacidade ou os dados reais dessa integração.
+Quando o pedido estiver claro, responda diretamente.
 
-Se essa capacidade não estiver disponível, diga isso diretamente. Não peça nova confirmação para executar uma ação impossível.
+Não faça perguntas desnecessárias.
 
-Nunca diga que acessou, conectou, verificou, pesquisou, enviou, criou, alterou, excluiu ou autorizou algo em um serviço externo se essa ação não foi realmente executada pelo aplicativo.
+Não invente lembranças ou informações pessoais.
 
-Nunca invente integrações, permissões, conexões ou resultados.
+Use a memória persistente somente quando relevante.
 
-Não prometa abrir telas de autorização ou conectar contas se o Companion AI não possuir essa integração.
+Nunca afirme ter executado ações externas sem que
+uma integração real tenha executado essas ações.
 
-Se o usuário pedir algo que exige uma integração que não está disponível, explique isso imediatamente e de forma breve.
+Se não houver integração disponível para uma tarefa,
+explique a limitação de maneira breve.
 
-Por exemplo, se não houver integração de calendário disponível, diga diretamente que você ainda não consegue consultar o calendário automaticamente.
+Não exponha dados pessoais de outros usuários.
 
-Não peça ao usuário para escolher Google, Outlook, permissões de leitura/escrita ou outras configurações de uma integração que não existe.
+MEMÓRIA PERSISTENTE DO USUÁRIO:
 
-Você recebe duas fontes de contexto:
-
-1. MEMÓRIA PERSISTENTE:
-informações pessoais importantes aprendidas anteriormente.
-
-2. HISTÓRICO RECENTE:
-as mensagens recentes da conversa.
-
-Use a memória apenas quando for relevante.
-Não invente lembranças.
-
-Se houver conflito entre uma informação antiga e uma nova informação explícita do usuário, considere a informação nova como mais atual.
-
-A memória é atualizada automaticamente.
-
-Não pergunte ao usuário se ele quer que uma informação seja salva, a menos que ele esteja falando explicitamente sobre controle ou privacidade da memória.
-
-MEMÓRIA PERSISTENTE ATUAL:
-${memory || "(nenhuma memória persistente ainda)"}
-
-Em temas médicos:
-- seja prudente;
-- considere informações pessoais relevantes;
-- não recomende medicamentos automaticamente sem considerar contraindicações conhecidas;
-- indique quando avaliação médica é necessária.
-
-Responda primeiro ao que o usuário realmente perguntou.
-Se puder responder ou executar diretamente, faça isso sem pedir confirmação desnecessária.
+${memory.slice(0, 8000) || "(nenhuma memória registrada)"}
 `;
 
-      const response =
-        await fetch(
+        // ==================================
+        // CONSULTAR OPENAI
+        // ==================================
+
+        const response = await fetch(
           "https://api.openai.com/v1/responses",
           {
             method: "POST",
@@ -290,95 +419,77 @@ Se puder responder ou executar diretamente, faça isso sem pedir confirmação d
                 `Bearer ${env.OPENAI_API_KEY}`,
 
               "Content-Type":
-                "application/json",
+                "application/json"
             },
 
             body: JSON.stringify({
               model: "gpt-5-mini",
               instructions,
-              input: conversation,
-              store: false,
-            }),
+              input: history,
+              store: false
+            })
           }
         );
 
-      const data =
-        await response.json();
+        const data = await response.json();
 
-      if (!response.ok) {
-        return jsonResponse(
-          {
-            error:
-              data?.error?.message ||
-              `Erro na OpenAI (${response.status})`,
-          },
-          response.status,
-          cors
+        if (!response.ok) {
+          console.error(
+            "Erro da OpenAI:",
+            response.status
+          );
+
+          return json(
+            {
+              error:
+                "Não foi possível obter a resposta da Lumi"
+            },
+            502,
+            cors
+          );
+        }
+
+        const reply = extractText(data);
+
+        if (!reply) {
+          return json(
+            {
+              error:
+                "A Lumi não retornou uma resposta"
+            },
+            502,
+            cors
+          );
+        }
+
+        // ==================================
+        // SALVAR HISTÓRICO
+        // ==================================
+
+        const newHistory =
+          normalizeHistory(
+            [
+              ...history,
+              {
+                role: "assistant",
+                content: reply
+              }
+            ],
+            30
+          );
+
+        await env.Memory.put(
+          historyKey,
+          JSON.stringify(newHistory)
         );
-      }
 
-      const reply =
-        extractText(data);
+        // ==================================
+        // ATUALIZAR MEMÓRIA
+        // ==================================
 
-      if (!reply) {
-        return jsonResponse(
-          {
-            error:
-              "A OpenAI respondeu, mas não retornou texto.",
-          },
-          502,
-          cors
-        );
-      }
+        try {
 
-      const newHistory = [
-        ...conversation,
-        {
-          role: "assistant",
-          content: reply,
-        },
-      ].slice(-30);
-
-      await env.Memory.put(
-        historyKey,
-        JSON.stringify(newHistory)
-      );
-
-      try {
-        const memoryUpdatePrompt = `
-MEMÓRIA ANTERIOR:
-${memory || "(vazia)"}
-
-NOVA MENSAGEM DO USUÁRIO:
-${message}
-
-RESPOSTA DO ASSISTENTE:
-${reply}
-
-Atualize a memória persistente desse usuário.
-
-Guarde somente informações úteis para conversas futuras,
-como:
-- nome e forma preferida de tratamento;
-- família, animais e pessoas importantes;
-- preferências;
-- projetos e objetivos;
-- rotina;
-- informações pessoais explicitamente fornecidas.
-
-Regras:
-- Não invente informações.
-- Não transforme suposições em fatos.
-- Se um fato novo corrigir um antigo, use o mais novo.
-- Não guarde saudações ou conversa casual irrelevante.
-- Não pergunte se deve salvar.
-- Seja conciso.
-- Limite a memória a aproximadamente 1200 palavras.
-- Retorne SOMENTE a memória atualizada em texto simples.
-`;
-
-        const memoryResponse =
-          await fetch(
+          const memoryResponse = await fetch(
             "https://api.openai.com/v1/responses",
             {
               method: "POST",
@@ -388,552 +499,101 @@ Regras:
                   `Bearer ${env.OPENAI_API_KEY}`,
 
                 "Content-Type":
-                  "application/json",
+                  "application/json"
               },
 
               body: JSON.stringify({
-                model:
-                  "gpt-5-mini",
-                input:
-                  memoryUpdatePrompt,
+                model: "gpt-5-mini",
                 store: false,
-              }),
+
+                instructions: `
+Você atualiza a memória persistente de um usuário.
+
+Preserve informações pessoais importantes e
+preferências explícitas.
+
+Não invente fatos.
+
+Não registre instruções temporárias como memórias.
+
+Retorne somente a memória atualizada em texto simples.
+`,
+
+                input: `
+MEMÓRIA ANTERIOR:
+${memory.slice(0, 8000)}
+
+NOVA MENSAGEM:
+${message.slice(0, 6000)}
+
+RESPOSTA:
+${reply.slice(0, 6000)}
+`
+              })
             }
           );
 
-        const memoryData =
-          await memoryResponse.json();
+          if (memoryResponse.ok) {
 
-        if (memoryResponse.ok) {
-          const updatedMemory =
-            extractText(
-              memoryData
-            ).trim();
+            const memoryData =
+              await memoryResponse.json();
 
-          if (updatedMemory) {
-            await env.Memory.put(
-              memoryKey,
-              updatedMemory.slice(
-                0,
-                12000
-              )
-            );
+            const updatedMemory =
+              extractText(memoryData).trim();
+
+            if (updatedMemory) {
+              await env.Memory.put(
+                memoryKey,
+                updatedMemory.slice(0, 12000)
+              );
+            }
           }
-        } else {
+
+        } catch (error) {
           console.error(
             "Erro ao atualizar memória:",
-            memoryData
+            error
           );
         }
 
-      } catch (memoryError) {
-        console.error(
-          "Erro na memória:",
-          memoryError
+        // ==================================
+        // RESPOSTA AO APLICATIVO
+        // ==================================
+
+        return json(
+          {
+            reply,
+            history: newHistory
+          },
+          200,
+          cors
         );
       }
 
-      return jsonResponse(
+      return json(
         {
-          reply,
-          history: newHistory,
+          error:
+            "Rota ou método não permitido"
         },
-        200,
+        405,
         cors
       );
 
     } catch (error) {
-      console.error(error);
 
-      return jsonResponse(
+      console.error(
+        "Erro interno da Lumi:",
+        error
+      );
+
+      return json(
         {
           error:
-            error instanceof Error
-              ? error.message
-              : "Erro inesperado no Worker",
+            "Erro interno no servidor"
         },
         500,
         cors
       );
     }
-  },
+  }
 };
-
-
-async function handleMemory(
-  request,
-  env,
-  cors,
-  url
-) {
-  if (!env.Memory) {
-    return jsonResponse(
-      {
-        error:
-          "Binding KV Memory não configurado",
-      },
-      500,
-      cors
-    );
-  }
-
-  let clientId = "";
-
-  if (request.method === "GET") {
-    clientId =
-      url.searchParams.get(
-        "clientId"
-      ) || "";
-  } else {
-    const body =
-      await request.json();
-
-    clientId =
-      typeof body?.clientId === "string"
-        ? body.clientId
-        : "";
-
-    if (request.method === "PUT") {
-      const identity =
-        await getIdentity(
-          env,
-          clientId
-        );
-
-      if (!identity) {
-        return jsonResponse(
-          {
-            error:
-              "Identificador inválido",
-          },
-          400,
-          cors
-        );
-      }
-
-      const memory =
-        typeof body?.memory === "string"
-          ? body.memory.trim()
-          : "";
-
-      const key =
-        `memory:v2:${identity}`;
-
-      if (memory) {
-        await env.Memory.put(
-          key,
-          memory.slice(0, 12000)
-        );
-      } else {
-        await env.Memory.delete(key);
-      }
-
-      return jsonResponse(
-        { ok: true },
-        200,
-        cors
-      );
-    }
-
-    if (
-      request.method === "DELETE"
-    ) {
-      const identity =
-        await getIdentity(
-          env,
-          clientId
-        );
-
-      if (!identity) {
-        return jsonResponse(
-          {
-            error:
-              "Identificador inválido",
-          },
-          400,
-          cors
-        );
-      }
-
-      await env.Memory.delete(
-        `memory:v2:${identity}`
-      );
-
-      return jsonResponse(
-        { ok: true },
-        200,
-        cors
-      );
-    }
-  }
-
-  if (request.method === "GET") {
-    const identity =
-      await getIdentity(
-        env,
-        clientId
-      );
-
-    if (!identity) {
-      return jsonResponse(
-        {
-          error:
-            "Identificador inválido",
-        },
-        400,
-        cors
-      );
-    }
-
-    const memory =
-      (
-        await env.Memory.get(
-          `memory:v2:${identity}`
-        )
-      ) || "";
-
-    return jsonResponse(
-      { memory },
-      200,
-      cors
-    );
-  }
-
-  return jsonResponse(
-    {
-      error:
-        "Método não permitido",
-    },
-    405,
-    cors
-  );
-}
-
-
-async function handleHistory(
-  request,
-  env,
-  cors,
-  url
-) {
-  if (!env.Memory) {
-    return jsonResponse(
-      {
-        error:
-          "Binding KV Memory não configurado",
-      },
-      500,
-      cors
-    );
-  }
-
-  if (request.method === "GET") {
-    const clientId =
-      url.searchParams.get(
-        "clientId"
-      ) || "";
-
-    const identity =
-      await getIdentity(
-        env,
-        clientId
-      );
-
-    if (!identity) {
-      return jsonResponse(
-        {
-          error:
-            "Identificador inválido",
-        },
-        400,
-        cors
-      );
-    }
-
-    let history = [];
-
-    try {
-      const saved =
-        await env.Memory.get(
-          `history:v2:${identity}`,
-          "json"
-        );
-
-      if (Array.isArray(saved)) {
-        history =
-          normalizeHistory(
-            saved,
-            30
-          );
-      }
-    } catch (error) {
-      console.error(
-        "Erro ao carregar histórico:",
-        error
-      );
-    }
-
-    return jsonResponse(
-      { history },
-      200,
-      cors
-    );
-  }
-
-  if (
-    request.method === "DELETE"
-  ) {
-    const body =
-      await request.json();
-
-    const clientId =
-      typeof body?.clientId === "string"
-        ? body.clientId
-        : "";
-
-    const identity =
-      await getIdentity(
-        env,
-        clientId
-      );
-
-    if (!identity) {
-      return jsonResponse(
-        {
-          error:
-            "Identificador inválido",
-        },
-        400,
-        cors
-      );
-    }
-
-    await env.Memory.delete(
-      `history:v2:${identity}`
-    );
-
-    return jsonResponse(
-      { ok: true },
-      200,
-      cors
-    );
-  }
-
-  return jsonResponse(
-    {
-      error:
-        "Método não permitido",
-    },
-    405,
-    cors
-  );
-}
-
-
-async function getIdentity(
-  env,
-  clientId
-) {
-  const clean =
-    sanitizeClientId(clientId);
-
-  if (!clean) {
-    return "";
-  }
-
-  const identity =
-    await sha256(clean);
-
-  await migrateOldData(
-    env,
-    clean,
-    identity
-  );
-
-  return identity;
-}
-
-
-async function migrateOldData(
-  env,
-  oldId,
-  identity
-) {
-  const oldMemoryKey =
-    `memory:${oldId}`;
-
-  const oldHistoryKey =
-    `history:${oldId}`;
-
-  const newMemoryKey =
-    `memory:v2:${identity}`;
-
-  const newHistoryKey =
-    `history:v2:${identity}`;
-
-  const newMemory =
-    await env.Memory.get(
-      newMemoryKey
-    );
-
-  if (newMemory === null) {
-    const oldMemory =
-      await env.Memory.get(
-        oldMemoryKey
-      );
-
-    if (oldMemory !== null) {
-      await env.Memory.put(
-        newMemoryKey,
-        oldMemory
-      );
-    }
-  }
-
-  const newHistory =
-    await env.Memory.get(
-      newHistoryKey
-    );
-
-  if (newHistory === null) {
-    const oldHistory =
-      await env.Memory.get(
-        oldHistoryKey
-      );
-
-    if (oldHistory !== null) {
-      await env.Memory.put(
-        newHistoryKey,
-        oldHistory
-      );
-    }
-  }
-}
-
-
-async function sha256(text) {
-  const bytes =
-    new TextEncoder().encode(text);
-
-  const digest =
-    await crypto.subtle.digest(
-      "SHA-256",
-      bytes
-    );
-
-  return Array.from(
-    new Uint8Array(digest)
-  )
-    .map(
-      byte =>
-        byte
-          .toString(16)
-          .padStart(2, "0")
-    )
-    .join("");
-}
-
-
-function sanitizeClientId(
-  clientId
-) {
-  return String(clientId || "")
-    .trim()
-    .replace(
-      /[^a-zA-Z0-9_-]/g,
-      ""
-    )
-    .slice(0, 100);
-}
-
-
-function normalizeHistory(
-  history,
-  limit
-) {
-  return history
-    .filter(
-      item =>
-        item &&
-        typeof item.content ===
-          "string" &&
-        (
-          item.role === "user" ||
-          item.role === "assistant"
-        )
-    )
-    .map(item => ({
-      role: item.role,
-      content:
-        item.content.slice(
-          0,
-          6000
-        ),
-    }))
-    .slice(-limit);
-}
-
-
-function extractText(data) {
-  let text = "";
-
-  if (Array.isArray(data?.output)) {
-    for (
-      const item
-      of data.output
-    ) {
-      if (
-        !Array.isArray(
-          item?.content
-        )
-      ) {
-        continue;
-      }
-
-      for (
-        const content
-        of item.content
-      ) {
-        if (
-          content?.type ===
-            "output_text" &&
-          typeof content?.text ===
-            "string"
-        ) {
-          text += content.text;
-        }
-      }
-    }
-  }
-
-  if (
-    !text &&
-    typeof data?.output_text ===
-      "string"
-  ) {
-    text =
-      data.output_text;
-  }
-
-  return text.trim();
-}
-
-
-function jsonResponse(
-  data,
-  status,
-  cors
-) {
-  return new Response(
-    JSON.stringify(data),
-    {
-      status,
-
-      headers: {
-        ...cors,
-        "Content-Type":
-          "application/json; charset=utf-8",
-      },
-    }
-  );
-}
