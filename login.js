@@ -29,6 +29,10 @@ function showError(error) {
   );
 }
 
+function openChat() {
+  window.location.replace("./index.html");
+}
+
 // ENTRAR COM E-MAIL E SENHA
 
 $("#loginForm").addEventListener(
@@ -41,7 +45,7 @@ $("#loginForm").addEventListener(
 
     showStatus("Entrando...");
 
-    const { error } =
+    const { data, error } =
       await supabase.auth.signInWithPassword({
         email,
         password
@@ -52,7 +56,9 @@ $("#loginForm").addEventListener(
       return;
     }
 
-    showStatus("Login realizado com sucesso!");
+    if (data.session) {
+      openChat();
+    }
   }
 );
 
@@ -91,7 +97,7 @@ $("#signup").addEventListener(
       return;
     }
 
-    showStatus("Conta criada com sucesso!");
+    openChat();
   }
 );
 
@@ -106,11 +112,10 @@ $("#google").addEventListener(
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo:
-            new URL(
-              "./login.html",
-              window.location.href
-            ).href
+          redirectTo: new URL(
+            "./login.html",
+            window.location.href
+          ).href
         }
       });
 
@@ -132,9 +137,7 @@ async function checkSession() {
   }
 
   if (data.session) {
-    showStatus(
-      "Você já está conectado à Lumi."
-    );
+    openChat();
   }
 }
 
