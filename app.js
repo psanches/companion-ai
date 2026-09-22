@@ -14,7 +14,7 @@ const $ = selector =>
   document.querySelector(selector);
 
 const WORKER_URL =
-  "https://companion-ai.psanchesnle.workers.dev/";
+  "https://round-lab-f54f.psanchesnle.workers.dev/";
 
 const STORAGE = "companion-ai-v3";
 
