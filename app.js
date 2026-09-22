@@ -10,11 +10,8 @@ import {
 // Aplicativo com autenticação Supabase
 // ========================================
 
-const $ = selector =>
-  document.querySelector(selector);
-
 const WORKER_URL =
-  "https://round-lab-f54f.psanchesnle.workers.dev/";
+  "https://round-lab-f54f.psanchesnle.workers.dev/api/";
 
 const STORAGE = "companion-ai-v3";
 
