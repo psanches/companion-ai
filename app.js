@@ -7,8 +7,6 @@ import {
 const $ = selector =>
   document.querySelector(selector);
 
-const WORKER_URL =
-  "https://round-lab-f54f.psanchesnle.workers.dev/api/";
 // ========================================
 // LUMI — COMPANION AI
 // Aplicativo com autenticação Supabase
