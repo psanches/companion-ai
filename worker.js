@@ -132,7 +132,16 @@ ${memory.slice(0, 8000) || "(nenhuma memória registrada)"}
             Authorization: `Bearer ${env.OPENAI_API_KEY}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ model: "gpt-5-mini", instructions, input: history, store: false })
+          body: 
+body: JSON.stringify({
+  model: "gpt-5-mini",
+  instructions,
+  input: history,
+  store: false,
+  tools: [
+    { type: "web_search" }
+  ]
+})
         });
         const data = await response.json();
         if (!response.ok) {
