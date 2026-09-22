@@ -132,7 +132,7 @@ ${memory.slice(0, 8000) || "(nenhuma memória registrada)"}
             Authorization: `Bearer ${env.OPENAI_API_KEY}`,
             "Content-Type": "application/json"
           },
-          body: 
+       
 body: JSON.stringify({
   model: "gpt-5-mini",
   instructions,
