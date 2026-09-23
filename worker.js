@@ -1,5 +1,7 @@
 
 import { authenticateUser } from "./auth.js";
+const GOOGLE_CALENDAR_SCOPE =
+  "https://www.googleapis.com/auth/calendar.events";
 
 // Lumi: API autenticada. O frontend envia requisicoes para /api/*.
 function json(data, status = 200, cors = {}) {
@@ -29,6 +31,7 @@ function extractText(data) {
 
 export default {
 async fetch(request, env, ctx) {
+  
     const cors = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -168,11 +171,12 @@ body: JSON.stringify({
   instructions,
   input: history,
   store: false,
-  tools: [
-  { type: "web_search" }
-],
-tool_choice: "auto"
-        });
+   tools: [
+    { type: "web_search" }
+  ],
+  tool_choice: "auto"
+})
+});
         const data = await response.json();
         if (!response.ok) {
           console.error("Erro da OpenAI:", response.status);
