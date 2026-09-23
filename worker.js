@@ -209,9 +209,10 @@ Retorne somente a memória atualizada em texto simples.`,
                 );
               }
             }
+         
           } catch (error) {
             console.error("Erro ao atualizar memória:", error);
-
+          }
         })());
 
         return json({ reply, history: newHistory }, 200, cors);
