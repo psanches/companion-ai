@@ -28,7 +28,7 @@ function extractText(data) {
 }
 
 export default {
-  async fetch(request, env) {
+async fetch(request, env, ctx) {
     const cors = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -176,32 +176,43 @@ body: JSON.stringify({
         const newHistory = normalizeHistory([...history, { role: "assistant", content: reply }], 30);
         await env.Memory.put(historyKey, JSON.stringify(newHistory));
 
-        // Atualizacao automatica de memoria: falhas nao impedem a resposta do chat.
-        try {
-          const memoryResponse = await fetch("https://api.openai.com/v1/responses", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              model: "gpt-5-mini",
-              store: false,
-              instructions: `Você atualiza a memória persistente de um usuário.
+
+        // Atualizacao da memoria em segundo plano.
+        ctx.waitUntil((async () => {
+          try {
+            const memoryResponse = await fetch("https://api.openai.com/v1/responses", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                model: "gpt-5-mini",
+                store: false,
+                instructions: `Você atualiza a memória persistente de um usuário.
+
 Preserve informações pessoais importantes e preferências explícitas.
 Não invente fatos. Não registre instruções temporárias como memórias.
 Retorne somente a memória atualizada em texto simples.`,
-              input: `MEMÓRIA ANTERIOR:\n${memory.slice(0, 8000)}\n\nNOVA MENSAGEM:\n${message.slice(0, 6000)}\n\nRESPOSTA:\n${reply.slice(0, 6000)}`
-            })
-          });
-          if (memoryResponse.ok) {
-            const memoryData = await memoryResponse.json();
-            const updatedMemory = extractText(memoryData).trim();
-            if (updatedMemory) await env.Memory.put(memoryKey, updatedMemory.slice(0, 12000));
-          }
-        } catch (error) {
-          console.error("Erro ao atualizar memória:", error);
-        }
+                input: `MEMÓRIA ANTERIOR:\n${memory.slice(0, 8000)}\n\nNOVA MENSAGEM:\n${message.slice(0, 6000)}\n\nRESPOSTA:\n${reply.slice(0, 6000)}`
+              })
+            });
+
+            if (memoryResponse.ok) {
+              const memoryData = await memoryResponse.json();
+              const updatedMemory = extractText(memoryData).trim();
+
+              if (updatedMemory) {
+                await env.Memory.put(
+                  memoryKey,
+                  updatedMemory.slice(0, 12000)
+                );
+              }
+            }
+          } catch (error) {
+            console.error("Erro ao atualizar memória:", error);
+
+        })());
 
         return json({ reply, history: newHistory }, 200, cors);
       }
