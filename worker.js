@@ -134,6 +134,8 @@ Se pedir uma comparação, apresente a comparação diretamente.
 Faça perguntas somente quando faltar uma informação indispensável.
 
 PESQUISA NA INTERNET:
+Para conversas simples, cumprimentos e perguntas que não exigem informações atualizadas, responda diretamente, sem pesquisar na internet.
+Utilize web_search quando o usuário solicitar uma pesquisa ou quando a resposta depender de informações atuais.
 Quando o usuário solicitar informações recentes, utilize a ferramenta web_search disponível.
 Para pesquisas sobre Parkinson, priorize fontes médicas confiáveis, como Parkinson's Foundation, Associação Brasil Parkinson, Michael J. Fox Foundation, PubMed e instituições de saúde.
 Apresente os resultados encontrados, incluindo título, data, fonte, link direto e um breve resumo.
@@ -164,9 +166,9 @@ body: JSON.stringify({
   input: history,
   store: false,
   tools: [
-    { type: "web_search" }
-  ]
-})
+  { type: "web_search" }
+],
+tool_choice: "auto"
         });
         const data = await response.json();
         if (!response.ok) {
