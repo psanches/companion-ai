@@ -30,10 +30,11 @@ const defaults = {
   messages: []
 };
 
+
 let state = { ...defaults };
 
 let currentUser = null;
-let lumiSoundEnabled = true;
+let lumiSoundEnabled = false;
 let ready = false;
 
 // ========================================
@@ -521,6 +522,8 @@ function speakLumi(text) {
 const soundButton = $("#soundButton");
 
 if (soundButton) {
+    soundButton.textContent = "🔇";
+  soundButton.title = "Ligar voz da Lumi";
   soundButton.onclick = () => {
     lumiSoundEnabled =
       !lumiSoundEnabled;
