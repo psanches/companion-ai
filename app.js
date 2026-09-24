@@ -91,7 +91,34 @@ function add(role, content, persist = true) {
   const el = document.createElement("div");
 
   el.className = `msg ${role}`;
-  el.textContent = content;
+  
+const urlRegex = /https?:\/\/[^\s<>"']+/g;
+let lastIndex = 0;
+
+for (const match of content.matchAll(urlRegex)) {
+  const start = match.index;
+  const rawUrl = match[0];
+  const url = rawUrl.replace(/[.,;:!?)\]]+$/, "");
+
+  el.appendChild(
+    document.createTextNode(
+      content.slice(lastIndex, start)
+    )
+  );
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.textContent = url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+
+  el.appendChild(link);
+  lastIndex = start + rawUrl.length;
+}
+
+el.appendChild(
+  document.createTextNode(content.slice(lastIndex))
+);
 
   messagesEl.appendChild(el);
 
