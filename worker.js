@@ -74,6 +74,30 @@ async fetch(request, env, ctx) {
     const memoryKey = `memory:user:${user.id}`;
     const historyKey = `history:user:${user.id}`;
 
+    if (
+      route === "/auth/google/start" &&
+      request.method === "POST"
+    ) {
+      try {
+        const authUrl = await createGoogleAuthUrl(
+          env,
+          user.id
+        );
+
+        return json({ authUrl }, 200, cors);
+      } catch (error) {
+        console.error(
+          "Erro ao iniciar Google Calendar:",
+          error
+        );
+
+        return json(
+          { error: "Não foi possível iniciar a conexão com o Google Calendar." },
+          503,
+          cors
+        );
+      }
+    }
     try {
       if (route === "/memory" && request.method === "GET") {
         return json({ memory: (await env.Memory.get(memoryKey)) || "" }, 200, cors);
