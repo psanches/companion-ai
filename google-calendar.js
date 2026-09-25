@@ -433,14 +433,15 @@ async function finishGoogleAuth(env, url) {
   };
 }
 
-export {
-  
+
 export {
   GOOGLE_CALENDAR_SCOPE,
   GOOGLE_REDIRECT_URI,
   googleCalendarConfigured,
   createGoogleAuthUrl,
   finishGoogleAuth,
+  listGoogleCalendarEvents
+};
   listGoogleCalendarEvents
 };
 };
