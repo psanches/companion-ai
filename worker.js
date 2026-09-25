@@ -1,8 +1,9 @@
 
-import { authenticateUser } from "./auth.js";
+
 import {
   createGoogleAuthUrl,
-  finishGoogleAuth
+  finishGoogleAuth,
+  listGoogleCalendarEvents
 } from "./google-calendar.js";
 const GOOGLE_CALENDAR_SCOPE =
   "https://www.googleapis.com/auth/calendar.events";
@@ -111,6 +112,35 @@ async fetch(request, env, ctx) {
       return json({ error: "Serviço de autenticação indisponível" }, 503, cors);
     }
     if (!user?.id) return json({ error: "Faça login para continuar" }, 401, cors);
+
+    if (
+      route === "/calendar/events" &&
+      request.method === "GET"
+    ) {
+      try {
+        const events = await listGoogleCalendarEvents(
+          env,
+          user.id
+        );
+
+        return json({ events }, 200, cors);
+      } catch (error) {
+        console.error(
+          "Erro ao consultar Google Calendar:",
+          error.message
+        );
+
+        return json(
+          {
+            error:
+              "Não foi possível consultar sua agenda. " +
+              "Verifique se o Google Calendar está conectado."
+          },
+          503,
+          cors
+        );
+      }
+    }
 
     const memoryKey = `memory:user:${user.id}`;
     const historyKey = `history:user:${user.id}`;
