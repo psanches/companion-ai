@@ -61,6 +61,13 @@ export async function authenticateUser(request, env) {
     return null;
   }
 
+  
+  const user = await response.json();
+
+  if (!user?.id) {
+    return null;
+  }
+
   return {
     id: user.id,
     email: user.email
