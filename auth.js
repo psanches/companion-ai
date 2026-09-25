@@ -24,8 +24,10 @@ export async function authenticateUser(request, env) {
     );
   }
 
+ 
+  
   const response = await fetch(
-    `${env.SUPABASE_URL}/auth/v1/user`,
+    `${env.SUPABASE_URL.replace(/\/+$/, "")}/auth/v1/user`,
     {
       headers: {
         Authorization: `Bearer ${match[1]}`,
