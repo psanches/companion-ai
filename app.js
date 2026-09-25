@@ -303,6 +303,49 @@ form.onsubmit = async event => {
 // CONFIGURAÇÕES
 // ========================================
 
+$("#connectGoogleBtn").onclick = async () => {
+  const button = $("#connectGoogleBtn");
+  const status = $("#googleCalendarStatus");
+
+  button.disabled = true;
+  status.textContent = "Preparando conexão...";
+
+  try {
+    const data = await api(
+      "auth/google/start",
+      { method: "POST" }
+    );
+
+    if (!data.authUrl) {
+      throw new Error(
+        "O servidor não retornou o endereço de autorização."
+      );
+    }
+
+    const url = new URL(data.authUrl);
+
+    if (
+      url.protocol !== "https:" ||
+      url.hostname !== "accounts.google.com"
+    ) {
+      throw new Error(
+        "Endereço de autorização inválido."
+      );
+    }
+
+    status.textContent =
+      "Autorize o acesso na página do Google.";
+
+    window.location.assign(url.href);
+
+  } catch (error) {
+    status.textContent =
+      error.message ||
+      "Não foi possível conectar o Google Calendar.";
+
+    button.disabled = false;
+  }
+};
 $("#settingsBtn").onclick = () => {
   $("#userName").value =
     state.name || "";
