@@ -1,4 +1,135 @@
 
+async function getGoogleAccessToken(env, userId) {
+  if (!userId) {
+    throw new Error("Usuário não autenticado");
+  }
+
+  const tokenKey = `google:tokens:user:${userId}`;
+
+  const stored = await env.Memory.get(tokenKey);
+
+  if (!stored) {
+    throw new Error(
+      "Google Calendar não conectado. Conecte sua agenda nas Configurações."
+    );
+  }
+
+  const tokens = await decryptTokens(env, stored);
+
+  // Reutiliza o token enquanto ele estiver válido.
+  if (
+    tokens.access_token &&
+    tokens.expires_at > Date.now() + 60000
+  ) {
+    return tokens.access_token;
+  }
+
+  if (!tokens.refresh_token) {
+    throw new Error(
+      "A autorização do Google expirou. Conecte sua agenda novamente."
+    );
+  }
+
+  // Renova automaticamente o token expirado.
+  const response = await fetch(
+    "https://oauth2.googleapis.com/token",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        client_id: env.GOOGLE_CLIENT_ID,
+        client_secret: env.GOOGLE_CLIENT_SECRET,
+        refresh_token: tokens.refresh_token,
+        grant_type: "refresh_token"
+      })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      "Não foi possível renovar a autorização do Google Calendar."
+    );
+  }
+
+  const data = await response.json();
+
+  if (!data.access_token) {
+    throw new Error(
+      "O Google não retornou um token de acesso."
+    );
+  }
+
+  const updatedTokens = {
+    ...tokens,
+    access_token: data.access_token,
+    refresh_token:
+      data.refresh_token || tokens.refresh_token,
+    expires_at:
+      Date.now() + data.expires_in * 1000
+  };
+
+  await env.Memory.put(
+    tokenKey,
+    await encryptTokens(env, updatedTokens)
+  );
+
+  return updatedTokens.access_token;
+}
+
+// Consulta os próximos compromissos do usuário.
+async function listGoogleCalendarEvents(
+  env,
+  userId,
+  maxResults = 10
+) {
+  const accessToken = await getGoogleAccessToken(
+    env,
+    userId
+  );
+
+  const params = new URLSearchParams({
+    timeMin: new Date().toISOString(),
+    maxResults: String(
+      Math.min(Math.max(maxResults, 1), 50)
+    ),
+    singleEvents: "true",
+    orderBy: "startTime"
+  });
+
+  const response = await fetch(
+    "https://www.googleapis.com/calendar/v3/calendars/primary/events?" +
+      params.toString(),
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      "Não foi possível consultar os compromissos do Google Calendar."
+    );
+  }
+
+  const data = await response.json();
+
+  return (data.items || []).map(event => ({
+    id: event.id,
+    title: event.summary || "Sem título",
+    start:
+      event.start?.dateTime ||
+      event.start?.date,
+    end:
+      event.end?.dateTime ||
+      event.end?.date,
+    location: event.location || "",
+    description: event.description || ""
+  }));
+}
 const GOOGLE_CALENDAR_SCOPE =
   "https://www.googleapis.com/auth/calendar.events";
 
@@ -303,9 +434,13 @@ async function finishGoogleAuth(env, url) {
 }
 
 export {
+  
+export {
   GOOGLE_CALENDAR_SCOPE,
   GOOGLE_REDIRECT_URI,
   googleCalendarConfigured,
   createGoogleAuthUrl,
-  finishGoogleAuth
+  finishGoogleAuth,
+  listGoogleCalendarEvents
+};
 };
