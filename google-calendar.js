@@ -235,7 +235,24 @@ async function finishGoogleAuth(env, url) {
     }
   );
 
+  
   if (!response.ok) {
+    let googleError = "unknown";
+
+    try {
+      const errorData = await response.json();
+      googleError =
+        errorData.error || "unknown";
+    } catch {
+      googleError = "invalid_response";
+    }
+
+    console.error(
+      "Google OAuth token exchange failed:",
+      response.status,
+      googleError
+    );
+
     throw new Error(
       "Falha na troca do codigo de autorizacao"
     );
