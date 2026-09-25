@@ -442,7 +442,4 @@ export {
   finishGoogleAuth,
   listGoogleCalendarEvents
 };
-};
-  listGoogleCalendarEvents
-};
-};
+
