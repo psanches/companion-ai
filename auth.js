@@ -26,23 +26,38 @@ export async function authenticateUser(request, env) {
 
  
   
-  const response = await fetch(
-    `${env.SUPABASE_URL.replace(/\/+$/, "")}/auth/v1/user`,
-    {
-      headers: {
-        Authorization: `Bearer ${match[1]}`,
-        apikey: env.SUPABASE_PUBLISHABLE_KEY
-      }
-    }
-  );
+  
+  let response;
 
-  if (!response.ok) {
-    return null;
+  try {
+    response = await fetch(
+      `${env.SUPABASE_URL.replace(/\/+$/, "")}/auth/v1/user`,
+      {
+        headers: {
+          Authorization: `Bearer ${match[1]}`,
+          apikey: env.SUPABASE_PUBLISHABLE_KEY
+        }
+      }
+    );
+  } catch (error) {
+    console.error(
+      "Lumi auth: Supabase fetch failed",
+      {
+        errorType: error?.name || "UnknownError"
+      }
+    );
+
+    throw error;
   }
 
-  const user = await response.json();
+  if (!response.ok) {
+    console.error(
+      "Lumi auth: Supabase rejected user request",
+      {
+        status: response.status
+      }
+    );
 
-  if (!user?.id) {
     return null;
   }
 
