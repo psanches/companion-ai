@@ -1,6 +1,9 @@
 
 import { authenticateUser } from "./auth.js";
-import { createGoogleAuthUrl } from "./google-calendar.js";
+import {
+  createGoogleAuthUrl,
+  finishGoogleAuth
+} from "./google-calendar.js";;
 const GOOGLE_CALENDAR_SCOPE =
   "https://www.googleapis.com/auth/calendar.events";
 
@@ -45,6 +48,44 @@ async fetch(request, env, ctx) {
     }
 
     const url = new URL(request.url);
+  
+    if (
+      url.pathname === "/api/auth/google/callback" &&
+      request.method === "GET"
+    ) {
+      try {
+        await finishGoogleAuth(env, url);
+
+        return new Response(
+          "Google Calendar conectado com sucesso! " +
+          "Você pode fechar esta janela e voltar à Lumi.",
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              "Cache-Control": "no-store"
+            }
+          }
+        );
+      } catch (error) {
+        console.error(
+          "Erro na autorização do Google Calendar:",
+          error.message
+        );
+
+        return new Response(
+          "Não foi possível conectar o Google Calendar. " +
+          "Volte à Lumi e tente novamente.",
+          {
+            status: 400,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              "Cache-Control": "no-store"
+            }
+          }
+        );
+      }
+    }
     // A configuracao de assets encaminha /api/* para este Worker.
     // Aceitar tambem as rotas antigas, sem modificar a rota publica /.
     const route = url.pathname.startsWith("/api/")
