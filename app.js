@@ -418,7 +418,40 @@ $("#inviteBtn").onclick = async () => {
 };
 // As chaves antigas não serão usadas.
 // Cada conta terá sua própria identidade.
+$("#previousConversationsBtn").onclick = async () => {
+  const container = $("#previousConversations");
 
+  if (!container.hidden) {
+    container.hidden = true;
+    return;
+  }
+
+  try {
+    const data = await api("history/archives");
+    const archives = data.archives || [];
+
+    container.innerHTML = "";
+
+    if (!archives.length) {
+      container.textContent = "Nenhuma conversa anterior.";
+    } else {
+      archives.forEach(item => {
+        const button = document.createElement("button");
+        button.type = "button";
+
+        const date = new Date(item.createdAt);
+        button.textContent =
+          `${date.toLocaleString()} — ${item.preview}`;
+
+        container.appendChild(button);
+      });
+    }
+
+    container.hidden = false;
+  } catch (error) {
+    alert(error.message);
+  }
+};
 $("#generateKeyBtn").onclick = () => {
   $("#syncStatus").textContent =
     "Sua conta substitui a chave de sincronização.";
