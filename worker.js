@@ -1,10 +1,10 @@
-
 import { authenticateUser } from "./auth.js";
 import {
   createGoogleAuthUrl,
   finishGoogleAuth,
   listGoogleCalendarEvents
 } from "./google-calendar.js";
+
 const GOOGLE_CALENDAR_SCOPE =
   "https://www.googleapis.com/auth/calendar.events";
 
@@ -12,46 +12,75 @@ const GOOGLE_CALENDAR_SCOPE =
 function json(data, status = 200, cors = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...cors, "Content-Type": "application/json; charset=utf-8" }
+    headers: {
+      ...cors,
+      "Content-Type": "application/json; charset=utf-8"
+    }
   });
 }
 
 function normalizeHistory(history, limit = 30) {
   if (!Array.isArray(history)) return [];
+
   return history
-    .filter(item => item && ["user", "assistant"].includes(item.role) && typeof item.content === "string")
-    .map(item => ({ role: item.role, content: item.content.slice(0, 6000) }))
+    .filter(
+      item =>
+        item &&
+        ["user", "assistant"].includes(item.role) &&
+        typeof item.content === "string"
+    )
+    .map(item => ({
+      role: item.role,
+      content: item.content.slice(0, 6000)
+    }))
     .slice(-limit);
 }
 
 function extractText(data) {
   let text = "";
+
   for (const item of data.output || []) {
     for (const content of item.content || []) {
-      if (content.type === "output_text" && typeof content.text === "string") text += content.text;
+      if (
+        content.type === "output_text" &&
+        typeof content.text === "string"
+      ) {
+        text += content.text;
+      }
     }
   }
+
   return text.trim() || data.output_text || "";
 }
 
 export default {
-async fetch(request, env, ctx) {
-  
+  async fetch(request, env, ctx) {
+
     const cors = {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Methods":
+        "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers":
+        "Content-Type, Authorization",
       "Cache-Control": "no-store"
     };
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: cors });
+      return new Response(null, {
+        status: 204,
+        headers: cors
+      });
     }
 
     const url = new URL(request.url);
-  
+
+    // ========================================
+    // GOOGLE CALLBACK
+    // ========================================
+
     if (
-      url.pathname === "/api/auth/google/callback" &&
+      url.pathname ===
+        "/api/auth/google/callback" &&
       request.method === "GET"
     ) {
       try {
@@ -59,11 +88,12 @@ async fetch(request, env, ctx) {
 
         return new Response(
           "Google Calendar conectado com sucesso! " +
-          "Você pode fechar esta janela e voltar à Lumi.",
+            "Você pode fechar esta janela e voltar à Lumi.",
           {
             status: 200,
             headers: {
-              "Content-Type": "text/plain; charset=utf-8",
+              "Content-Type":
+                "text/plain; charset=utf-8",
               "Cache-Control": "no-store"
             }
           }
@@ -76,54 +106,145 @@ async fetch(request, env, ctx) {
 
         return new Response(
           "Não foi possível conectar o Google Calendar. " +
-          "Volte à Lumi e tente novamente.",
+            "Volte à Lumi e tente novamente.",
           {
             status: 400,
             headers: {
-              "Content-Type": "text/plain; charset=utf-8",
+              "Content-Type":
+                "text/plain; charset=utf-8",
               "Cache-Control": "no-store"
             }
           }
         );
       }
     }
-    // A configuracao de assets encaminha /api/* para este Worker.
-    // Aceitar tambem as rotas antigas, sem modificar a rota publica /.
-    const route = url.pathname.startsWith("/api/")
-      ? url.pathname.slice(4)
-      : url.pathname;
 
-    if (request.method === "GET" && url.pathname === "/") {
-      return json({ status: "ok", message: "Lumi API funcionando" }, 200, cors);
+    // A configuracao de assets encaminha /api/*
+    // para este Worker.
+    const route =
+      url.pathname.startsWith("/api/")
+        ? url.pathname.slice(4)
+        : url.pathname;
+
+    // ========================================
+    // STATUS
+    // ========================================
+
+    if (
+      request.method === "GET" &&
+      url.pathname === "/"
+    ) {
+      return json(
+        {
+          status: "ok",
+          message: "Lumi API funcionando"
+        },
+        200,
+        cors
+      );
     }
+
+    // ========================================
+    // CONFIGURAÇÃO
+    // ========================================
 
     if (!env.Memory) {
-      return json({ error: "Binding KV Memory não configurado" }, 503, cors);
-    }
-    if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) {
-      return json({ error: "Configuração do Supabase incompleta" }, 503, cors);
+      return json(
+        {
+          error:
+            "Binding KV Memory não configurado"
+        },
+        503,
+        cors
+      );
     }
 
-    let user;
-    try {
-      user = await authenticateUser(request, env);
-    } catch (error) {
-      console.error("Erro de autenticação:", error);
-      return json({ error: "Serviço de autenticação indisponível" }, 503, cors);
+    if (
+      !env.SUPABASE_URL ||
+      !env.SUPABASE_PUBLISHABLE_KEY
+    ) {
+      return json(
+        {
+          error:
+            "Configuração do Supabase incompleta"
+        },
+        503,
+        cors
+      );
     }
-    if (!user?.id) return json({ error: "Faça login para continuar" }, 401, cors);
+
+    // ========================================
+    // AUTENTICAÇÃO
+    // ========================================
+
+    let user;
+
+    try {
+      user =
+        await authenticateUser(request, env);
+    } catch (error) {
+      console.error(
+        "Erro de autenticação:",
+        error
+      );
+
+      return json(
+        {
+          error:
+            "Serviço de autenticação indisponível"
+        },
+        503,
+        cors
+      );
+    }
+
+    if (!user?.id) {
+      return json(
+        {
+          error:
+            "Faça login para continuar"
+        },
+        401,
+        cors
+      );
+    }
+
+    // ========================================
+    // CHAVES DO USUÁRIO
+    // ========================================
+
+    const memoryKey =
+      `memory:user:${user.id}`;
+
+    const generalMemoryKey =
+      "memory:lumi:general";
+
+    const historyKey =
+      `history:user:${user.id}`;
+
+    const archivePrefix =
+      `archive:user:${user.id}:`;
+
+    // ========================================
+    // GOOGLE CALENDAR
+    // ========================================
 
     if (
       route === "/calendar/events" &&
       request.method === "GET"
     ) {
       try {
-        const events = await listGoogleCalendarEvents(
-          env,
-          user.id
-        );
+        const events =
+          await listGoogleCalendarEvents(
+            env,
+            user.id
+          );
 
-        return json({ events }, 200, cors);
+        return json(
+          { events },
+          200,
+          cors
+        );
       } catch (error) {
         console.error(
           "Erro ao consultar Google Calendar:",
@@ -142,22 +263,22 @@ async fetch(request, env, ctx) {
       }
     }
 
-    
-const memoryKey = `memory:user:${user.id}`;
-const generalMemoryKey = "memory:lumi:general";
-const historyKey = `history:user:${user.id}`;
-const archivePrefix = `archive:user:${user.id}:`;
     if (
       route === "/auth/google/start" &&
       request.method === "POST"
     ) {
       try {
-        const authUrl = await createGoogleAuthUrl(
-          env,
-          user.id
-        );
+        const authUrl =
+          await createGoogleAuthUrl(
+            env,
+            user.id
+          );
 
-        return json({ authUrl }, 200, cors);
+        return json(
+          { authUrl },
+          200,
+          cors
+        );
       } catch (error) {
         console.error(
           "Erro ao iniciar Google Calendar:",
@@ -165,123 +286,362 @@ const archivePrefix = `archive:user:${user.id}:`;
         );
 
         return json(
-          { error: "Não foi possível iniciar a conexão com o Google Calendar." },
+          {
+            error:
+              "Não foi possível iniciar a conexão com o Google Calendar."
+          },
           503,
           cors
         );
       }
     }
+
     try {
-      if (route === "/memory" && request.method === "GET") {
-        return json({ memory: (await env.Memory.get(memoryKey)) || "" }, 200, cors);
+
+      // ========================================
+      // MEMÓRIA PESSOAL
+      // ========================================
+
+      if (
+        route === "/memory" &&
+        request.method === "GET"
+      ) {
+        return json(
+          {
+            memory:
+              (await env.Memory.get(
+                memoryKey
+              )) || ""
+          },
+          200,
+          cors
+        );
       }
 
-      if (route === "/memory" && request.method === "PUT") {
-        const body = await request.json();
-        if (typeof body.memory !== "string") {
-          return json({ error: "Memória inválida" }, 400, cors);
+      if (
+        route === "/memory" &&
+        request.method === "PUT"
+      ) {
+        const body =
+          await request.json();
+
+        if (
+          typeof body.memory !== "string"
+        ) {
+          return json(
+            {
+              error:
+                "Memória inválida"
+            },
+            400,
+            cors
+          );
         }
-        const memory = body.memory.trim().slice(0, 12000);
-        if (memory) await env.Memory.put(memoryKey, memory);
-        else await env.Memory.delete(memoryKey);
-        return json({ ok: true }, 200, cors);
+
+        const memory =
+          body.memory
+            .trim()
+            .slice(0, 12000);
+
+        if (memory) {
+          await env.Memory.put(
+            memoryKey,
+            memory
+          );
+        } else {
+          await env.Memory.delete(
+            memoryKey
+          );
+        }
+
+        return json(
+          { ok: true },
+          200,
+          cors
+        );
       }
 
-      if (route === "/memory" && request.method === "DELETE") {
-        await env.Memory.delete(memoryKey);
-        return json({ ok: true }, 200, cors);
+      if (
+        route === "/memory" &&
+        request.method === "DELETE"
+      ) {
+        await env.Memory.delete(
+          memoryKey
+        );
+
+        return json(
+          { ok: true },
+          200,
+          cors
+        );
       }
 
-      if (route === "/history" && request.method === "GET") {
-        const stored = await env.Memory.get(historyKey, "json");
-        return json({ history: normalizeHistory(stored) }, 200, cors);
+      // ========================================
+      // HISTÓRICO ATUAL
+      // ========================================
+
+      if (
+        route === "/history" &&
+        request.method === "GET"
+      ) {
+        const stored =
+          await env.Memory.get(
+            historyKey,
+            "json"
+          );
+
+        return json(
+          {
+            history:
+              normalizeHistory(stored)
+          },
+          200,
+          cors
+        );
       }
 
-     if (route === "/history/archive" && request.method === "POST") {
-  const stored = await env.Memory.get(historyKey, "json");
-  const history = normalizeHistory(stored);
+      // ========================================
+      // ARQUIVAR CONVERSA ATUAL
+      // ========================================
 
-  if (!history.length) {
-    return json({ error: "Nenhuma conversa para arquivar" }, 400, cors);
-  }
+      if (
+        route === "/history/archive" &&
+        request.method === "POST"
+      ) {
+        const stored =
+          await env.Memory.get(
+            historyKey,
+            "json"
+          );
 
-  const conversationId = Date.now().toString();
-  const archiveKey = `${archivePrefix}${conversationId}`;
+        const history =
+          normalizeHistory(stored);
 
-  await env.Memory.put(
-    archiveKey,
-    JSON.stringify({
-      id: conversationId,
-      createdAt: new Date().toISOString(),
-history
-    })
-  );
+        if (!history.length) {
+          return json(
+            {
+              error:
+                "Nenhuma conversa para arquivar"
+            },
+            400,
+            cors
+          );
+        }
 
-  await env.Memory.delete(historyKey);
+        const conversationId =
+          Date.now().toString();
 
-  return json({ ok: true, id: conversationId }, 200, cors);
-}
-      if (route === "/history/archives" && request.method === "GET") {
-  const list = await env.Memory.list({ prefix: archivePrefix });
+        const archiveKey =
+          `${archivePrefix}${conversationId}`;
 
-  const archives = [];
+        await env.Memory.put(
+          archiveKey,
+          JSON.stringify({
+            id: conversationId,
+            createdAt:
+              new Date().toISOString(),
+            history
+          })
+        );
 
-  for (const key of list.keys) {
-    const conversation = await env.Memory.get(key.name, "json");
+        await env.Memory.delete(
+          historyKey
+        );
 
-    if (conversation) {
-      archives.push({
-        id: conversation.id,
-        createdAt: conversation.createdAt,
-        preview: conversation.history?.[0]?.content?.slice(0, 120) || "Conversa"
-      });
-    }
-  }
-if (
-  route.startsWith("/history/archive/") &&
-  request.method === "GET"
-) {
-  const conversationId =
-    route.slice("/history/archive/".length);
-
-  if (!conversationId) {
-    return json({ error: "Conversa inválida" }, 400, cors);
-  }
-
-  const conversation = await env.Memory.get(
-    `${archivePrefix}${conversationId}`,
-    "json"
-  );
-
-  if (!conversation) {
-    return json({ error: "Conversa não encontrada" }, 404, cors);
-  }
-
-  return json({ conversation }, 200, cors);
-}
-  archives.sort((a, b) =>
-    new Date(b.createdAt) - new Date(a.createdAt)
-  );
-
-  return json({ archives }, 200, cors);
-}
-      if (route === "/history" && request.method === "DELETE") {
-        await env.Memory.delete(historyKey);
-        return json({ ok: true }, 200, cors);
+        return json(
+          {
+            ok: true,
+            id: conversationId
+          },
+          200,
+          cors
+        );
       }
 
-      if (route === "/" && request.method === "POST") {
+      // ========================================
+      // LISTAR CONVERSAS ARQUIVADAS
+      // ========================================
+
+      if (
+        route === "/history/archives" &&
+        request.method === "GET"
+      ) {
+        const list =
+          await env.Memory.list({
+            prefix: archivePrefix
+          });
+
+        const archives = [];
+
+        for (const key of list.keys) {
+          const conversation =
+            await env.Memory.get(
+              key.name,
+              "json"
+            );
+
+          if (conversation) {
+            archives.push({
+              id:
+                conversation.id,
+              createdAt:
+                conversation.createdAt,
+              preview:
+                conversation.history?.[0]
+                  ?.content
+                  ?.slice(0, 120) ||
+                "Conversa"
+            });
+          }
+        }
+
+        archives.sort(
+          (a, b) =>
+            new Date(b.createdAt) -
+            new Date(a.createdAt)
+        );
+
+        return json(
+          { archives },
+          200,
+          cors
+        );
+      }
+
+      // ========================================
+      // ABRIR UMA CONVERSA ARQUIVADA
+      // ========================================
+
+      if (
+        route.startsWith(
+          "/history/archive/"
+        ) &&
+        request.method === "GET"
+      ) {
+        const conversationId =
+          route.slice(
+            "/history/archive/".length
+          );
+
+        if (!conversationId) {
+          return json(
+            {
+              error:
+                "Conversa inválida"
+            },
+            400,
+            cors
+          );
+        }
+
+        const conversation =
+          await env.Memory.get(
+            `${archivePrefix}${conversationId}`,
+            "json"
+          );
+
+        if (!conversation) {
+          return json(
+            {
+              error:
+                "Conversa não encontrada"
+            },
+            404,
+            cors
+          );
+        }
+
+        return json(
+          { conversation },
+          200,
+          cors
+        );
+      }
+
+      // ========================================
+      // APAGAR HISTÓRICO ATUAL
+      // ========================================
+
+      if (
+        route === "/history" &&
+        request.method === "DELETE"
+      ) {
+        await env.Memory.delete(
+          historyKey
+        );
+
+        return json(
+          { ok: true },
+          200,
+          cors
+        );
+      }
+
+      // ========================================
+      // CHAT COM A LUMI
+      // ========================================
+
+      if (
+        route === "/" &&
+        request.method === "POST"
+      ) {
         if (!env.OPENAI_API_KEY) {
-          return json({ error: "OPENAI_API_KEY não configurada" }, 503, cors);
+          return json(
+            {
+              error:
+                "OPENAI_API_KEY não configurada"
+            },
+            503,
+            cors
+          );
         }
-        const body = await request.json();
-        const message = typeof body.message === "string" ? body.message.trim() : "";
-        if (!message) return json({ error: "Mensagem não informada" }, 400, cors);
-const generalMemory = (await env.Memory.get(generalMemoryKey)) || "";
-        const memory = (await env.Memory.get(memoryKey)) || "";
-        const storedHistory = await env.Memory.get(historyKey, "json");
-        const history = normalizeHistory(storedHistory, 20);
-        history.push({ role: "user", content: message.slice(0, 6000) });
+
+        const body =
+          await request.json();
+
+        const message =
+          typeof body.message === "string"
+            ? body.message.trim()
+            : "";
+
+        if (!message) {
+          return json(
+            {
+              error:
+                "Mensagem não informada"
+            },
+            400,
+            cors
+          );
+        }
+
+        const generalMemory =
+          (await env.Memory.get(
+            generalMemoryKey
+          )) || "";
+
+        const memory =
+          (await env.Memory.get(
+            memoryKey
+          )) || "";
+
+        const storedHistory =
+          await env.Memory.get(
+            historyKey,
+            "json"
+          );
+
+        const history =
+          normalizeHistory(
+            storedHistory,
+            20
+          );
+
+        history.push({
+          role: "user",
+          content:
+            message.slice(0, 6000)
+        });
 
         const instructions = `
 
@@ -320,88 +680,204 @@ Use a memória persistente somente quando relevante.
 Não invente lembranças ou informações pessoais.
 Não exponha dados pessoais de outros usuários.
 Não afirme ter executado ações externas sem que uma integração real tenha executado essas ações.
+
 MEMÓRIA GERAL DA LUMI:
-${generalMemory.slice(0, 12000) || "(nenhuma memória geral registrada)"}
+${generalMemory.slice(0, 12000) ||
+"(nenhuma memória geral registrada)"}
 
 MEMÓRIA PERSISTENTE DO USUÁRIO:
-${memory.slice(0, 8000) || "(nenhuma memória registrada)"}
+${memory.slice(0, 8000) ||
+"(nenhuma memória registrada)"}
 `;
 
-        const response = await fetch("https://api.openai.com/v1/responses", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-            "Content-Type": "application/json"
-          },
-       
-body: JSON.stringify({
-  model: "gpt-5-mini",
-  instructions,
-  input: history,
-  store: false,
-   tools: [
-    { type: "web_search" }
-  ],
-  tool_choice: "auto"
-})
-});
-        const data = await response.json();
-        if (!response.ok) {
-          console.error("Erro da OpenAI:", response.status);
-          return json({ error: "Não foi possível obter a resposta da Lumi" }, 502, cors);
-        }
-        const reply = extractText(data);
-        if (!reply) return json({ error: "A Lumi não retornou uma resposta" }, 502, cors);
-
-        const newHistory = normalizeHistory([...history, { role: "assistant", content: reply }], 30);
-        await env.Memory.put(historyKey, JSON.stringify(newHistory));
-
-
-        // Atualizacao da memoria em segundo plano.
-        ctx.waitUntil((async () => {
-          try {
-            const memoryResponse = await fetch("https://api.openai.com/v1/responses", {
+        const response =
+          await fetch(
+            "https://api.openai.com/v1/responses",
+            {
               method: "POST",
+
               headers: {
-                Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-                "Content-Type": "application/json"
+                Authorization:
+                  `Bearer ${env.OPENAI_API_KEY}`,
+                "Content-Type":
+                  "application/json"
               },
+
               body: JSON.stringify({
                 model: "gpt-5-mini",
+                instructions,
+                input: history,
                 store: false,
-                instructions: `Você atualiza a memória persistente de um usuário.
+                tools: [
+                  {
+                    type:
+                      "web_search"
+                  }
+                ],
+                tool_choice: "auto"
+              })
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          console.error(
+            "Erro da OpenAI:",
+            response.status
+          );
+
+          return json(
+            {
+              error:
+                "Não foi possível obter a resposta da Lumi"
+            },
+            502,
+            cors
+          );
+        }
+
+        const reply =
+          extractText(data);
+
+        if (!reply) {
+          return json(
+            {
+              error:
+                "A Lumi não retornou uma resposta"
+            },
+            502,
+            cors
+          );
+        }
+
+        const newHistory =
+          normalizeHistory(
+            [
+              ...history,
+              {
+                role: "assistant",
+                content: reply
+              }
+            ],
+            30
+          );
+
+        await env.Memory.put(
+          historyKey,
+          JSON.stringify(newHistory)
+        );
+
+        // ========================================
+        // ATUALIZAÇÃO DA MEMÓRIA EM SEGUNDO PLANO
+        // ========================================
+
+        ctx.waitUntil(
+          (async () => {
+            try {
+              const memoryResponse =
+                await fetch(
+                  "https://api.openai.com/v1/responses",
+                  {
+                    method: "POST",
+
+                    headers: {
+                      Authorization:
+                        `Bearer ${env.OPENAI_API_KEY}`,
+                      "Content-Type":
+                        "application/json"
+                    },
+
+                    body:
+                      JSON.stringify({
+                        model:
+                          "gpt-5-mini",
+
+                        store: false,
+
+                        instructions:
+`Você atualiza a memória persistente de um usuário.
 
 Preserve informações pessoais importantes e preferências explícitas.
 Não invente fatos. Não registre instruções temporárias como memórias.
 Retorne somente a memória atualizada em texto simples.`,
-                input: `MEMÓRIA ANTERIOR:\n${memory.slice(0, 8000)}\n\nNOVA MENSAGEM:\n${message.slice(0, 6000)}\n\nRESPOSTA:\n${reply.slice(0, 6000)}`
-              })
-            });
 
-            if (memoryResponse.ok) {
-              const memoryData = await memoryResponse.json();
-              const updatedMemory = extractText(memoryData).trim();
+                        input:
+`MEMÓRIA ANTERIOR:
+${memory.slice(0, 8000)}
 
-              if (updatedMemory) {
-                await env.Memory.put(
-                  memoryKey,
-                  updatedMemory.slice(0, 12000)
+NOVA MENSAGEM:
+${message.slice(0, 6000)}
+
+RESPOSTA:
+${reply.slice(0, 6000)}`
+                      })
+                  }
                 );
-              }
-            }
-         
-          } catch (error) {
-            console.error("Erro ao atualizar memória:", error);
-          }
-        })());
 
-        return json({ reply, history: newHistory }, 200, cors);
+              if (memoryResponse.ok) {
+                const memoryData =
+                  await memoryResponse.json();
+
+                const updatedMemory =
+                  extractText(
+                    memoryData
+                  ).trim();
+
+                if (updatedMemory) {
+                  await env.Memory.put(
+                    memoryKey,
+                    updatedMemory.slice(
+                      0,
+                      12000
+                    )
+                  );
+                }
+              }
+
+            } catch (error) {
+              console.error(
+                "Erro ao atualizar memória:",
+                error
+              );
+            }
+          })()
+        );
+
+        return json(
+          {
+            reply,
+            history: newHistory
+          },
+          200,
+          cors
+        );
       }
 
-      return json({ error: "Rota ou método não permitido" }, 405, cors);
+      return json(
+        {
+          error:
+            "Rota ou método não permitido"
+        },
+        405,
+        cors
+      );
+
     } catch (error) {
-      console.error("Erro interno da Lumi:", error);
-      return json({ error: "Erro interno no servidor" }, 500, cors);
+      console.error(
+        "Erro interno da Lumi:",
+        error
+      );
+
+      return json(
+        {
+          error:
+            "Erro interno no servidor"
+        },
+        500,
+        cors
+      );
     }
   }
 };
