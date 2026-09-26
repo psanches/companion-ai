@@ -227,7 +227,12 @@ async function loadSharedHistory() {
 
   render();
 }
-
+// Sincroniza automaticamente a conversa entre dispositivos.
+setInterval(() => {
+  if (ready && !document.hidden) {
+    loadSharedHistory();
+  }
+}, 5000);
 // ========================================
 // RESPOSTAS DA LUMI
 // ========================================
