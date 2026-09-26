@@ -143,7 +143,8 @@ async fetch(request, env, ctx) {
     }
 
     const memoryKey = `memory:user:${user.id}`;
-    const historyKey = `history:user:${user.id}`;
+    const generalMemoryKey = "memory:lumi:general";
+  const historyKey = `history:user:${user.id}`;
 
     if (
       route === "/auth/google/start" &&
