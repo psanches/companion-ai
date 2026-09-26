@@ -237,7 +237,28 @@ history
       });
     }
   }
+if (
+  route.startsWith("/history/archive/") &&
+  request.method === "GET"
+) {
+  const conversationId =
+    route.slice("/history/archive/".length);
 
+  if (!conversationId) {
+    return json({ error: "Conversa inválida" }, 400, cors);
+  }
+
+  const conversation = await env.Memory.get(
+    `${archivePrefix}${conversationId}`,
+    "json"
+  );
+
+  if (!conversation) {
+    return json({ error: "Conversa não encontrada" }, 404, cors);
+  }
+
+  return json({ conversation }, 200, cors);
+}
   archives.sort((a, b) =>
     new Date(b.createdAt) - new Date(a.createdAt)
   );
