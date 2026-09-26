@@ -442,7 +442,23 @@ $("#previousConversationsBtn").onclick = async () => {
         const date = new Date(item.createdAt);
         button.textContent =
           `${date.toLocaleString()} — ${item.preview}`;
+button.onclick = async () => {
+  try {
+    const data = await api(
+      `history/archive/${item.id}`
+    );
 
+    state.messages =
+      data.conversation?.history || [];
+
+    save();
+    render();
+
+    container.hidden = true;
+  } catch (error) {
+    alert(error.message);
+  }
+};
         container.appendChild(button);
       });
     }
