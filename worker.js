@@ -208,7 +208,7 @@ async fetch(request, env, ctx) {
         const body = await request.json();
         const message = typeof body.message === "string" ? body.message.trim() : "";
         if (!message) return json({ error: "Mensagem não informada" }, 400, cors);
-
+const generalMemory = (await env.Memory.get(generalMemoryKey)) || "";
         const memory = (await env.Memory.get(memoryKey)) || "";
         const storedHistory = await env.Memory.get(historyKey, "json");
         const history = normalizeHistory(storedHistory, 20);
@@ -251,6 +251,8 @@ Use a memória persistente somente quando relevante.
 Não invente lembranças ou informações pessoais.
 Não exponha dados pessoais de outros usuários.
 Não afirme ter executado ações externas sem que uma integração real tenha executado essas ações.
+MEMÓRIA GERAL DA LUMI:
+${generalMemory.slice(0, 12000) || "(nenhuma memória geral registrada)"}
 
 MEMÓRIA PERSISTENTE DO USUÁRIO:
 ${memory.slice(0, 8000) || "(nenhuma memória registrada)"}
