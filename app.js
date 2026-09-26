@@ -379,7 +379,25 @@ $("#saveBtn").onclick = () => {
 
   render();
 };
+$("#inviteBtn").onclick = async () => {
+  const shareData = {
+    title: "Lumi",
+    text: "Conheça a Lumi, sua companheira de IA.",
+    url: "https://round-lab-f54f.psanchesnle.workers.dev/"
+  };
 
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      return;
+    } catch (error) {
+      if (error.name === "AbortError") return;
+    }
+  }
+
+  await navigator.clipboard.writeText(shareData.url);
+  alert("Link da Lumi copiado!");
+};
 // As chaves antigas não serão usadas.
 // Cada conta terá sua própria identidade.
 
