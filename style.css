@@ -636,35 +636,36 @@ hr {
 },
 /* CONVERSATION CONTROLS */
 
+/* CONVERSATION CONTROLS */
+
 .conversation-tools {
   display: flex;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 14px 0;
+  padding: 8px 14px 0;
 }
 
 .conversation-tools button {
-  min-height: 38px;
-  padding: 8px 14px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
   background: var(--surface-2);
   color: var(--text);
-  font-size: 13px;
+  font-size: 19px;
   font-weight: 600;
+  cursor: pointer;
   transition:
-    background .15s ease,
     transform .15s ease,
-    border-color .15s ease;
+    background .15s ease;
 }
 
 .conversation-tools button:hover {
   background: var(--surface-3);
-  border-color: rgba(59,130,246,.35);
   transform: translateY(-1px);
-}
-
-#newConversationBtn {
-  color: #bfdbfe;
 }
 
 #previousConversations {
@@ -692,7 +693,6 @@ hr {
   color: var(--text);
   text-align: left;
   font-size: 13px;
-  line-height: 1.4;
 }
 
 #previousConversations button:last-child {
@@ -702,11 +702,6 @@ hr {
 #previousConversations button:hover {
   background: rgba(59,130,246,.18);
 }
-
-@media (max-width: 600px) {
-  .conversation-tools {
-    padding: 8px 10px 0;
-  }
 
   .conversation-tools button {
     flex: 1;
