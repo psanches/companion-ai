@@ -30,7 +30,6 @@ const defaults = {
   messages: []
 };
 
-
 let state = { ...defaults };
 
 let currentUser = null;
@@ -91,34 +90,34 @@ function add(role, content, persist = true) {
   const el = document.createElement("div");
 
   el.className = `msg ${role}`;
-  
-const urlRegex = /https?:\/\/[^\s<>"']+/g;
-let lastIndex = 0;
 
-for (const match of content.matchAll(urlRegex)) {
-  const start = match.index;
-  const rawUrl = match[0];
-  const url = rawUrl.replace(/[.,;:!?)\]]+$/, "");
+  const urlRegex = /https?:\/\/[^\s<>"']+/g;
+  let lastIndex = 0;
+
+  for (const match of content.matchAll(urlRegex)) {
+    const start = match.index;
+    const rawUrl = match[0];
+    const url = rawUrl.replace(/[.,;:!?)\]]+$/, "");
+
+    el.appendChild(
+      document.createTextNode(
+        content.slice(lastIndex, start)
+      )
+    );
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.textContent = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+
+    el.appendChild(link);
+    lastIndex = start + rawUrl.length;
+  }
 
   el.appendChild(
-    document.createTextNode(
-      content.slice(lastIndex, start)
-    )
+    document.createTextNode(content.slice(lastIndex))
   );
-
-  const link = document.createElement("a");
-  link.href = url;
-  link.textContent = url;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-
-  el.appendChild(link);
-  lastIndex = start + rawUrl.length;
-}
-
-el.appendChild(
-  document.createTextNode(content.slice(lastIndex))
-);
 
   messagesEl.appendChild(el);
 
@@ -224,12 +223,9 @@ async function loadSharedHistory() {
       error
     );
   }
+
   render();
 }
-
-// ========================================
-// RESPOSTAS DA LUMI
-// ========================================render();
 
 // ========================================
 // RESPOSTAS DA LUMI
@@ -349,6 +345,7 @@ $("#connectGoogleBtn").onclick = async () => {
     button.disabled = false;
   }
 };
+
 $("#settingsBtn").onclick = () => {
   $("#userName").value =
     state.name || "";
@@ -379,6 +376,11 @@ $("#saveBtn").onclick = () => {
 
   render();
 };
+
+// ========================================
+// CONVIDAR PARA A LUMI
+// ========================================
+
 $("#inviteBtn").onclick = async () => {
   const shareData = {
     title: "Lumi",
@@ -395,7 +397,22 @@ $("#inviteBtn").onclick = async () => {
     }
   }
 
- $("#newConversationBtn").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(
+      shareData.url
+    );
+
+    alert("Link da Lumi copiado!");
+  } catch {
+    alert(shareData.url);
+  }
+};
+
+// ========================================
+// CONVERSAS
+// ========================================
+
+$("#newConversationBtn").onclick = async () => {
   try {
     await api("history/archive", {
       method: "POST"
@@ -404,8 +421,12 @@ $("#inviteBtn").onclick = async () => {
     state.messages = [];
     save();
     render();
+
   } catch (error) {
-    if (error.message === "Nenhuma conversa para arquivar") {
+    if (
+      error.message ===
+      "Nenhuma conversa para arquivar"
+    ) {
       state.messages = [];
       save();
       render();
@@ -415,59 +436,75 @@ $("#inviteBtn").onclick = async () => {
     alert(error.message);
   }
 };
-};
-// As chaves antigas não serão usadas.
-// Cada conta terá sua própria identidade.
-$("#previousConversationsBtn").onclick = async () => {
-  const container = $("#previousConversations");
 
-  if (!container.hidden) {
-    container.hidden = true;
-    return;
-  }
+$("#previousConversationsBtn").onclick =
+  async () => {
+    const container =
+      $("#previousConversations");
 
-  try {
-    const data = await api("history/archives");
-    const archives = data.archives || [];
-
-    container.innerHTML = "";
-
-    if (!archives.length) {
-      container.textContent = "Nenhuma conversa anterior.";
-    } else {
-      archives.forEach(item => {
-        const button = document.createElement("button");
-        button.type = "button";
-
-        const date = new Date(item.createdAt);
-        button.textContent =
-          `${date.toLocaleString()} — ${item.preview}`;
-button.onclick = async () => {
-  try {
-    const data = await api(
-      `history/archive/${item.id}`
-    );
-
-    state.messages =
-      data.conversation?.history || [];
-
-    save();
-    render();
-
-    container.hidden = true;
-  } catch (error) {
-    alert(error.message);
-  }
-};
-        container.appendChild(button);
-      });
+    if (!container.hidden) {
+      container.hidden = true;
+      return;
     }
 
-    container.hidden = false;
-  } catch (error) {
-    alert(error.message);
-  }
-};
+    try {
+      const data =
+        await api("history/archives");
+
+      const archives =
+        data.archives || [];
+
+      container.innerHTML = "";
+
+      if (!archives.length) {
+        container.textContent =
+          "Nenhuma conversa anterior.";
+      } else {
+        archives.forEach(item => {
+          const button =
+            document.createElement("button");
+
+          button.type = "button";
+
+          const date =
+            new Date(item.createdAt);
+
+          button.textContent =
+            `${date.toLocaleString()} — ${item.preview}`;
+
+          button.onclick = async () => {
+            try {
+              const data = await api(
+                `history/archive/${item.id}`
+              );
+
+              state.messages =
+                data.conversation?.history || [];
+
+              save();
+              render();
+
+              container.hidden = true;
+
+            } catch (error) {
+              alert(error.message);
+            }
+          };
+
+          container.appendChild(button);
+        });
+      }
+
+      container.hidden = false;
+
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+// As chaves antigas não serão usadas.
+// Cada conta terá sua própria identidade.
+
 $("#generateKeyBtn").onclick = () => {
   $("#syncStatus").textContent =
     "Sua conta substitui a chave de sincronização.";
@@ -680,8 +717,9 @@ function speakLumi(text) {
 const soundButton = $("#soundButton");
 
 if (soundButton) {
-    soundButton.textContent = "🔇";
+  soundButton.textContent = "🔇";
   soundButton.title = "Ligar voz da Lumi";
+
   soundButton.onclick = () => {
     lumiSoundEnabled =
       !lumiSoundEnabled;
