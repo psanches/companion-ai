@@ -197,6 +197,30 @@ const archivePrefix = `archive:user:${user.id}:`;
         return json({ history: normalizeHistory(stored) }, 200, cors);
       }
 
+      hisif (route === "/history/archive" && request.method === "POST") {
+  const stored = await env.Memory.get(historyKey, "json");
+  const history = normalizeHistory(stored);
+
+  if (!history.length) {
+    return json({ error: "Nenhuma conversa para arquivar" }, 400, cors);
+  }
+
+  const conversationId = Date.now().toString();
+  const archiveKey = `${archivePrefix}${conversationId}`;
+
+  await env.Memory.put(
+    archiveKey,
+    JSON.stringify({
+      id: conversationId,
+      createdAt: new Date().toISOString(),
+history
+    })
+  );
+
+  await env.Memory.delete(historyKey);
+
+  return json({ ok: true, id: conversationId }, 200, cors);
+}
       if (route === "/history" && request.method === "DELETE") {
         await env.Memory.delete(historyKey);
         return json({ ok: true }, 200, cors);
