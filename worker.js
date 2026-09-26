@@ -142,10 +142,11 @@ async fetch(request, env, ctx) {
       }
     }
 
-    const memoryKey = `memory:user:${user.id}`;
-    const generalMemoryKey = "memory:lumi:general";
-  const historyKey = `history:user:${user.id}`;
-
+    
+const memoryKey = `memory:user:${user.id}`;
+const generalMemoryKey = "memory:lumi:general";
+const historyKey = `history:user:${user.id}`;
+const archivePrefix = `archive:user:${user.id}:`;
     if (
       route === "/auth/google/start" &&
       request.method === "POST"
