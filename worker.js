@@ -197,7 +197,7 @@ const archivePrefix = `archive:user:${user.id}:`;
         return json({ history: normalizeHistory(stored) }, 200, cors);
       }
 
-      hisif (route === "/history/archive" && request.method === "POST") {
+     if (route === "/history/archive" && request.method === "POST") {
   const stored = await env.Memory.get(historyKey, "json");
   const history = normalizeHistory(stored);
 
@@ -220,6 +220,29 @@ history
   await env.Memory.delete(historyKey);
 
   return json({ ok: true, id: conversationId }, 200, cors);
+}
+      if (route === "/history/archives" && request.method === "GET") {
+  const list = await env.Memory.list({ prefix: archivePrefix });
+
+  const archives = [];
+
+  for (const key of list.keys) {
+    const conversation = await env.Memory.get(key.name, "json");
+
+    if (conversation) {
+      archives.push({
+        id: conversation.id,
+        createdAt: conversation.createdAt,
+        preview: conversation.history?.[0]?.content?.slice(0, 120) || "Conversa"
+      });
+    }
+  }
+
+  archives.sort((a, b) =>
+    new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
+  return json({ archives }, 200, cors);
 }
       if (route === "/history" && request.method === "DELETE") {
         await env.Memory.delete(historyKey);
