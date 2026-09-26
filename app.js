@@ -395,8 +395,26 @@ $("#inviteBtn").onclick = async () => {
     }
   }
 
-  await navigator.clipboard.writeText(shareData.url);
-  alert("Link da Lumi copiado!");
+ $("#newConversationBtn").onclick = async () => {
+  try {
+    await api("history/archive", {
+      method: "POST"
+    });
+
+    state.messages = [];
+    save();
+    render();
+  } catch (error) {
+    if (error.message === "Nenhuma conversa para arquivar") {
+      state.messages = [];
+      save();
+      render();
+      return;
+    }
+
+    alert(error.message);
+  }
+};
 };
 // As chaves antigas não serão usadas.
 // Cada conta terá sua própria identidade.
