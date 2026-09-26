@@ -1,5 +1,5 @@
 
-
+import { authenticateUser } from "./auth.js";
 import {
   createGoogleAuthUrl,
   finishGoogleAuth,
