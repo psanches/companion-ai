@@ -141,7 +141,10 @@ async function loadSharedHistory() {
 }
 
 loadSharedHistory();
-
+// Keep conversations synchronized between devices.
+setInterval(() => {
+  loadSharedHistory();
+}, 5000);
 $("#settingsBtn").onclick = () => {
   $("#userName").value =
     state.name || "";
