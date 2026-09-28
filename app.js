@@ -4,27 +4,17 @@ const SUPABASE_URL =
   "https://hjdrnxqvmpwfztlrqknp.supabase.co";
 
 const SUPABASE_PUBLISHABLE_KEY =
-sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv
+ sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv
 
 const supabaseClient =
   window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY
-    );
+  );
 
-async function getAccessToken() {
-  const {
-    data: { session },
-    error
-  } = await supabaseClient.auth.getSession();
+const WORKER_URL =
+  "https://round-lab-f54f.psanchesnle.workers.dev/";
 
-  if (error) {
-    console.error("Erro ao obter sessão Supabase:", error);
-    return null;
-  }
-
-  return session?.access_token || null;
-}
 const messagesEl = $("#messages");
 const form = $("#chatForm");
 const input = $("#messageInput");
@@ -35,29 +25,6 @@ const memoryDialog = $("#memoryDialog");
 const STORAGE = "companion-ai-v2";
 const CLIENT_ID_KEY = "companion-ai-client-id";
 const SYNC_KEY = "companion-ai-sync-key";
-
-const WORKER_URL =
-  "https://round-lab-f54f.psanchesnle.workers.dev/";
-
-function getClientId() {
-  let id = localStorage.getItem(CLIENT_ID_KEY);
-
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(CLIENT_ID_KEY, id);
-  }
-
-  return id;
-}
-
-const clientId = getClientId();
-
-function getMemoryId() {
-  const syncKey =
-    localStorage.getItem(SYNC_KEY)?.trim();
-
-  return syncKey || clientId;
-}
 
 const defaults = {
   name: "",
@@ -72,6 +39,89 @@ let state = {
   )
 };
 
+
+/* =========================================================
+   SUPABASE AUTHENTICATION
+   ========================================================= */
+
+async function getAccessToken() {
+  const {
+    data: { session },
+    error
+  } = await supabaseClient.auth.getSession();
+
+  if (error) {
+    console.error(
+      "Error getting Supabase session:",
+      error
+    );
+    return null;
+  }
+
+  return session?.access_token || null;
+}
+
+
+async function authFetch(url, options = {}) {
+  const token = await getAccessToken();
+
+  if (!token) {
+    throw new Error(
+      "Please sign in to continue."
+    );
+  }
+
+  const headers =
+    new Headers(options.headers || {});
+
+  headers.set(
+    "Authorization",
+    `Bearer ${token}`
+  );
+
+  return fetch(url, {
+    ...options,
+    headers
+  });
+}
+
+
+/* =========================================================
+   LEGACY LOCAL ID
+   Kept temporarily for compatibility with the current UI.
+   The Worker now identifies the user from Supabase.
+   ========================================================= */
+
+function getClientId() {
+  let id =
+    localStorage.getItem(CLIENT_ID_KEY);
+
+  if (!id) {
+    id = crypto.randomUUID();
+
+    localStorage.setItem(
+      CLIENT_ID_KEY,
+      id
+    );
+  }
+
+  return id;
+}
+
+const clientId = getClientId();
+
+function getMemoryId() {
+  const syncKey =
+    localStorage.getItem(SYNC_KEY)?.trim();
+
+  return syncKey || clientId;
+}
+
+
+/* =========================================================
+   LOCAL STATE
+   ========================================================= */
+
 function save() {
   localStorage.setItem(
     STORAGE,
@@ -79,13 +129,16 @@ function save() {
   );
 }
 
+
 function add(role, content, persist = true) {
-  const el = document.createElement("div");
+  const el =
+    document.createElement("div");
 
   el.className = `msg ${role}`;
   el.textContent = content;
 
   messagesEl.appendChild(el);
+
   messagesEl.scrollTop =
     messagesEl.scrollHeight;
 
@@ -102,11 +155,16 @@ function add(role, content, persist = true) {
   }
 }
 
+
 function render() {
   messagesEl.innerHTML = "";
 
   state.messages.forEach(m => {
-    add(m.role, m.content, false);
+    add(
+      m.role,
+      m.content,
+      false
+    );
   });
 
   if (!state.messages.length) {
@@ -122,22 +180,42 @@ function render() {
   }
 }
 
+
+/* =========================================================
+   SHARED HISTORY
+   ========================================================= */
+
 async function loadSharedHistory() {
+  const token =
+    await getAccessToken();
+
+  /*
+   Do not repeatedly call the Worker before
+   the user has an authenticated Supabase session.
+  */
+  if (!token) {
+    render();
+    return;
+  }
+
   try {
     const response =
-      await fetch(
-        `${WORKER_URL}history?clientId=${encodeURIComponent(
-          getMemoryId()
-        )}`
+      await authFetch(
+        `${WORKER_URL}history`
       );
 
     const data =
       await response.json();
 
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+        "Error loading conversation history."
+      );
+    }
+
     if (
-      response.ok &&
-      Array.isArray(data?.history) &&
-      data.history.length
+      Array.isArray(data?.history)
     ) {
       state.messages =
         data.history
@@ -157,7 +235,7 @@ async function loadSharedHistory() {
 
   } catch (error) {
     console.error(
-      "Não foi possível carregar o histórico compartilhado:",
+      "Could not load shared history:",
       error
     );
   }
@@ -165,11 +243,19 @@ async function loadSharedHistory() {
   render();
 }
 
+
+/*
+  Load once.
+  The previous 5-second polling has been removed.
+  It was repeatedly generating 401 requests.
+*/
 loadSharedHistory();
-// Keep conversations synchronized between devices.
-setInterval(() => {
-  loadSharedHistory();
-}, 5000);
+
+
+/* =========================================================
+   SETTINGS
+   ========================================================= */
+
 $("#settingsBtn").onclick = () => {
   $("#userName").value =
     state.name || "";
@@ -184,6 +270,7 @@ $("#settingsBtn").onclick = () => {
 
   settingsDialog.showModal();
 };
+
 
 $("#generateKeyBtn").onclick = () => {
   const random =
@@ -201,6 +288,7 @@ $("#generateKeyBtn").onclick = () => {
     "Chave criada. Clique em Salvar.";
 };
 
+
 $("#copyKeyBtn").onclick = async () => {
   const key =
     $("#syncKey").value.trim();
@@ -212,15 +300,19 @@ $("#copyKeyBtn").onclick = async () => {
   }
 
   try {
-    await navigator.clipboard.writeText(key);
+    await navigator.clipboard.writeText(
+      key
+    );
 
     $("#syncStatus").textContent =
       "Chave copiada.";
+
   } catch (error) {
     $("#syncStatus").textContent =
       "Não foi possível copiar automaticamente.";
   }
 };
+
 
 $("#saveBtn").onclick = async () => {
   state.name =
@@ -242,29 +334,37 @@ $("#saveBtn").onclick = async () => {
       newKey
     );
   } else {
-    localStorage.removeItem(SYNC_KEY);
+    localStorage.removeItem(
+      SYNC_KEY
+    );
   }
 
   save();
 
   if (oldKey !== newKey) {
     $("#syncStatus").textContent =
-      "Chave salva. Carregando dados sincronizados...";
+      "Chave salva. Carregando dados...";
 
     await loadSharedHistory();
 
     $("#syncStatus").textContent =
-      "Sincronização ativada.";
+      "Configurações salvas.";
+
   } else {
     $("#syncStatus").textContent =
       "Configurações salvas.";
   }
 };
 
+
+/* =========================================================
+   CLEAR HISTORY
+   ========================================================= */
+
 $("#clearBtn").onclick = async () => {
   if (
     !confirm(
-      "Apagar o histórico compartilhado da conversa nos aparelhos sincronizados?"
+      "Apagar o histórico compartilhado da conversa?"
     )
   ) {
     return;
@@ -272,7 +372,7 @@ $("#clearBtn").onclick = async () => {
 
   try {
     const response =
-      await fetch(
+      await authFetch(
         `${WORKER_URL}history`,
         {
           method: "DELETE",
@@ -280,11 +380,7 @@ $("#clearBtn").onclick = async () => {
           headers: {
             "Content-Type":
               "application/json"
-          },
-
-          body: JSON.stringify({
-            clientId: getMemoryId()
-          })
+          }
         }
       );
 
@@ -299,8 +395,10 @@ $("#clearBtn").onclick = async () => {
     }
 
     state.messages = [];
+
     save();
     render();
+
     settingsDialog.close();
 
   } catch (error) {
@@ -309,9 +407,14 @@ $("#clearBtn").onclick = async () => {
   }
 };
 
+
+/* =========================================================
+   CHAT
+   ========================================================= */
+
 async function getReply(text) {
   const response =
-    await fetch(
+    await authFetch(
       WORKER_URL,
       {
         method: "POST",
@@ -322,7 +425,6 @@ async function getReply(text) {
         },
 
         body: JSON.stringify({
-          clientId: getMemoryId(),
           message: text,
           history:
             state.messages.slice(-12)
@@ -333,22 +435,25 @@ async function getReply(text) {
   let data;
 
   try {
-    data = await response.json();
+    data =
+      await response.json();
+
   } catch (error) {
     throw new Error(
-      "O servidor não retornou uma resposta válida."
+      "The server did not return a valid response."
     );
   }
 
   if (!response.ok) {
     throw new Error(
       data?.error ||
-      "Erro ao conectar com a IA."
+      "Error connecting to Lumi."
     );
   }
 
   return data;
 }
+
 
 form.onsubmit = async e => {
   e.preventDefault();
@@ -362,7 +467,10 @@ form.onsubmit = async e => {
 
   input.value = "";
 
-  add("user", text);
+  add(
+    "user",
+    text
+  );
 
   const wait =
     document.createElement("div");
@@ -381,17 +489,17 @@ form.onsubmit = async e => {
 
     wait.remove();
 
-   const reply =
-  data?.reply ||
-  "Sem resposta.";
+    const reply =
+      data?.reply ||
+      "Sem resposta.";
 
-speakLumi(reply);
+    speakLumi(reply);
 
-add(
-  "assistant",
-  reply,
-  false
-);
+    add(
+      "assistant",
+      reply,
+      false
+    );
 
     if (
       Array.isArray(data?.history)
@@ -401,6 +509,7 @@ add(
 
       save();
       render();
+
     } else {
       state.messages.push({
         role: "assistant",
@@ -423,6 +532,11 @@ add(
   }
 };
 
+
+/* =========================================================
+   MEMORY
+   ========================================================= */
+
 $("#memoryBtn").onclick =
   async () => {
 
@@ -435,10 +549,8 @@ $("#memoryBtn").onclick =
 
     try {
       const response =
-        await fetch(
-          `${WORKER_URL}memory?clientId=${encodeURIComponent(
-            getMemoryId()
-          )}`
+        await authFetch(
+          `${WORKER_URL}memory`
         );
 
       const data =
@@ -465,10 +577,12 @@ $("#memoryBtn").onclick =
     }
   };
 
+
 $("#closeMemoryBtn").onclick =
   () => {
     memoryDialog.close();
   };
+
 
 $("#saveMemoryBtn").onclick =
   async () => {
@@ -481,7 +595,7 @@ $("#saveMemoryBtn").onclick =
 
     try {
       const response =
-        await fetch(
+        await authFetch(
           `${WORKER_URL}memory`,
           {
             method: "PUT",
@@ -492,8 +606,6 @@ $("#saveMemoryBtn").onclick =
             },
 
             body: JSON.stringify({
-              clientId:
-                getMemoryId(),
               memory
             })
           }
@@ -518,6 +630,7 @@ $("#saveMemoryBtn").onclick =
     }
   };
 
+
 $("#deleteMemoryBtn").onclick =
   async () => {
 
@@ -535,7 +648,7 @@ $("#deleteMemoryBtn").onclick =
 
     try {
       const response =
-        await fetch(
+        await authFetch(
           `${WORKER_URL}memory`,
           {
             method: "DELETE",
@@ -543,12 +656,7 @@ $("#deleteMemoryBtn").onclick =
             headers: {
               "Content-Type":
                 "application/json"
-            },
-
-            body: JSON.stringify({
-              clientId:
-                getMemoryId()
-            })
+            }
           }
         );
 
@@ -573,21 +681,33 @@ $("#deleteMemoryBtn").onclick =
     }
   };
 
+
+/* =========================================================
+   SERVICE WORKER
+   ========================================================= */
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("./sw.js")
     .catch(() => {});
 }
 
-/* VOZ DA LUMI */
 
-const voiceButton = $("#voiceButton");
+/* =========================================================
+   VOICE INPUT
+   ========================================================= */
+
+const voiceButton =
+  $("#voiceButton");
 
 const SpeechRecognition =
   window.SpeechRecognition ||
   window.webkitSpeechRecognition;
 
-if (voiceButton && SpeechRecognition) {
+if (
+  voiceButton &&
+  SpeechRecognition
+) {
   const recognition =
     new SpeechRecognition();
 
@@ -617,7 +737,8 @@ if (voiceButton && SpeechRecognition) {
 
   recognition.onend = () => {
     voiceButton.textContent = "🎙️";
-    voiceButton.title = "Falar com a Lumi";
+    voiceButton.title =
+      "Falar com a Lumi";
   };
 
   voiceButton.onclick = () => {
@@ -626,18 +747,23 @@ if (voiceButton && SpeechRecognition) {
 
 } else if (voiceButton) {
   voiceButton.disabled = true;
+
   voiceButton.title =
     "Reconhecimento de voz não disponível neste navegador";
 }
 
-/* LUMI FALA AS RESPOSTAS */
+
+/* =========================================================
+   LUMI SPEECH
+   ========================================================= */
+
 let lumiSoundEnabled = true;
 
 function speakLumi(text) {
   if (
     !("speechSynthesis" in window) ||
     !text ||
-!lumiSoundEnabled
+    !lumiSoundEnabled
   ) {
     return;
   }
@@ -652,28 +778,41 @@ function speakLumi(text) {
   speech.pitch = 1;
   speech.volume = 1;
 
-  window.speechSynthesis.speak(speech);
+  window.speechSynthesis.speak(
+    speech
+  );
 }
-/* BOTÃO DE SOM DA LUMI */
 
-const soundButton = $("#soundButton");
+
+/* =========================================================
+   SOUND BUTTON
+   ========================================================= */
+
+const soundButton =
+  $("#soundButton");
 
 if (soundButton) {
   soundButton.onclick = () => {
-    lumiSoundEnabled = !lumiSoundEnabled;
+    lumiSoundEnabled =
+      !lumiSoundEnabled;
 
     if (lumiSoundEnabled) {
       soundButton.textContent = "🔊";
-      soundButton.title = "Desligar voz da Lumi";
+      soundButton.title =
+        "Desligar voz da Lumi";
+
       soundButton.setAttribute(
         "aria-label",
         "Desligar voz da Lumi"
       );
+
     } else {
       window.speechSynthesis?.cancel();
 
       soundButton.textContent = "🔇";
-      soundButton.title = "Ligar voz da Lumi";
+      soundButton.title =
+        "Ligar voz da Lumi";
+
       soundButton.setAttribute(
         "aria-label",
         "Ligar voz da Lumi"
@@ -681,15 +820,22 @@ if (soundButton) {
     }
   };
 }
-/* ENTER ENVIA A MENSAGEM */
 
-input.addEventListener("keydown", event => {
-  if (
-    event.key === "Enter" &&
-    !event.shiftKey
-  ) {
-    event.preventDefault();
-    form.requestSubmit();
+
+/* =========================================================
+   ENTER SENDS MESSAGE
+   ========================================================= */
+
+input.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
   }
-});
-
+);
