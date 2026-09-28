@@ -1,5 +1,4 @@
 const $ = s => document.querySelector(s);
-
 const SUPABASE_URL =
   "https://hjdrnxqvmpwfztlrqknp.supabase.co";
 
@@ -9,7 +8,7 @@ const SUPABASE_PUBLISHABLE_KEY =
 const supabaseClient =
   window.supabase.createClient(
     SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY
+
   );
 
 const WORKER_URL =
