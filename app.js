@@ -1,14 +1,15 @@
 const $ = s => document.querySelector(s);
+
 const SUPABASE_URL =
   "https://hjdrnxqvmpwfztlrqknp.supabase.co";
 
 const SUPABASE_PUBLISHABLE_KEY =
- sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv
+  "sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv";
 
 const supabaseClient =
   window.supabase.createClient(
     SUPABASE_URL,
-
+    SUPABASE_PUBLISHABLE_KEY
   );
 
 const WORKER_URL =
