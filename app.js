@@ -4,13 +4,27 @@ const SUPABASE_URL =
   "https://hjdrnxqvmpwfztlrqknp.supabase.co";
 
 const SUPABASE_PUBLISHABLE_KEY =
-  "sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv";
+sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv
 
 const supabaseClient =
   window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY
-  );
+    );
+
+async function getAccessToken() {
+  const {
+    data: { session },
+    error
+  } = await supabaseClient.auth.getSession();
+
+  if (error) {
+    console.error("Erro ao obter sessão Supabase:", error);
+    return null;
+  }
+
+  return session?.access_token || null;
+}
 const messagesEl = $("#messages");
 const form = $("#chatForm");
 const input = $("#messageInput");
