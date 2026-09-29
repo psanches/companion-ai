@@ -104,7 +104,8 @@ signInBtn?.addEventListener("click", async () => {
   const { error } = await supabaseClient.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: window.location.origin
+  emailRedirectTo: 
+    "https://psanches.github.io/companion-ai/"
     }
   });
 
