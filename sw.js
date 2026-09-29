@@ -1,11 +1,13 @@
-const CACHE_NAME = "companion-ai-v1";
+const CACHE_NAME = "companion-ai-v2";
+
+const BASE = "/companion-ai/";
 
 const APP_FILES = [
-  "/",
-  "/index.html",
-  "/style.css",
-  "/app.js",
-  "/manifest.json"
+  BASE,
+  BASE + "index.html",
+  BASE + "style.css",
+  BASE + "app.js",
+  BASE + "manifest.json"
 ];
 
 self.addEventListener("install", event => {
