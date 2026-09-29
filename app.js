@@ -457,7 +457,7 @@ $("#clearBtn").onclick = async () => {
 async function getReply(text) {
   const response =
     await authFetch(
-      WORKER_URL,
+            `${WORKER_URL}chat`,
       {
         method: "POST",
 
