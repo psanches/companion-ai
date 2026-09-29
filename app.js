@@ -84,7 +84,48 @@ async function authFetch(url, options = {}) {
     headers
   });
 }
+const signInBtn = document.querySelector("#signInBtn");
+const signOutBtn = document.querySelector("#signOutBtn");
 
+async function updateAuthUI() {
+  const {
+    data: { session }
+  } = await supabaseClient.auth.getSession();
+
+  if (signInBtn) signInBtn.hidden = !!session;
+  if (signOutBtn) signOutBtn.hidden = !session;
+}
+
+signInBtn?.addEventListener("click", async () => {
+  const email = prompt("Enter your email:");
+
+  if (!email) return;
+
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: window.location.origin
+    }
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("Check your email for the Lumi sign-in link.");
+});
+
+signOutBtn?.addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+  await updateAuthUI();
+});
+
+supabaseClient.auth.onAuthStateChange(() => {
+  updateAuthUI();
+});
+
+updateAuthUI();
 
 /* =========================================================
    LEGACY LOCAL ID
