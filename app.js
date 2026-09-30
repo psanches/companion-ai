@@ -852,6 +852,10 @@ window.speechSynthesis.speak(speech);
    SOUND BUTTON
    ========================================================= */
 
+/* =========================================================
+   SOUND BUTTON
+   ========================================================= */
+
 const soundButton =
   $("#soundButton");
 
@@ -865,6 +869,25 @@ if (soundButton) {
       soundButton.title =
         "Desligar voz da Lumi";
 
+      soundButton.setAttribute(
+        "aria-label",
+        "Desligar voz da Lumi"
+      );
+
+    } else {
+      window.speechSynthesis?.cancel();
+
+      soundButton.textContent = "🔇";
+      soundButton.title =
+        "Ligar voz da Lumi";
+
+      soundButton.setAttribute(
+        "aria-label",
+        "Ligar voz da Lumi"
+      );
+    }
+  };
+}
  
 /* =========================================================
    ENTER SENDS MESSAGE
