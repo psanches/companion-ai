@@ -842,15 +842,7 @@ function speakLumi(text) {
         )
     );
 
- );
-
-if (preferredVoice) {
-  speech.voice = preferredVoice;
-}
-
-window.speechSynthesis.speak(speech);
-
-/* =========================================================
+=====
    SOUND BUTTON
    ========================================================= */
 
@@ -867,27 +859,7 @@ if (soundButton) {
       soundButton.title =
         "Desligar voz da Lumi";
 
-      soundButton.setAttribute(
-        "aria-label",
-        "Desligar voz da Lumi"
-      );
-
-    } else {
-      window.speechSynthesis?.cancel();
-
-      soundButton.textContent = "🔇";
-      soundButton.title =
-        "Ligar voz da Lumi";
-
-      soundButton.setAttribute(
-        "aria-label",
-        "Ligar voz da Lumi"
-      );
-    }
-  };
-}
-
-
+ 
 /* =========================================================
    ENTER SENDS MESSAGE
    ========================================================= */
