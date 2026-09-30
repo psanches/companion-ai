@@ -799,13 +799,11 @@ if (
    LUMI SPEECH
    ========================================================= */
 
-let lumiSoundEnabled = false;
-
 function speakLumi(text) {
   if (
-    !("speechSynthesis" in window) ||
+    !lumiSoundEnabled ||
     !text ||
-    !lumiSoundEnabled
+    !("speechSynthesis" in window)
   ) {
     return;
   }
@@ -815,17 +813,39 @@ function speakLumi(text) {
   const speech =
     new SpeechSynthesisUtterance(text);
 
-  speech.lang = "pt-BR";
-  speech.rate = 1;
-  speech.pitch = 1;
-  speech.volume = 1;
+  // Detect whether Lumi's response is Portuguese or English.
+  const portuguese =
+    /[áàâãéêíóôõúç]|\b(o|a|os|as|de|do|da|que|para|com|não|uma|você|seu|sua|é)\b/i
+      .test(text);
 
-  window.speechSynthesis.speak(
-    speech
-  );
+  speech.lang =
+    portuguese ? "pt-BR" : "en-US";
+
+  const voices =
+    window.speechSynthesis.getVoices();
+
+  const preferredVoice =
+    voices.find(voice =>
+      voice.lang
+        .toLowerCase()
+        .startsWith(
+          portuguese ? "pt-br" : "en-us"
+        )
+    ) ||
+    voices.find(voice =>
+      voice.lang
+        .toLowerCase()
+        .startsWith(
+          portuguese ? "pt" : "en"
+        )
+    );
+
+  if (preferredVoice) {
+    speech.voice = preferredVoice;
+  }
+
+  window.speechSynthesis.speak(speech);
 }
-
-
 /* =========================================================
    SOUND BUTTON
    ========================================================= */
