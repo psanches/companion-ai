@@ -798,6 +798,7 @@ if (
 /* =========================================================
    LUMI SPEECH
    ========================================================= */
+let lumiSoundEnabled = false;
 
 function speakLumi(text) {
   if (
@@ -809,6 +810,7 @@ function speakLumi(text) {
   }
 
   window.speechSynthesis.cancel();
+
 
   const speech =
     new SpeechSynthesisUtterance(text);
@@ -840,11 +842,13 @@ function speakLumi(text) {
         )
     );
 
-  if (preferredVoice) {
-    speech.voice = preferredVoice;
-  }
+ );
 
-  window.speechSynthesis.speak(speech);
+if (preferredVoice) {
+  speech.voice = preferredVoice;
+}
+
+window.speechSynthesis.speak(speech);
 }
 /* =========================================================
    SOUND BUTTON
