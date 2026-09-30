@@ -455,9 +455,84 @@ $("#clearBtn").onclick = async () => {
    ========================================================= */
 
 async function getReply(text) {
+
+  const calendarRequest =
+    /\b(calendar|agenda|compromisso|compromissos|evento|eventos|appointment|appointments)\b/i
+      .test(text);
+
+  if (calendarRequest) {
+    const response =
+      await authFetch(
+        `${WORKER_URL}calendar/events`
+      );
+
+    let data;
+
+    try {
+      data = await response.json();
+    } catch (error) {
+      throw new Error(
+        "The calendar did not return a valid response."
+      );
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+        "Não foi possível consultar seu Google Calendar."
+      );
+    }
+
+    const events =
+      Array.isArray(data?.events)
+        ? data.events
+        : [];
+
+    if (!events.length) {
+      return {
+        reply:
+          "Você não tem compromissos no Google Calendar.",
+        history: state.messages
+      };
+    }
+
+    const formattedEvents =
+      events.map(event => {
+        const start =
+          event.start?.dateTime ||
+          event.start?.date ||
+          "";
+
+        const date =
+          start
+            ? new Date(start).toLocaleString(
+                "pt-BR",
+                {
+                  dateStyle: "short",
+                  timeStyle:
+                    event.start?.dateTime
+                      ? "short"
+                      : undefined
+                }
+              )
+            : "";
+
+        return date
+          ? `• ${date} — ${event.summary || "Evento"}`
+          : `• ${event.summary || "Evento"}`;
+      });
+
+    return {
+      reply:
+        "Seus compromissos no Google Calendar:\n\n" +
+        formattedEvents.join("\n"),
+      history: state.messages
+    };
+  }
+
   const response =
     await authFetch(
-            `${WORKER_URL}chat`,
+      `${WORKER_URL}chat`,
       {
         method: "POST",
 
@@ -477,9 +552,7 @@ async function getReply(text) {
   let data;
 
   try {
-    data =
-      await response.json();
-
+    data = await response.json();
   } catch (error) {
     throw new Error(
       "The server did not return a valid response."
