@@ -847,6 +847,7 @@ if (preferredVoice) {
 }
 
 window.speechSynthesis.speak(speech);
+  }
 
 /* =========================================================
    SOUND BUTTON
