@@ -840,9 +840,15 @@ function speakLumi(text) {
         .startsWith(
           portuguese ? "pt" : "en"
         )
-    );
+       );
 
-=====
+if (preferredVoice) {
+  speech.voice = preferredVoice;
+}
+
+window.speechSynthesis.speak(speech);
+
+/* =========================================================
    SOUND BUTTON
    ========================================================= */
 
