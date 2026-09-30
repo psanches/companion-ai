@@ -799,7 +799,7 @@ if (
    LUMI SPEECH
    ========================================================= */
 
-let lumiSoundEnabled = true;
+let lumiSoundEnabled = false;
 
 function speakLumi(text) {
   if (
