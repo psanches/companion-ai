@@ -12,10 +12,12 @@ const supabaseClient =
 const WORKER_URL =
   "https://round-lab-f54f.psanchesnle.workers.dev/";
 
+const $ = selector =>
+  document.querySelector(selector);
+
 const messagesEl = $("#messages");
 const form = $("#chatForm");
 const input = $("#messageInput");
-
 const settingsDialog = $("#settingsDialog");
 const memoryDialog = $("#memoryDialog");
 
