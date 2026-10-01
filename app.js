@@ -508,64 +508,92 @@ async function getReply(text) {
       "Abrindo o Google para conectar seu Calendar..."
   };
 }
-    const events =
-      Array.isArray(data?.events)
-        ? data.events
-        : [];
+  const events =
+  Array.isArray(data?.events)
+    ? data.events
+    : [];
 
-    if (!events.length) {
-      return {
-        reply:
-          "Você não tem compromissos no Google Calendar.",
-        history: state.messages
-      };
+const today =
+  new Date().toLocaleDateString("en-CA");
+
+const todayEvents =
+  events.filter(event => {
+    if (!event.start) {
+      return false;
     }
 
-    const formattedEvents =
-      events.map(event => {
-        const start =
-          event.start?.dateTime ||
-          event.start?.date ||
-          "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(event.start)) {
+      return event.start === today;
+    }
 
-        const date =
-          start
-            ? new Date(start).toLocaleString(
-                "pt-BR",
-                {
-                  dateStyle: "short",
-                  timeStyle:
-                    event.start?.dateTime
-                      ? "short"
-                      : undefined
-                }
-              )
-            : "";
+    const eventDate =
+      new Date(event.start)
+        .toLocaleDateString("en-CA");
 
-        return date
-          ? `• ${date} — ${event.summary || "Evento"}`
-          : `• ${event.summary || "Evento"}`;
-      });
+    return eventDate === today;
+  });
 
-    return {
-      reply:
-        "Seus compromissos no Google Calendar:\n\n" +
-        formattedEvents.join("\n"),
-      history: state.messages
-    };
-  }
+const events =
+  Array.isArray(data?.events)
+    ? data.events
+    : [];
 
-  const response =
-    await authFetch(
-      `${WORKER_URL}chat`,
-      {
-        method: "POST",
+const today =
+  new Date().toLocaleDateString("en-CA");
 
-        headers: {
-          "Content-Type":
-            "application/json"
-        },
+const todayEvents =
+  events.filter(event => {
+    if (!event.start) {
+      return false;
+    }
 
+    if (/^\d{4}-\d{2}-\d{2}$/.test(event.start)) {
+      return event.start === today;
+    }
+
+    const eventDate =
+      new Date(event.start)
+        .toLocaleDateString("en-CA");
+
+    return eventDate === today;
+  });
+
+if (!todayEvents.length) {
+  return {
+    reply:
+      "Você não tem compromissos no Google Calendar hoje.",
+    history: state.messages
+  };
+}
+
+const formattedEvents =
+  todayEvents.map(event => {
+    const allDay =
+      /^\d{4}-\d{2}-\d{2}$/.test(event.start);
+
+    if (allDay) {
+      return `• Dia inteiro — ${event.title || "Evento"}`;
+    }
+
+    const time =
+      new Date(event.start)
+        .toLocaleTimeString(
+          "pt-BR",
+          {
+            hour: "2-digit",
+            minute: "2-digit"
+          }
+        );
+
+    return `• ${time} — ${event.title || "Evento"}`;
+  });
+
+return {
+  reply:
+    "Seus compromissos de hoje:\n\n" +
+    formattedEvents.join("\n"),
+  history: state.messages
+};
         body: JSON.stringify({
           message: text,
           history:
