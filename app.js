@@ -539,7 +539,7 @@ async function getReply(text) {
     if (!todayEvents.length) {
       return {
         reply:
-          "Você não tem compromissos no Google Calendar hoje.",
+          "Você não tem compromissos no Google Calendar hoje."
       };
     }
 
@@ -570,7 +570,7 @@ async function getReply(text) {
     return {
       reply:
         "Seus compromissos de hoje:\n\n" +
-        formattedEvents.join("\n"),
+        formattedEvents.join("\n")
     };
   }
 
