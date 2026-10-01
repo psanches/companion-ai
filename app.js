@@ -476,13 +476,38 @@ async function getReply(text) {
       );
     }
 
-    if (!response.ok) {
-      throw new Error(
-        data?.error ||
-        "Não foi possível consultar seu Google Calendar."
-      );
-    }
+   if (!response.ok) {
 
+  const authResponse =
+    await authFetch(
+      `${WORKER_URL}auth/google/start`,
+      {
+        method: "POST"
+      }
+    );
+
+  const authData =
+    await authResponse.json();
+
+  if (
+    !authResponse.ok ||
+    !authData?.authUrl
+  ) {
+    throw new Error(
+      authData?.error ||
+      data?.error ||
+      "Não foi possível conectar o Google Calendar."
+    );
+  }
+
+  window.location.href =
+    authData.authUrl;
+
+  return {
+    reply:
+      "Abrindo o Google para conectar seu Calendar..."
+  };
+}
     const events =
       Array.isArray(data?.events)
         ? data.events
