@@ -1,7 +1,3 @@
-const $ = s => document.querySelector(s);
-
-const SUPABASE_URL =
-  "https://hjdrnxqvmpwfztlrqknp.supabase.co";
 
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv";
@@ -544,7 +540,6 @@ async function getReply(text) {
       return {
         reply:
           "Você não tem compromissos no Google Calendar hoje.",
-        history: state.messages
       };
     }
 
@@ -576,7 +571,6 @@ async function getReply(text) {
       reply:
         "Seus compromissos de hoje:\n\n" +
         formattedEvents.join("\n"),
-      history: state.messages
     };
   }
 
