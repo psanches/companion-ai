@@ -1,18 +1,16 @@
-const CACHE_NAME = "companion-ai-v3";
-
-const BASE = "/companion-ai/";
+const CACHE_NAME = "lumi-v4";
 
 const STATIC_FILES = [
-  BASE,
-  BASE + "index.html",
-  BASE + "style.css",
-  BASE + "manifest.json"
+  "/",
+  "/index.html",
+  "/style.css",
+  "/manifest.json"
 ];
 
 /*
- * Install
- * Cache only the static application shell.
- * app.js is deliberately NOT precached.
+ * INSTALL
+ * Cache only Lumi's basic static shell.
+ * app.js is intentionally NOT cached.
  */
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -23,9 +21,10 @@ self.addEventListener("install", event => {
   self.skipWaiting();
 });
 
+
 /*
- * Activate
- * Delete every older Lumi cache.
+ * ACTIVATE
+ * Remove all old Lumi caches.
  */
 self.addEventListener("activate", event => {
   event.waitUntil(
@@ -41,15 +40,17 @@ self.addEventListener("activate", event => {
   );
 });
 
+
 /*
- * Fetch
+ * FETCH
  *
- * JavaScript and HTML:
- * ALWAYS try the network.
- * Do not store app.js in the Service Worker cache.
- *
- * Other static files:
- * Network first, cache as fallback.
+ * Important:
+ * - Never interfere with API/backend requests.
+ * - Never interfere with Supabase.
+ * - Never cache app.js.
+ * - HTML/navigation is network-first.
+ * - Static same-origin files are network-first
+ *   with cache fallback.
  */
 self.addEventListener("fetch", event => {
   const request = event.request;
@@ -60,40 +61,72 @@ self.addEventListener("fetch", event => {
 
   const url = new URL(request.url);
 
-  // Never cache Lumi's JavaScript.
-  if (
-    url.origin === self.location.origin &&
-    url.pathname.endsWith("/app.js")
-  ) {
+  /*
+   * Leave every cross-origin request completely alone.
+   * This includes Supabase and the Lumi backend Worker.
+   */
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  /*
+   * Always get the newest app.js directly
+   * from the network.
+   */
+  if (url.pathname === "/app.js") {
     event.respondWith(fetch(request));
     return;
   }
 
-  // Always prefer fresh HTML/navigation.
+  /*
+   * Navigation / HTML:
+   * network first, index.html as offline fallback.
+   */
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
-        .catch(() => caches.match(BASE + "index.html"))
+        .catch(async () => {
+          const cached =
+            await caches.match("/index.html");
+
+          if (cached) {
+            return cached;
+          }
+
+          return Response.error();
+        })
     );
+
     return;
   }
 
-  // Other static resources: network first.
+  /*
+   * Other same-origin static resources:
+   * network first, cache fallback.
+   */
   event.respondWith(
     fetch(request)
       .then(response => {
-        if (
-          response.ok &&
-          url.origin === self.location.origin
-        ) {
+        if (response && response.ok) {
           const copy = response.clone();
 
           caches.open(CACHE_NAME)
-            .then(cache => cache.put(request, copy));
+            .then(cache =>
+              cache.put(request, copy)
+            );
         }
 
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(async () => {
+        const cached =
+          await caches.match(request);
+
+        if (cached) {
+          return cached;
+        }
+
+        return Response.error();
+      })
   );
 });
