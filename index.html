@@ -68,7 +68,25 @@
       </div>
 
       <div class="header-actions">
+<div id="authBox" class="auth-box">
+  <button
+    id="signInBtn"
+    class="auth-button"
+    type="button"
+    hidden
+  >
+    Sign in
+  </button>
 
+  <button
+    id="signOutBtn"
+    class="auth-button"
+    type="button"
+    hidden
+  >
+    Sign out
+  </button>
+</div>
         <button
           id="memoryBtn"
           type="button"
@@ -335,11 +353,3 @@
   </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<div id="authBox" style="position:fixed;top:100px;right:20px;z-index:9999;">
-  <button id="signInBtn" type="button">Sign in</button>
-  <button id="signOutBtn" type="button" hidden>Sign out</button>
-</div>
-  <script src="app.js"></script>
-</body>
-
-</html>
