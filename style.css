@@ -634,3 +634,52 @@ hr {
   object-fit: cover !important;
   border-radius: 50% !important;
 }
+/* =========================================================
+   AUTHENTICATION
+   ========================================================= */
+
+.auth-box {
+  display: flex;
+  align-items: center;
+}
+
+.auth-button {
+  min-width: 76px;
+  height: 42px;
+  padding: 0 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  background: var(--surface-2);
+  color: var(--text);
+
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    background .15s ease,
+    transform .15s ease;
+}
+
+.auth-button:hover {
+  background: var(--surface-3);
+  transform: translateY(-1px);
+}
+
+.auth-button[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .auth-button {
+    min-width: auto;
+    height: 39px;
+    padding: 0 10px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+}
