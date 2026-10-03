@@ -14,7 +14,7 @@ const WORKER_URL =
 
 const $ = selector =>
   document.querySelector(selector);
-
+const loadEarlierBtn = $("#loadEarlierBtn");
 const messagesEl = $("#messages");
 const form = $("#chatForm");
 const input = $("#messageInput");
