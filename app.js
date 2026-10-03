@@ -218,12 +218,16 @@ function render() {
       }! Eu sou a Lumi, sua assistente no Companion AI. Posso conversar com você e lembrar de informações importantes.`,
       false
     );
+
   }
   requestAnimationFrame(() => {
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-});
-}
+const lastMessage = messagesEl.lastElementChild;
 
+if (lastMessage) {
+  lastMessage.scrollIntoView({
+    block: "end",
+    behavior: "instant"
+  });
 
 /* =========================================================
    SHARED HISTORY
