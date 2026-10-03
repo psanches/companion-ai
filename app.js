@@ -278,7 +278,7 @@ async function loadSharedHistory() {
                 item.role === "assistant"
               )
           )
-          .slice(-30);
+        .slice(-6);
 
       save();
     }
