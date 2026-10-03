@@ -234,7 +234,7 @@ requestAnimationFrame(() => {
 /* =========================================================
    SHARED HISTORY
    ========================================================= */
-
+let fullHistory = [];
 async function loadSharedHistory() {
   const token =
     await getAccessToken();
@@ -264,25 +264,28 @@ async function loadSharedHistory() {
       );
     }
 
-    if (
-      Array.isArray(data?.history)
-    ) {
-      state.messages =
-        data.history
-          .filter(
-            item =>
-              item &&
-              typeof item.content === "string" &&
-              (
-                item.role === "user" ||
-                item.role === "assistant"
-              )
-          )
-        .slice(-6);
+   if (
+  Array.isArray(data?.history)
+) {
+  fullHistory =
+    data.history.filter(
+      item =>
+        item &&
+        typeof item.content === "string" &&
+        (
+          item.role === "user" ||
+          item.role === "assistant"
+        )
+    );
 
-      save();
-    }
+  state.messages =
+    fullHistory.slice(-6);
 
+  loadEarlierBtn.hidden =
+    fullHistory.length <= 6;
+
+  save();
+}
   } catch (error) {
     console.error(
       "Could not load shared history:",
@@ -293,7 +296,24 @@ async function loadSharedHistory() {
   render();
 }
 
+loadEarlierBtn?.addEventListener("click", () => {
+  const currentlyShown =
+    state.messages.length;
 
+  const newCount =
+    Math.min(
+      currentlyShown + 6,
+      fullHistory.length
+    );
+
+  state.messages =
+    fullHistory.slice(-newCount);
+
+  render();
+
+  loadEarlierBtn.hidden =
+    newCount >= fullHistory.length;
+});
 /*
   Load once.
   The previous 5-second polling has been removed.
