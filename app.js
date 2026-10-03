@@ -220,15 +220,17 @@ function render() {
     );
 
   }
-  requestAnimationFrame(() => {
-const lastMessage = messagesEl.lastElementChild;
+requestAnimationFrame(() => {
+  const lastMessage = messagesEl.lastElementChild;
 
-if (lastMessage) {
-  lastMessage.scrollIntoView({
-    block: "end",
-    behavior: "instant"
-  });
-
+  if (lastMessage) {
+    lastMessage.scrollIntoView({
+      block: "end",
+      behavior: "instant"
+    });
+  }
+});
+}
 /* =========================================================
    SHARED HISTORY
    ========================================================= */
