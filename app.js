@@ -483,7 +483,125 @@ $("#clearBtn").onclick = async () => {
    ========================================================= */
 
 async function getReply(text) {
+  const createCalendarRequest =
+    /\b(marque|marcar|agende|agendar|agenda|schedule|book)\b/i
+      .test(text);
 
+  if (createCalendarRequest) {
+    const scheduleMatch =
+      text.match(
+        /(?:amanh[ãa]).*?(?:às|as)\s*(\d{1,2})(?::(\d{2}))?/i
+      );
+
+    if (!scheduleMatch) {
+      return {
+        reply:
+          "Posso criar o compromisso. Diga o dia e o horário, por exemplo: “Marque dentista amanhã às 15h.”"
+      };
+    }
+
+    const hour =
+      Number(scheduleMatch[1]);
+
+    const minute =
+      Number(scheduleMatch[2] || 0);
+
+    if (
+      hour < 0 ||
+      hour > 23 ||
+      minute < 0 ||
+      minute > 59
+    ) {
+      return {
+        reply:
+          "Esse horário não parece válido."
+      };
+    }
+
+    const start = new Date();
+
+    start.setDate(
+      start.getDate() + 1
+    );
+
+    start.setHours(
+      hour,
+      minute,
+      0,
+      0
+    );
+
+    const end =
+      new Date(
+        start.getTime() +
+        60 * 60 * 1000
+      );
+
+    let title =
+      text
+        .replace(
+          /\b(lumi|por favor)\b/gi,
+          ""
+        )
+        .replace(
+          /\b(marque|marcar|agende|agendar|schedule|book)\b/gi,
+          ""
+        )
+        .replace(
+          /\bamanh[ãa]\b/gi,
+          ""
+        )
+        .replace(
+          /(?:às|as)\s*\d{1,2}(?::\d{2})?\s*h?/gi,
+          ""
+        )
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!title) {
+      title = "Compromisso";
+    }
+
+    const response =
+      await authFetch(
+        `${WORKER_URL}calendar/events`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+            title,
+            start:
+              start.toISOString(),
+            end:
+              end.toISOString()
+          })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+        "Não foi possível criar o compromisso."
+      );
+    }
+
+    return {
+      reply:
+        `Pronto. Criei “${title}” no seu Google Calendar para amanhã às ${
+          String(hour).padStart(2, "0")
+        }:${
+          String(minute).padStart(2, "0")
+        }.`
+    };
+  }
   const calendarRequest =
     /\b(calendar|agenda|compromisso|compromissos|evento|eventos|appointment|appointments)\b/i
       .test(text);
