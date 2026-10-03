@@ -219,6 +219,9 @@ function render() {
       false
     );
   }
+  requestAnimationFrame(() => {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+});
 }
 
 
