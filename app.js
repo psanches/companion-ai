@@ -538,26 +538,32 @@ async function getReply(text) {
       );
 
     let title =
-      text
-        .replace(
-          /\b(lumi|por favor)\b/gi,
-          ""
-        )
-        .replace(
-          /\b(marque|marcar|agende|agendar|schedule|book)\b/gi,
-          ""
-        )
-        .replace(
-          /\bamanh[ãa]\b/gi,
-          ""
-        )
-        .replace(
-          /(?:às|as)\s*\d{1,2}(?::\d{2})?\s*h?/gi,
-          ""
-        )
-        .replace(/\s+/g, " ")
-        .trim();
+  text
+    .replace(
+      /\b(lumi|por favor)\b/gi,
+      ""
+    )
+    .replace(
+      /\b(marque|marcar|agende|agendar|schedule|book)\b/gi,
+      ""
+    )
+    .replace(
+      /\bamanh[ãa]\b/gi,
+      ""
+    )
+    .replace(
+      /(?:às|as)\s*\d{1,2}(?::\d{2})?\s*h?/gi,
+      ""
+    )
+    .replace(/[“”"'.,!?]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
+if (title) {
+  title =
+    title.charAt(0).toUpperCase() +
+    title.slice(1);
+}
     if (!title) {
       title = "Compromisso";
     }
