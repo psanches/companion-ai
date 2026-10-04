@@ -67,26 +67,36 @@
 
       </div>
 
-      <div class="header-actions">
-<div id="authBox" class="auth-box">
-  <button
-    id="signInBtn"
-    class="auth-button"
-    type="button"
-    hidden
-  >
-    Sign in
-  </button>
+   <div class="header-actions">
 
-  <button
-    id="signOutBtn"
-    class="auth-button"
-    type="button"
-    hidden
-  >
-    Sign out
-  </button>
-</div>
+  <div id="authBox" class="auth-box">
+
+    <button
+      id="signInBtn"
+      class="auth-button auth-signin"
+      type="button"
+      hidden
+      aria-label="Entrar na Lumi"
+      title="Entrar na Lumi"
+    >
+      <span class="auth-icon">👤</span>
+      <span>Entrar</span>
+    </button>
+
+    <button
+      id="signOutBtn"
+      class="auth-button auth-signout"
+      type="button"
+      hidden
+      aria-label="Sair da Lumi"
+      title="Sair da Lumi"
+    >
+      <span class="auth-status"></span>
+      <span>Pedro</span>
+      <span class="auth-exit">Sair</span>
+    </button>
+
+  </div>
         <button
           id="memoryBtn"
           type="button"
@@ -195,7 +205,7 @@
             Sincronizada entre seus aparelhos
           </small>
         </div>
-
+Deploy updated auth header
         <button
           id="closeMemoryBtn"
           type="button"
