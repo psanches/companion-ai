@@ -1187,3 +1187,55 @@ input.addEventListener(
     }
   }
 );
+/* =========================================================
+   INVITE TO LUMI
+   ========================================================= */
+
+const inviteBtn =
+  document.getElementById("inviteBtn");
+
+inviteBtn?.addEventListener(
+  "click",
+  async () => {
+
+    const shareData = {
+      title: "Lumi",
+      text:
+        "Conheça a Lumi, sua assistente pessoal com memória.",
+      url:
+        "https://mylumicompanion.com/"
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      await navigator.clipboard.writeText(
+        shareData.url
+      );
+
+      const originalContent =
+        inviteBtn.textContent;
+
+      inviteBtn.textContent = "✓";
+      inviteBtn.title = "Link copiado!";
+
+      setTimeout(() => {
+        inviteBtn.textContent =
+          originalContent;
+        inviteBtn.title =
+          "Convidar para a Lumi";
+      }, 1800);
+
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        console.error(
+          "Erro ao compartilhar Lumi:",
+          error
+        );
+      }
+    }
+  }
+);
