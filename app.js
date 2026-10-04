@@ -537,7 +537,7 @@ async function getReply(text) {
         60 * 60 * 1000
       );
 
-    let title =
+let title =
   text
     .replace(
       /\b(lumi|por favor)\b/gi,
@@ -548,7 +548,7 @@ async function getReply(text) {
       ""
     )
     .replace(
-      /\bamanh[ãa]\b/gi,
+      /amanh[ãa]/gi,
       ""
     )
     .replace(
@@ -560,6 +560,14 @@ async function getReply(text) {
     .trim();
 
 if (title) {
+  title =
+    title.charAt(0).toUpperCase() +
+    title.slice(1);
+}
+
+if (!title) {
+  title = "Compromisso";
+}{
   title =
     title.charAt(0).toUpperCase() +
     title.slice(1);
