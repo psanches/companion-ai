@@ -67,103 +67,51 @@
 
       </div>
 
- <header class="topbar">
+      <div class="header-actions">
 
-  <div class="companion">
+        <div
+          id="authBox"
+          class="auth-box"
+        >
 
-    <div class="avatar">
-      <img
-        src="/icon-192.png"
-        alt=""
-      >
-    </div>
+          <button
+            id="signInBtn"
+            class="auth-button"
+            type="button"
+            hidden
+          >
+            Sign in
+          </button>
 
-    <div class="companion-info">
+          <button
+            id="signOutBtn"
+            class="auth-button"
+            type="button"
+            hidden
+          >
+            Sign out
+          </button>
 
-      <h1>Lumi</h1>
+        </div>
 
-      <div class="companion-status">
-        <span class="online-dot"></span>
-        <span>Online</span>
-        <span class="status-separator">•</span>
-        <span>Memória sincronizada</span>
-      </div>
+        <button
+          id="inviteBtn"
+          type="button"
+          aria-label="Convidar para a Lumi"
+          title="Convidar para a Lumi"
+        >
+          💌
+        </button>
 
-    </div>
+        <button
+          id="memoryBtn"
+          type="button"
+          aria-label="Minha memória"
+          title="Minha memória"
+        >
+          🧠
+        </button>
 
-  </div>
-
-
-  <div class="header-actions">
-
-    <div
-      id="authBox"
-      class="auth-box"
-    >
-
-      <button
-        id="signInBtn"
-        class="auth-button"
-        type="button"
-        hidden
-      >
-        Sign in
-      </button>
-
-      <button
-        id="signOutBtn"
-        class="auth-button"
-        type="button"
-        hidden
-      >
-        Sign out
-      </button>
-
-    </div>
-
-
-    <button
-      id="inviteBtn"
-      type="button"
-      aria-label="Convidar para a Lumi"
-      title="Convidar para a Lumi"
-    >
-      💌
-    </button>
-
-
-    <button
-      id="memoryBtn"
-      type="button"
-      aria-label="Minha memória"
-      title="Minha memória"
-    >
-      🧠
-    </button>
-
-
-    <button
-      id="soundButton"
-      type="button"
-      aria-label="Desligar voz da Lumi"
-      title="Desligar voz da Lumi"
-    >
-      🔊
-    </button>
-
-
-    <button
-      id="settingsBtn"
-      type="button"
-      aria-label="Configurações"
-      title="Configurações"
-    >
-      ⚙️
-    </button>
-
-  </div>
-
-</header>
         <button
           id="soundButton"
           type="button"
@@ -189,21 +137,20 @@
 
     <!-- CONVERSA -->
 
-<button
-  id="loadEarlierBtn"
-  type="button"
-  hidden
->
-  ↑ Carregar mensagens anteriores
-</button>
-   <section
-  id="messages"
-  class="messages"
-  aria-live="polite"
-></section>
+    <button
+      id="loadEarlierBtn"
+      type="button"
+      hidden
+    >
+      ↑ Carregar mensagens anteriores
+    </button>
 
+    <section
+      id="messages"
+      class="messages"
+      aria-live="polite"
+    ></section>
 
-<!-- ÁREA DE DIGITAÇÃO -->
 
     <!-- ÁREA DE DIGITAÇÃO -->
 
@@ -257,13 +204,15 @@
       <div class="dialog-header">
 
         <div>
+
           <h2>🧠 Minha memória</h2>
 
           <small>
             Sincronizada entre seus aparelhos
           </small>
+
         </div>
-Deploy updated auth header
+
         <button
           id="closeMemoryBtn"
           type="button"
@@ -331,7 +280,6 @@ Deploy updated auth header
 
       </div>
 
-
       <label>
         Seu nome
 
@@ -340,7 +288,6 @@ Deploy updated auth header
           placeholder="Como quer ser chamado?"
         >
       </label>
-
 
       <label>
         Modelo
@@ -351,9 +298,7 @@ Deploy updated auth header
         >
       </label>
 
-
       <hr>
-
 
       <h3>🔄 Sincronização</h3>
 
@@ -361,7 +306,6 @@ Deploy updated auth header
         A mesma chave permite compartilhar memória
         e histórico entre seu PC e celular.
       </p>
-
 
       <label>
         Chave de sincronização
@@ -373,7 +317,6 @@ Deploy updated auth header
           placeholder="Sua chave pessoal"
         >
       </label>
-
 
       <div class="row">
 
@@ -393,18 +336,14 @@ Deploy updated auth header
 
       </div>
 
-
       <p id="syncStatus"></p>
 
-
       <hr>
-
 
       <div class="privacy-note">
         🔒 Sua chave da OpenAI permanece protegida
         no servidor Cloudflare.
       </div>
-
 
       <div class="row">
 
@@ -429,7 +368,11 @@ Deploy updated auth header
 
   </dialog>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+  ></script>
+
   <script src="app.js"></script>
 
 </body>
