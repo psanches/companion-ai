@@ -163,7 +163,86 @@ button {
   background: var(--surface-3);
   transform: translateY(-1px);
 }
+/* =========================================================
+   LUMI AUTH CONTROL
+   ========================================================= */
 
+.auth-box {
+  display: flex;
+  align-items: center;
+}
+
+.auth-button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.auth-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.auth-button:active {
+  transform: scale(0.97);
+}
+
+.auth-button[hidden] {
+  display: none !important;
+}
+
+.auth-icon {
+  font-size: 15px;
+}
+
+.auth-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #39d98a;
+  flex: 0 0 auto;
+}
+
+.auth-exit {
+  opacity: 0.65;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+.auth-signout:hover .auth-exit {
+  opacity: 1;
+}
+
+@media (max-width: 600px) {
+  .auth-button {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+
+  .auth-signout .auth-exit {
+    display: none;
+  }
+}
 /* CONVERSA */
 
 .messages {
