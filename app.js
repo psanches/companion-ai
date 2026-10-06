@@ -10,7 +10,7 @@ const supabaseClient =
   );
 
 const WORKER_URL =
-  "https://round-lab-f54f.psanchesnle.workers.dev/";
+  "https://lumi-develop.psanchesnle.workers.dev/";
 
 const $ = selector =>
   document.querySelector(selector);
