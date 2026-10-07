@@ -641,10 +641,7 @@ if (!title) {
 
       const authResponse =
         await authFetch(
-          `${WORKER_URL}auth/google/start`,
-          {
-            method: "POST"
-          }
+          `${WORKER_URL}auth/google/start`
         );
 
       const authData =
@@ -652,7 +649,7 @@ if (!title) {
 
       if (
         !authResponse.ok ||
-        !authData?.authUrl
+        !authData?.Url
       ) {
         throw new Error(
           authData?.error ||
@@ -662,7 +659,7 @@ if (!title) {
       }
 
       window.location.href =
-        authData.authUrl;
+        authData.Url;
 
       return {
         reply:
