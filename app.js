@@ -104,7 +104,7 @@ signInBtn?.addEventListener("click", async () => {
     email,
     options: {
   emailRedirectTo: 
-   "https://mylumicompanion.com/"
+  "https://companion-ai-e42.pages.dev/"
     }
   });
 
