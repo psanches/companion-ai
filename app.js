@@ -176,7 +176,29 @@ function add(role, content, persist = true) {
     document.createElement("div");
 
   el.className = `msg ${role}`;
-  el.textContent = content;
+  if (role === "assistant") {
+    const linkPattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+    let lastIndex = 0;
+
+    for (const match of content.matchAll(linkPattern)) {
+      el.appendChild(
+        document.createTextNode(content.slice(lastIndex, match.index))
+      );
+
+      const link = document.createElement("a");
+      link.href = match[2];
+      link.textContent = match[1];
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+
+      el.appendChild(link);
+      lastIndex = match.index + match[0].length;
+    }
+
+    el.appendChild(document.createTextNode(content.slice(lastIndex)));
+  } else {
+    el.textContent = content;
+  }
 
   messagesEl.appendChild(el);
 
