@@ -1,10 +1,10 @@
-const CACHE_NAME = "lumi-v4";
+const CACHE_NAME = "lumi-v5";
 
 const STATIC_FILES = [
-  "/",
-  "/index.html",
-  "/style.css",
-  "/manifest.json"
+  "/companion-ai/",
+  "/companion-ai/index.html",
+  "/companion-ai/style.css",
+  "/companion-ai/manifest.json"
 ];
 
 /*
