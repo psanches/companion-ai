@@ -669,26 +669,25 @@ if (!title) {
       const authData =
         await authResponse.json();
 
-      if (
-        !authResponse.ok ||
-        !authData?.Url
-      ) {
-        throw new Error(
-          authData?.error ||
-          data?.error ||
-          "Não foi possível conectar o Google Calendar."
-        );
-      }
+    if (
+  !authResponse.ok ||
+  !authData?.url
+) {
+  throw new Error(
+    authData?.error ||
+    data?.error ||
+    "Não foi possível conectar o Google Calendar."
+  );
+}
 
-      window.location.href =
-        authData.Url;
+window.location.href =
+  authData.url;
 
-      return {
-        reply:
-          "Abrindo o Google para conectar seu Calendar..."
-      };
-    }
-
+return {
+  reply:
+    "Abrindo o Google para conectar seu Calendar..."
+};
+}
     const events =
       Array.isArray(data?.events)
         ? data.events
