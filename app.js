@@ -693,69 +693,81 @@ return {
         ? data.events
         : [];
 
-    const today =
-      new Date()
-        .toLocaleDateString("en-CA");
+        const todayOnly =
+      /\b(hoje|today)\b/i.test(text);
 
-    const todayEvents =
-      events.filter(event => {
+    const now = new Date();
 
-        if (!event.start) {
+    const selectedEvents = events
+      .filter(event => {
+        if (!event.start) return false;
+
+        const start = new Date(event.start);
+
+        if (Number.isNaN(start.getTime())) {
           return false;
         }
 
-        if (
-          /^\d{4}-\d{2}-\d{2}$/
-            .test(event.start)
-        ) {
-          return event.start === today;
+        if (todayOnly) {
+          return start.toLocaleDateString(
+            "en-CA",
+            { timeZone: "America/Sao_Paulo" }
+          ) === now.toLocaleDateString(
+            "en-CA",
+            { timeZone: "America/Sao_Paulo" }
+          );
         }
 
-        const eventDate =
-          new Date(event.start)
-            .toLocaleDateString("en-CA");
+        return start >= now ||
+          /^\d{4}-\d{2}-\d{2}$/.test(event.start) &&
+          event.start >= now.toLocaleDateString(
+            "en-CA",
+            { timeZone: "America/Sao_Paulo" }
+          );
+      })
+      .slice(0, 5);
 
-        return eventDate === today;
-      });
-
-    if (!todayEvents.length) {
+    if (!selectedEvents.length) {
       return {
-        reply:
-          "Você não tem compromissos no Google Calendar hoje."
+        reply: todayOnly
+          ? "Você não tem compromissos no Google Calendar hoje."
+          : "Não encontrei próximos compromissos no Google Calendar."
       };
     }
 
-    const formattedEvents =
-      todayEvents.map(event => {
+    const formattedEvents = selectedEvents.map(event => {
+      const allDay =
+        /^\d{4}-\d{2}-\d{2}$/.test(event.start);
 
-        const allDay =
-          /^\d{4}-\d{2}-\d{2}$/
-            .test(event.start);
+      if (allDay) {
+        return `• ${event.start} — Dia inteiro — ${event.title || "Evento"}`;
+      }
 
-        if (allDay) {
-          return `• Dia inteiro — ${event.title || "Evento"}`;
+      const start = new Date(event.start);
+
+      const dateTime = start.toLocaleString(
+        "pt-BR",
+        {
+          timeZone: "America/Sao_Paulo",
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
         }
+      );
 
-        const time =
-          new Date(event.start)
-            .toLocaleTimeString(
-              "pt-BR",
-              {
-                hour: "2-digit",
-                minute: "2-digit"
-              }
-            );
-
-        return `• ${time} — ${event.title || "Evento"}`;
-      });
+      return `• ${dateTime} — ${event.title || "Evento"}`;
+    });
 
     return {
       reply:
-        "Seus compromissos de hoje:\n\n" +
+        (todayOnly
+          ? "Seus compromissos de hoje:\n\n"
+          : "Seus próximos compromissos:\n\n") +
         formattedEvents.join("\n")
     };
   }
-
   const response =
     await authFetch(
       `${WORKER_URL}chat`,
