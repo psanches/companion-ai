@@ -375,7 +375,11 @@
     src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
   ></script>
 
-<script src="app.js?v=6"></script>
+<script>
+  const lumiScript = document.createElement("script");
+  lumiScript.src = "app.js?v=" + Date.now();
+  document.body.appendChild(lumiScript);
+</script>
 
 </body>
 </html>
