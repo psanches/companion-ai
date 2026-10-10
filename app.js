@@ -1331,6 +1331,7 @@ newChatBtn?.addEventListener("click", async () => {
     render();
     input.value = "";
     input.focus();
+    refreshConversationList();
 
   } catch (error) {
     alert(error.message);
@@ -1354,8 +1355,10 @@ function setSidebarOpen(open) {
   sidebarBackdrop?.classList.toggle("open", open);
   sidebar?.setAttribute("aria-hidden", String(!open));
   sidebarBackdrop?.setAttribute("aria-hidden", String(!open));
-  if (open) closeSidebarBtn?.focus();
-  else chatHistoryBtn?.focus();
+  if (window.innerWidth <= 900) {
+    if (open) closeSidebarBtn?.focus();
+    else chatHistoryBtn?.focus();
+  }
 }
 
 async function refreshConversationList() {
@@ -1390,7 +1393,8 @@ async function refreshConversationList() {
           });
           if (!restore.ok) throw new Error("Não foi possível abrir a conversa.");
           await loadSharedHistory();
-          setSidebarOpen(false);
+          if (window.innerWidth <= 900) setSidebarOpen(false);
+          else refreshConversationList();
         } catch (error) {
           sidebarStatus.textContent = error.message;
           item.disabled = false;
@@ -1420,5 +1424,11 @@ document.addEventListener("keydown", event => {
 sidebarNewChatBtn?.addEventListener("click", async () => {
   if (chatBusy) return;
   newChatBtn?.click();
-  setSidebarOpen(false);
+  if (window.innerWidth <= 900) setSidebarOpen(false);
+});
+
+/* Load the sidebar automatically on desktop and whenever sign-in changes. */
+refreshConversationList();
+supabaseClient.auth.onAuthStateChange(() => {
+  setTimeout(() => refreshConversationList(), 0);
 });
