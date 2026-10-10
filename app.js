@@ -1039,9 +1039,33 @@ $("#deleteMemoryBtn").onclick =
    ========================================================= */
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker
-    .register("./sw.js")
-    .catch(() => {});
+  let refreshing = false;
+
+  navigator.serviceWorker.addEventListener(
+    "controllerchange",
+    () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    }
+  );
+
+  window.addEventListener("load", async () => {
+    try {
+      const registration =
+        await navigator.serviceWorker.register(
+          "./sw.js",
+          { updateViaCache: "none" }
+        );
+
+      await registration.update();
+    } catch (error) {
+      console.error(
+        "Lumi update check failed:",
+        error
+      );
+    }
+  });
 }
 
 
