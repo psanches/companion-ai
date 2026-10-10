@@ -1289,6 +1289,109 @@ inviteBtn?.addEventListener(
           "Erro ao compartilhar Lumi:",
           error
         );
+        /* =========================================================
+   NEW CHAT AND CHAT HISTORY
+   ========================================================= */
+
+const newChatBtn =
+  document.getElementById("newChatBtn");
+
+const chatHistoryBtn =
+  document.getElementById("chatHistoryBtn");
+
+let chatBusy = false;
+
+newChatBtn?.addEventListener("click", async () => {
+  if (chatBusy) return;
+
+  chatBusy = true;
+  newChatBtn.disabled = true;
+
+  try {
+    const response = await authFetch(
+      `${WORKER_URL}history/archive`,
+      { method: "POST" }
+    );
+
+    if (!response.ok) {
+      throw new Error("Não foi possível salvar a conversa.");
+    }
+
+    fullHistory = [];
+    state.messages = [];
+    loadEarlierBtn.hidden = true;
+
+    save();
+    render();
+    input.value = "";
+    input.focus();
+
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    chatBusy = false;
+    newChatBtn.disabled = false;
+  }
+});
+
+chatHistoryBtn?.addEventListener("click", async () => {
+  try {
+    const response = await authFetch(
+      `${WORKER_URL}history/archives`
+    );
+
+    if (!response.ok) {
+      throw new Error("Não foi possível carregar o histórico.");
+    }
+
+    const data = await response.json();
+    const archives = data.archives || [];
+
+    if (!archives.length) {
+      alert("Nenhuma conversa arquivada.");
+      return;
+    }
+
+    const choices = archives.map((chat, index) =>
+      `${index + 1}. ${chat.title}`
+    );
+
+    const choice = prompt(
+      "Escolha uma conversa:\n\n" + choices.join("\n")
+    );
+
+    if (!choice) return;
+
+    const index = Number(choice) - 1;
+
+    if (!Number.isInteger(index) || !archives[index]) {
+      alert("Conversa inválida.");
+      return;
+    }
+
+    const restore = await authFetch(
+      `${WORKER_URL}history/restore`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          id: archives[index].id
+        })
+      }
+    );
+
+    if (!restore.ok) {
+      throw new Error("Não foi possível abrir a conversa.");
+    }
+
+    await loadSharedHistory();
+
+  } catch (error) {
+    alert(error.message);
+  }
+});
       }
     }
   }
