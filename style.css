@@ -683,3 +683,18 @@ hr {
     font-size: 12px;
   }
 }
+/* Mobile authentication button fix */
+@media (max-width: 600px) {
+  .header-actions .auth-button {
+    width: auto;
+    min-width: 72px;
+    padding: 0 10px;
+    white-space: nowrap;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .header-actions {
+    flex-shrink: 0;
+  }
+}
