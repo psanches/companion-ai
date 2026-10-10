@@ -1340,61 +1340,85 @@ newChatBtn?.addEventListener("click", async () => {
   }
 });
 
-chatHistoryBtn?.addEventListener("click", async () => {
+/* Sidebar: archived conversations, newest first. */
+const sidebar = document.getElementById("conversationSidebar");
+const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+const sidebarList = document.getElementById("conversationList");
+const sidebarStatus = document.getElementById("sidebarStatus");
+const closeSidebarBtn = document.getElementById("closeSidebarBtn");
+const sidebarNewChatBtn = document.getElementById("sidebarNewChatBtn");
+let sidebarLoading = false;
+
+function setSidebarOpen(open) {
+  sidebar?.classList.toggle("open", open);
+  sidebarBackdrop?.classList.toggle("open", open);
+  sidebar?.setAttribute("aria-hidden", String(!open));
+  sidebarBackdrop?.setAttribute("aria-hidden", String(!open));
+  if (open) closeSidebarBtn?.focus();
+  else chatHistoryBtn?.focus();
+}
+
+async function refreshConversationList() {
+  if (sidebarLoading) return;
+  sidebarLoading = true;
+  sidebarList.replaceChildren();
+  sidebarStatus.textContent = "Carregando conversas...";
   try {
-    const response = await authFetch(
-      `${WORKER_URL}history/archives`
-    );
-
-    if (!response.ok) {
-      throw new Error("Não foi possível carregar o histórico.");
-    }
-
+    const response = await authFetch(`${WORKER_URL}history/archives`);
+    if (!response.ok) throw new Error("Não foi possível carregar as conversas.");
     const data = await response.json();
-    const archives = data.archives || [];
-
-    if (!archives.length) {
-      alert("Nenhuma conversa arquivada.");
-      return;
+    const archives = Array.isArray(data.archives) ? data.archives : [];
+    archives.sort((a,b) => Number(b.timestamp || b.createdAt || 0) - Number(a.timestamp || a.createdAt || 0));
+    sidebarStatus.textContent = archives.length ? "" : "Nenhuma conversa arquivada ainda.";
+    for (const chat of archives) {
+      if (!chat?.id) continue;
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "conversation-item";
+      item.textContent = (chat.title || "Conversa sem título").trim().slice(0,100);
+      item.title = chat.title || "Conversa sem título";
+      item.addEventListener("click", async () => {
+        if (sidebarLoading || chatBusy) return;
+        chatBusy = true;
+        item.disabled = true;
+        sidebarStatus.textContent = "Abrindo conversa...";
+        try {
+          const restore = await authFetch(`${WORKER_URL}history/restore`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: chat.id })
+          });
+          if (!restore.ok) throw new Error("Não foi possível abrir a conversa.");
+          await loadSharedHistory();
+          setSidebarOpen(false);
+        } catch (error) {
+          sidebarStatus.textContent = error.message;
+          item.disabled = false;
+        } finally {
+          chatBusy = false;
+        }
+      });
+      sidebarList.appendChild(item);
     }
-
-    const choices = archives.map((chat, index) =>
-      `${index + 1}. ${chat.title}`
-    );
-
-    const choice = prompt(
-      "Escolha uma conversa:\n\n" + choices.join("\n")
-    );
-
-    if (!choice) return;
-
-    const index = Number(choice) - 1;
-
-    if (!Number.isInteger(index) || !archives[index]) {
-      alert("Conversa inválida.");
-      return;
-    }
-
-    const restore = await authFetch(
-      `${WORKER_URL}history/restore`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          id: archives[index].id
-        })
-      }
-    );
-
-    if (!restore.ok) {
-      throw new Error("Não foi possível abrir a conversa.");
-    }
-
-    await loadSharedHistory();
-
   } catch (error) {
-    alert(error.message);
+    sidebarStatus.textContent = error.message;
+  } finally {
+    sidebarLoading = false;
   }
+}
+
+chatHistoryBtn?.addEventListener("click", () => {
+  const opening = !sidebar?.classList.contains("open");
+  setSidebarOpen(opening);
+  if (opening) refreshConversationList();
+});
+closeSidebarBtn?.addEventListener("click", () => setSidebarOpen(false));
+sidebarBackdrop?.addEventListener("click", () => setSidebarOpen(false));
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && sidebar?.classList.contains("open")) setSidebarOpen(false);
+});
+sidebarNewChatBtn?.addEventListener("click", async () => {
+  if (chatBusy) return;
+  newChatBtn?.click();
+  setSidebarOpen(false);
 });
