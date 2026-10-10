@@ -1,38 +1,29 @@
-const CACHE_NAME = "lumi-v5";
+const CACHE_NAME = "lumi-v6";
 
 const STATIC_FILES = [
-  "/companion-ai/",
-  "/companion-ai/index.html",
-  "/companion-ai/style.css",
-  "/companion-ai/manifest.json"
+  "./",
+  "./index.html",
+  "./style.css",
+  "./manifest.json"
 ];
 
-/*
- * INSTALL
- * Cache only Lumi's basic static shell.
- * app.js is intentionally NOT cached.
- */
+// Install the new Service Worker.
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(STATIC_FILES))
+      .then(() => self.skipWaiting())
   );
-
-  self.skipWaiting();
 });
 
-
-/*
- * ACTIVATE
- * Remove all old Lumi caches.
- */
+// Remove old Lumi caches and activate immediately.
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
       .then(keys =>
         Promise.all(
           keys
-            .filter(key => key !== CACHE_NAME)
+            .filter(key => key.startsWith("lumi-") && key !== CACHE_NAME)
             .map(key => caches.delete(key))
         )
       )
@@ -40,93 +31,51 @@ self.addEventListener("activate", event => {
   );
 });
 
-
-/*
- * FETCH
- *
- * Important:
- * - Never interfere with API/backend requests.
- * - Never interfere with Supabase.
- * - Never cache app.js.
- * - HTML/navigation is network-first.
- * - Static same-origin files are network-first
- *   with cache fallback.
- */
+// Network-first for all same-origin resources.
+// Never cache JavaScript, API calls, or authentication.
 self.addEventListener("fetch", event => {
   const request = event.request;
 
-  if (request.method !== "GET") {
-    return;
-  }
+  if (request.method !== "GET") return;
 
   const url = new URL(request.url);
 
-  /*
-   * Leave every cross-origin request completely alone.
-   * This includes Supabase and the Lumi backend Worker.
-   */
-  if (url.origin !== self.location.origin) {
+  if (url.origin !== self.location.origin) return;
+
+  if (url.pathname.endsWith("/app.js")) {
+    event.respondWith(
+      fetch(request, { cache: "no-store" })
+    );
     return;
   }
 
-  /*
-   * Always get the newest app.js directly
-   * from the network.
-   */
-  if (url.pathname === "/app.js") {
-    event.respondWith(fetch(request));
-    return;
-  }
-
-  /*
-   * Navigation / HTML:
-   * network first, index.html as offline fallback.
-   */
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .catch(async () => {
-          const cached =
-            await caches.match("/index.html");
-
-          if (cached) {
-            return cached;
-          }
-
-          return Response.error();
-        })
+      fetch(request, { cache: "no-store" })
+        .catch(async () =>
+          (await caches.match("./index.html")) ||
+          (await caches.match("./")) ||
+          Response.error()
+        )
     );
-
     return;
   }
 
-  /*
-   * Other same-origin static resources:
-   * network first, cache fallback.
-   */
   event.respondWith(
     fetch(request)
       .then(response => {
-        if (response && response.ok) {
+        if (response.ok) {
           const copy = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then(cache =>
-              cache.put(request, copy)
-            );
+          event.waitUntil(
+            caches.open(CACHE_NAME)
+              .then(cache => cache.put(request, copy))
+          );
         }
-
         return response;
       })
-      .catch(async () => {
-        const cached =
-          await caches.match(request);
-
-        if (cached) {
-          return cached;
-        }
-
-        return Response.error();
-      })
+      .catch(async () =>
+        (await caches.match(request)) ||
+        Response.error()
+      )
   );
 });
