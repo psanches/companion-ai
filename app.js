@@ -1289,7 +1289,13 @@ inviteBtn?.addEventListener(
           "Erro ao compartilhar Lumi:",
           error
         );
-        /* =========================================================
+        
+      }
+    }
+  }
+);
+
+/* =========================================================
    NEW CHAT AND CHAT HISTORY
    ========================================================= */
 
@@ -1392,7 +1398,3 @@ chatHistoryBtn?.addEventListener("click", async () => {
     alert(error.message);
   }
 });
-      }
-    }
-  }
-);
