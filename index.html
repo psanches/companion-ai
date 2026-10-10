@@ -65,6 +65,13 @@
   <button id="chatHistoryBtn" type="button" aria-label="Abrir menu de conversas" title="Conversas">☰</button>
   <div id="authBox" class="auth-box"><button id="signInBtn" class="auth-button" type="button" hidden>Sign in</button><button id="signOutBtn" class="auth-button" type="button" hidden>Sign out</button></div>
   <button id="inviteBtn" type="button" aria-label="Convidar para a Lumi" title="Convidar para a Lumi">💌</button>
+  <button id="profileBtn"
+  type="button"
+  aria-label="Personal Profile"
+  title="Personal Profile"
+  onclick="document.getElementById('profileDialog').showModal()">
+  👤
+</button>
   <button id="memoryBtn" type="button" aria-label="Minha memória" title="Minha memória">🧠</button>
   <button id="soundButton" type="button" aria-label="Ligar voz da Lumi" title="Ligar voz da Lumi">🔇</button>
   <button id="settingsBtn" type="button" aria-label="Configurações" title="Configurações">⚙️</button>
@@ -97,6 +104,94 @@
 <div class="privacy-note">🔒 Sua chave da OpenAI permanece protegida no servidor Cloudflare.</div>
 <div class="row"><button id="clearBtn" type="button" class="danger">Apagar conversa</button><button id="saveBtn" type="button">Salvar</button></div>
 </div></dialog>
+  
+<!-- Lumi Personal Profile — interface preview only -->
+<style>
+  #profileDialog {
+    width: min(520px, 94vw);
+    max-height: 85vh;
+    overflow-y: auto;
+    border: 1px solid #374151;
+    border-radius: 16px;
+    padding: 24px;
+    background: #111827;
+    color: #f9fafb;
+  }
+  #profileDialog::backdrop {
+    background: rgba(0, 0, 0, .7);
+  }
+  #profileDialog h2 { margin-top: 0; }
+  #profileDialog h3 { margin-top: 24px; }
+  #profileDialog label {
+    display: block;
+    margin: 12px 0;
+  }
+  #profileDialog input,
+  #profileDialog textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px;
+    border: 1px solid #4b5563;
+    border-radius: 8px;
+    background: #1f2937;
+    color: white;
+  }
+  #profileDialog button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+</style>
+
+<dialog id="profileDialog">
+  <h2>👤 Personal Profile</h2>
+  <p>Optional information about you.</p>
+
+  <h3>Personal details</h3>
+  <label>Name
+    <input type="text" placeholder="Preferred name">
+  </label>
+
+  <h3>Preferences</h3>
+  <label>Interests and preferences
+    <textarea rows="3"></textarea>
+  </label>
+
+  <h3>Medical information</h3>
+  <p>
+    Preview only. Do not enter real medical
+    information yet.
+  </p>
+
+  <label>Medical conditions
+    <textarea rows="2" disabled></textarea>
+  </label>
+
+  <label>Medications and dosages
+    <textarea rows="3" disabled></textarea>
+  </label>
+
+  <label>Allergies
+    <textarea rows="2" disabled></textarea>
+  </label>
+
+  <label>Doctors and notes
+    <textarea rows="2" disabled></textarea>
+  </label>
+
+  <p>
+    🔒 Secure storage and consent controls
+    will be implemented before activation.
+  </p>
+
+  <button type="button"
+    onclick="document.getElementById('profileDialog').close()">
+    Close
+  </button>
+</dialog>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>const lumiScript=document.createElement("script");lumiScript.src="app.js?v="+Date.now();document.body.appendChild(lumiScript);</script>
 </body>
