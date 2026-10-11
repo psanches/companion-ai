@@ -25,8 +25,6 @@
 .conversation-item:disabled {opacity:.6;cursor:wait}
 #sidebarStatus {padding:8px 18px;color:#94a3b8;font-size:13px;min-height:26px}
 @media(max-width:600px){.app-header{gap:7px}.header-actions{gap:4px}.header-actions button{width:35px;height:35px;font-size:16px}.companion-profile{gap:6px!important}.companion-avatar{width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;flex-basis:36px!important}.companion-status{display:none}.header-actions .auth-button{min-width:58px;padding:0 6px;font-size:11px}}
-
-/* Persistent sidebar on desktop, slide-out navigation on mobile. */
 @media (min-width: 901px) {
   body { display:flex; }
   #conversationSidebar { position:relative; flex:0 0 276px; width:276px; height:100dvh; transform:none!important; box-shadow:none; z-index:1; }
@@ -65,6 +63,13 @@
   <button id="chatHistoryBtn" type="button" aria-label="Abrir menu de conversas" title="Conversas">☰</button>
   <div id="authBox" class="auth-box"><button id="signInBtn" class="auth-button" type="button" hidden>Sign in</button><button id="signOutBtn" class="auth-button" type="button" hidden>Sign out</button></div>
   <button id="inviteBtn" type="button" aria-label="Convidar para a Lumi" title="Convidar para a Lumi">💌</button>
+  <button id="profileBtn"
+  type="button"
+  aria-label="Personal Profile"
+  title="Personal Profile"
+  onclick="document.getElementById('profileDialog').showModal()">
+  👤
+</button>
   <button id="memoryBtn" type="button" aria-label="Minha memória" title="Minha memória">🧠</button>
   <button id="soundButton" type="button" aria-label="Ligar voz da Lumi" title="Ligar voz da Lumi">🔇</button>
   <button id="settingsBtn" type="button" aria-label="Configurações" title="Configurações">⚙️</button>
@@ -97,7 +102,103 @@
 <div class="privacy-note">🔒 Sua chave da OpenAI permanece protegida no servidor Cloudflare.</div>
 <div class="row"><button id="clearBtn" type="button" class="danger">Apagar conversa</button><button id="saveBtn" type="button">Salvar</button></div>
 </div></dialog>
+  
+<!-- Lumi Personal Profile — interface preview only -->
+<style>
+  #profileDialog {
+    width: min(520px, 94vw);
+    max-height: 85vh;
+    overflow-y: auto;
+    border: 1px solid #374151;
+    border-radius: 16px;
+    padding: 24px;
+    background: #111827;
+    color: #f9fafb;
+  }
+  #profileDialog::backdrop { background: rgba(0, 0, 0, .7); }
+  #profileDialog h2 { margin-top: 0; }
+  #profileDialog h3 { margin-top: 24px; }
+  #profileDialog label { display: block; margin: 12px 0; }
+  #profileDialog input,
+  #profileDialog textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px;
+    border: 1px solid #4b5563;
+    border-radius: 8px;
+    background: #1f2937;
+    color: white;
+  }
+  #profileDialog button { padding: 10px 16px; border-radius: 8px; cursor: pointer; }
+</style>
+
+<dialog id="profileDialog">
+  <h2>👤 Personal Profile</h2>
+  <p>Optional information about you.</p>
+  <h3>Personal details</h3>
+  <label>Name
+    <input type="text" placeholder="Preferred name">
+  </label>
+  <h3>Preferences</h3>
+  <label>Interests and preferences
+    <textarea rows="3"></textarea>
+  </label>
+  <h3>Medical information</h3>
+  <p>Preview only. Do not enter real medical information yet.</p>
+  <label>Medical conditions
+    <textarea rows="2" disabled></textarea>
+  </label>
+  <label>Medications and dosages
+    <textarea rows="3" disabled></textarea>
+  </label>
+  <label>Allergies
+    <textarea rows="2" disabled></textarea>
+  </label>
+  <label>Doctors and notes
+    <textarea rows="2" disabled></textarea>
+  </label>
+  <p>🔒 Secure storage and consent controls will be implemented before activation.</p>
+  <button type="button" onclick="document.getElementById('profileDialog').close()">Close</button>
+  <button type="button" id="testMedicalStorageBtn" style="margin-top:12px;background:#2563eb;color:white">🧪 Test Medical Storage</button>
+  <p id="medicalTestResult" role="status" aria-live="polite"></p>
+</dialog>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>const lumiScript=document.createElement("script");lumiScript.src="app.js?v="+Date.now();document.body.appendChild(lumiScript);</script>
+<script>
+/* Development-only fictional medical storage test. No real data. */
+document.getElementById("testMedicalStorageBtn").addEventListener("click", async function () {
+  const button = this;
+  const output = document.getElementById("medicalTestResult");
+  button.disabled = true;
+  output.textContent = "Testing medical storage...";
+  try {
+    if (typeof getAccessToken !== "function") throw new Error("Lumi is still loading. Try again.");
+    const token = await getAccessToken();
+    if (!token) throw new Error("Please sign in first.");
+    const response = await fetch("https://lumi-develop.psanchesnle.workers.dev/profile/medical", {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        consentToStore: true,
+        profile: {
+          conditions: ["Fictional test condition"],
+          medications: [], allergies: [], doctors: [],
+          notes: "LUMI ENCRYPTION TEST - FICTIONAL DATA"
+        }
+      })
+    });
+    output.textContent = response.ok
+      ? "✅ Fictional test saved. Check lumi-develop-memory in Cloudflare KV."
+      : "❌ Save failed. HTTP " + response.status;
+  } catch (error) {
+    output.textContent = "❌ " + error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+</script>
 </body>
 </html>
