@@ -146,20 +146,20 @@
     <textarea rows="3"></textarea>
   </label>
   <h3>Medical information</h3>
-  <p>Preview only. Do not enter real medical information yet.</p>
+  <p id="medicalDraftNotice" role="status">🔒 Medical fields are editable for testing only. They are NOT saved or sent to a server. Please do not enter real medical information until secure storage is verified.</p>
   <label>Medical conditions
-    <textarea rows="2" disabled></textarea>
+    <textarea id="profileConditions" rows="2" autocomplete="off"></textarea>
   </label>
   <label>Medications and dosages
-    <textarea rows="3" disabled></textarea>
+    <textarea id="profileMedications" rows="3" autocomplete="off"></textarea>
   </label>
   <label>Allergies
-    <textarea rows="2" disabled></textarea>
+    <textarea id="profileAllergies" rows="2" autocomplete="off"></textarea>
   </label>
   <label>Doctors and notes
-    <textarea rows="2" disabled></textarea>
+    <textarea id="profileDoctors" rows="2" autocomplete="off"></textarea>
   </label>
-  <p>🔒 Secure storage and consent controls will be implemented before activation.</p>
+  <p>Nothing entered here is stored. Closing the form clears the medical fields.</p>
   <button type="button" onclick="document.getElementById('profileDialog').close()">Close</button>
   <button type="button" id="testMedicalStorageBtn" style="margin-top:12px;background:#2563eb;color:white">🧪 Test Medical Storage</button>
   <p id="medicalTestResult" role="status" aria-live="polite"></p>
@@ -168,6 +168,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>const lumiScript=document.createElement("script");lumiScript.src="app.js?v="+Date.now();document.body.appendChild(lumiScript);</script>
 <script>
+/* Clear unsaved medical draft on close; no persistence or network transmission. */
+document.getElementById("profileDialog").addEventListener("close", () => {
+  for (const id of ["profileConditions","profileMedications","profileAllergies","profileDoctors"]) {
+    document.getElementById(id).value = "";
+  }
+});
 /* Development-only fictional medical storage test. No real data. */
 document.getElementById("testMedicalStorageBtn").addEventListener("click", async function () {
   const button = this;
