@@ -3,10 +3,30 @@ const SUPABASE_URL =
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv";
 
+// Only the authentication session follows Remember me; Lumi's existing
+// conversation preferences and other local data are managed separately.
+const REMEMBER_KEY = "lumi-remember-signin";
+const AUTH_STORAGE_KEY = "sb-" + new URL(SUPABASE_URL).hostname.split(".")[0] + "-auth-token";
+const rememberSignIn = () => localStorage.getItem(REMEMBER_KEY) !== "false";
+const lumiAuthStorage = {
+  getItem(key) {
+    return (rememberSignIn() ? localStorage : sessionStorage).getItem(key);
+  },
+  setItem(key, value) {
+    (rememberSignIn() ? localStorage : sessionStorage).setItem(key, value);
+    (rememberSignIn() ? sessionStorage : localStorage).removeItem(key);
+  },
+  removeItem(key) {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  }
+};
 const supabaseClient =
   window.supabase.createClient(
     SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY
+    SUPABASE_PUBLISHABLE_KEY,
+    { auth: { storage: lumiAuthStorage, persistSession: true,
+              autoRefreshToken: true, detectSessionInUrl: true } }
   );
 
 const WORKER_URL =
@@ -115,6 +135,45 @@ function ensureAuthDialog() {
   email.style.cssText = "box-sizing:border-box;width:100%;margin:8px 0 12px;" +
     "padding:12px;border:1px solid #64748b;border-radius:8px;" +
     "background:#1e293b;color:white;font-size:16px;";
+  const rememberLabel = document.createElement("label");
+  rememberLabel.style.cssText =
+    "display:flex;align-items:center;gap:9px;margin:4px 0 14px;cursor:pointer;";
+  const remember = document.createElement("input");
+  remember.type = "checkbox";
+  remember.id = "lumiRememberSignIn";
+  remember.checked = rememberSignIn();
+  rememberLabel.append(remember,document.createTextNode("Lembrar de mim neste dispositivo"));
+  const googleButton = document.createElement("button");
+  googleButton.type = "button";
+  googleButton.textContent = "Continuar com Google";
+  googleButton.style.cssText =
+    "width:100%;margin:0 0 12px;padding:12px;border-radius:8px;" +
+    "border:1px solid #64748b;background:#fff;color:#111827;cursor:pointer;";
+  const divider = document.createElement("p");
+  divider.textContent = "Ou receba um link por e-mail";
+  divider.style.cssText = "text-align:center;margin:10px 0;color:#cbd5e1;";
+  remember.addEventListener("change", () => {
+    // A signed-out user may choose session-only or persistent storage.
+    // Remove stale credentials from the opposite storage before sign-in.
+    localStorage.setItem(REMEMBER_KEY, String(remember.checked));
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  });
+  googleButton.addEventListener("click", async () => {
+    googleButton.disabled = true;
+    const status = dialog.querySelector("#lumiAuthStatus");
+    status.textContent = "Abrindo login do Google...";
+    try {
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: location.origin + location.pathname }
+      });
+      if (error) throw error;
+    } catch (error) {
+      status.textContent = error?.message || "Não foi possível entrar com Google.";
+      googleButton.disabled = false;
+    }
+  });
   const status = document.createElement("p");
   status.id = "lumiAuthStatus";
   status.setAttribute("role", "status");
@@ -133,7 +192,7 @@ function ensureAuthDialog() {
   }
   close.onclick = () => dialog.close();
   actions.append(submit,close);
-  form.append(label,email,status,actions);
+  form.append(googleButton,divider,label,email,rememberLabel,status,actions);
   dialog.append(heading,help,form);
   document.body.appendChild(dialog);
   form.addEventListener("submit",async event => {
@@ -189,6 +248,8 @@ signOutBtn?.addEventListener("click", async () => {
   try {
     const { error } = await supabaseClient.auth.signOut();
     if (error) throw error;
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
     await updateAuthUI();
   } catch (error) {
     alert("Não foi possível sair da Lumi. Tente novamente.");
