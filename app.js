@@ -1242,58 +1242,91 @@ input.addEventListener(
   }
 );
 /* =========================================================
-   INVITE TO LUMI
+   INVITE TO LUMI — clear desktop and mobile sharing
    ========================================================= */
 
-const inviteBtn =
-  document.getElementById("inviteBtn");
+const inviteBtn = document.getElementById("inviteBtn");
+const LUMI_INVITE_URL = "https://mylumicompanion.com/";
+const LUMI_INVITE_TEXT =
+  "Conheça a Lumi, sua assistente pessoal com memória.";
 
-inviteBtn?.addEventListener(
-  "click",
-  async () => {
+function openLumiInviteDialog() {
+  const previous = document.getElementById("lumiInviteDialog");
+  if (previous) previous.remove();
 
-    const shareData = {
-      title: "Lumi",
-      text:
-        "Conheça a Lumi, sua assistente pessoal com memória.",
-      url:
-        "https://mylumicompanion.com/"
-    };
+  const dialog = document.createElement("dialog");
+  dialog.id = "lumiInviteDialog";
+  dialog.setAttribute("aria-label", "Convidar para a Lumi");
+  dialog.style.cssText =
+    "max-width:min(440px,92vw);box-sizing:border-box;padding:24px;" +
+    "border-radius:16px;border:1px solid #475569;background:#111827;" +
+    "color:#f8fafc;box-shadow:0 20px 70px #0008;";
+  dialog.innerHTML = `
+    <h2 style="margin:0 0 12px">💌 Convidar para a Lumi</h2>
+    <p style="line-height:1.5">Envie este link para alguém conhecer a Lumi.</p>
+    <input id="lumiInviteLink" type="text" readonly
+      aria-label="Link para convidar"
+      style="box-sizing:border-box;width:100%;padding:12px;border-radius:8px;
+      border:1px solid #64748b;background:#1e293b;color:white;">
+    <p id="lumiInviteStatus" role="status" aria-live="polite"></p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button type="button" id="lumiCopyInvite">📋 Copiar link</button>
+      <button type="button" id="lumiWhatsAppInvite">WhatsApp</button>
+      <button type="button" id="lumiEmailInvite">✉️ E-mail</button>
+      <button type="button" id="lumiCloseInvite">Fechar</button>
+    </div>
+  `;
+  document.body.appendChild(dialog);
+  const link = dialog.querySelector("#lumiInviteLink");
+  const status = dialog.querySelector("#lumiInviteStatus");
+  link.value = LUMI_INVITE_URL;
+  for (const button of dialog.querySelectorAll("button")) {
+    button.style.cssText =
+      "padding:10px 12px;border-radius:8px;border:1px solid #64748b;" +
+      "background:#243449;color:#fff;cursor:pointer;";
+  }
 
+  dialog.querySelector("#lumiCopyInvite").onclick = async () => {
     try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        return;
-      }
+      await navigator.clipboard.writeText(LUMI_INVITE_URL);
+      status.textContent = "✓ Link copiado. Cole no WhatsApp, e-mail ou mensagem.";
+    } catch {
+      link.focus();
+      link.select();
+      status.textContent = "Selecione e copie o link com Ctrl+C.";
+    }
+  };
+  dialog.querySelector("#lumiWhatsAppInvite").onclick = () => {
+    const message = LUMI_INVITE_TEXT + " " + LUMI_INVITE_URL;
+    window.open("https://wa.me/?text=" + encodeURIComponent(message),
+      "_blank", "noopener,noreferrer");
+  };
+  dialog.querySelector("#lumiEmailInvite").onclick = () => {
+    const subject = encodeURIComponent("Convite para conhecer a Lumi");
+    const body = encodeURIComponent(LUMI_INVITE_TEXT + "\n\n" + LUMI_INVITE_URL);
+    window.location.href = "mailto:?subject=" + subject + "&body=" + body;
+  };
+  dialog.querySelector("#lumiCloseInvite").onclick = () => dialog.close();
+  dialog.addEventListener("close", () => dialog.remove(), { once: true });
+  dialog.showModal();
+}
 
-      await navigator.clipboard.writeText(
-        shareData.url
-      );
-
-      const originalContent =
-        inviteBtn.textContent;
-
-      inviteBtn.textContent = "✓";
-      inviteBtn.title = "Link copiado!";
-
-      setTimeout(() => {
-        inviteBtn.textContent =
-          originalContent;
-        inviteBtn.title =
-          "Convidar para a Lumi";
-      }, 1800);
-
+inviteBtn?.addEventListener("click", async () => {
+  // On desktop, show explicit destinations instead of silently copying.
+  // On mobile, use native sharing where supported.
+  const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (mobile && navigator.share) {
+    try {
+      await navigator.share({
+        title: "Lumi", text: LUMI_INVITE_TEXT, url: LUMI_INVITE_URL
+      });
+      return;
     } catch (error) {
-      if (error?.name !== "AbortError") {
-        console.error(
-          "Erro ao compartilhar Lumi:",
-          error
-        );
-        
-      }
+      if (error?.name === "AbortError") return;
     }
   }
-);
+  openLumiInviteDialog();
+});
 
 /* =========================================================
    NEW CHAT AND CHAT HISTORY
