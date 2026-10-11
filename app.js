@@ -7,7 +7,7 @@ const SUPABASE_PUBLISHABLE_KEY =
 // conversation preferences and other local data are managed separately.
 const REMEMBER_KEY = "lumi-remember-signin";
 const AUTH_STORAGE_KEY = "sb-" + new URL(SUPABASE_URL).hostname.split(".")[0] + "-auth-token";
-const rememberSignIn = () => localStorage.getItem(REMEMBER_KEY) !== "false";
+const rememberSignIn = () => localStorage.getItem(REMEMBER_KEY) === "true";
 const lumiAuthStorage = {
   getItem(key) {
     return (rememberSignIn() ? localStorage : sessionStorage).getItem(key);
@@ -142,6 +142,9 @@ function ensureAuthDialog() {
   remember.type = "checkbox";
   remember.id = "lumiRememberSignIn";
   remember.checked = rememberSignIn();
+  const rememberHelp = document.createElement("p");
+  rememberHelp.textContent = "Use apenas em um dispositivo pessoal. Informações médicas exigirão nova confirmação de identidade.";
+  rememberHelp.style.cssText = "font-size:13px;line-height:1.45;color:#cbd5e1;margin:0 0 14px;";
   rememberLabel.append(remember,document.createTextNode("Lembrar de mim neste dispositivo"));
   const googleButton = document.createElement("button");
   googleButton.type = "button";
@@ -192,7 +195,7 @@ function ensureAuthDialog() {
   }
   close.onclick = () => dialog.close();
   actions.append(submit,close);
-  form.append(googleButton,divider,label,email,rememberLabel,status,actions);
+  form.append(googleButton,divider,label,email,rememberLabel,rememberHelp,status,actions);
   dialog.append(heading,help,form);
   document.body.appendChild(dialog);
   form.addEventListener("submit",async event => {
