@@ -86,43 +86,121 @@ async function authFetch(url, options = {}) {
 const signInBtn = document.querySelector("#signInBtn");
 const signOutBtn = document.querySelector("#signOutBtn");
 
-async function updateAuthUI() {
-  const {
-    data: { session }
-  } = await supabaseClient.auth.getSession();
-
-  if (signInBtn) signInBtn.hidden = !!session;
-  if (signOutBtn) signOutBtn.hidden = !session;
-}
-
-signInBtn?.addEventListener("click", async () => {
-  const email = prompt("Enter your email:");
-
-  if (!email) return;
-
-  const { error } = await supabaseClient.auth.signInWithOtp({
-    email,
-    options: {
-  emailRedirectTo: 
-  "https://companion-ai-e42.pages.dev/"
+function ensureAuthDialog() {
+  let dialog = document.getElementById("lumiAuthDialog");
+  if (dialog) return dialog;
+  dialog = document.createElement("dialog");
+  dialog.id = "lumiAuthDialog";
+  dialog.setAttribute("aria-label", "Entrar na Lumi");
+  dialog.style.cssText =
+    "width:min(440px,92vw);box-sizing:border-box;padding:24px;" +
+    "border:1px solid #475569;border-radius:16px;background:#111827;" +
+    "color:#f8fafc;box-shadow:0 20px 70px #0008;";
+  const heading = document.createElement("h2");
+  heading.textContent = "Entrar na Lumi";
+  heading.style.marginTop = "0";
+  const help = document.createElement("p");
+  help.textContent = "Digite seu e-mail. Enviaremos um link para entrar sem senha.";
+  const form = document.createElement("form");
+  form.noValidate = true;
+  const label = document.createElement("label");
+  label.textContent = "Seu e-mail";
+  label.htmlFor = "lumiSignInEmail";
+  const email = document.createElement("input");
+  email.id = "lumiSignInEmail";
+  email.type = "email";
+  email.autocomplete = "email";
+  email.required = true;
+  email.placeholder = "voce@exemplo.com";
+  email.style.cssText = "box-sizing:border-box;width:100%;margin:8px 0 12px;" +
+    "padding:12px;border:1px solid #64748b;border-radius:8px;" +
+    "background:#1e293b;color:white;font-size:16px;";
+  const status = document.createElement("p");
+  status.id = "lumiAuthStatus";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  const actions = document.createElement("div");
+  actions.style.cssText = "display:flex;flex-wrap:wrap;gap:10px;";
+  const submit = document.createElement("button");
+  submit.type = "submit";
+  submit.textContent = "Enviar link";
+  const close = document.createElement("button");
+  close.type = "button";
+  close.textContent = "Cancelar";
+  for (const btn of [submit,close]) {
+    btn.style.cssText = "padding:10px 14px;border-radius:8px;cursor:pointer;" +
+      "border:1px solid #64748b;background:#243449;color:white;";
+  }
+  close.onclick = () => dialog.close();
+  actions.append(submit,close);
+  form.append(label,email,status,actions);
+  dialog.append(heading,help,form);
+  document.body.appendChild(dialog);
+  form.addEventListener("submit",async event => {
+    event.preventDefault();
+    if (!email.checkValidity()) {
+      status.textContent = "Digite um endereço de e-mail válido.";
+      email.focus();
+      return;
+    }
+    submit.disabled = true;
+    status.textContent = "Enviando seu link de acesso...";
+    try {
+      // Keep users on the exact development host that initiated sign-in.
+      const redirectTo = location.origin + location.pathname;
+      const { error } = await supabaseClient.auth.signInWithOtp({
+        email: email.value.trim(),
+        options: { emailRedirectTo: redirectTo }
+      });
+      if (error) throw error;
+      status.textContent =
+        "Link solicitado. Verifique sua caixa de entrada e spam. " +
+        "Abra o link neste navegador para voltar à Lumi.";
+      submit.textContent = "Reenviar link";
+    } catch (error) {
+      status.textContent = error?.message ||
+        "Não foi possível enviar o link. Tente novamente.";
+    } finally {
+      submit.disabled = false;
     }
   });
+  return dialog;
+}
 
-  if (error) {
-    alert(error.message);
-    return;
-  }
+async function updateAuthUI() {
+  const { data, error } = await supabaseClient.auth.getSession();
+  if (error) console.error("Erro de sessão:",error);
+  const signedIn = !!data?.session && !error;
+  if (signInBtn) signInBtn.hidden = signedIn;
+  if (signOutBtn) signOutBtn.hidden = !signedIn;
+  const dialog = document.getElementById("lumiAuthDialog");
+  if (signedIn && dialog?.open) dialog.close();
+}
 
-  alert("Check your email for the Lumi sign-in link.");
+signInBtn?.addEventListener("click", () => {
+  const dialog = ensureAuthDialog();
+  dialog.querySelector("#lumiAuthStatus").textContent = "";
+  dialog.showModal();
+  dialog.querySelector("#lumiSignInEmail").focus();
 });
 
 signOutBtn?.addEventListener("click", async () => {
-  await supabaseClient.auth.signOut();
-  await updateAuthUI();
+  signOutBtn.disabled = true;
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) throw error;
+    await updateAuthUI();
+  } catch (error) {
+    alert("Não foi possível sair da Lumi. Tente novamente.");
+    console.error("Erro ao sair:",error);
+  } finally {
+    signOutBtn.disabled = false;
+  }
 });
 
 supabaseClient.auth.onAuthStateChange(() => {
-  updateAuthUI();
+  // Avoid awaiting another auth API call synchronously inside the callback.
+  setTimeout(() => { updateAuthUI(); }, 0);
 });
 
 updateAuthUI();
