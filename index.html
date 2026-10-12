@@ -48,6 +48,7 @@
 <aside id="conversationSidebar" aria-label="Histórico de conversas" aria-hidden="true">
   <div class="sidebar-top"><h2>Conversas</h2><button id="closeSidebarBtn" type="button" aria-label="Fechar menu">×</button></div>
   <button id="sidebarNewChatBtn" type="button">＋ Nova conversa</button>
+  <button id="lumiDemoBtn" type="button" style="margin:0 14px 16px;padding:14px;border-radius:12px;background:#215574;color:#fff;border:2px solid #9bd6f5;font-size:17px;cursor:pointer;text-align:left">✨ Conheça a Lumi</button>
   <div class="sidebar-label">RECENTES</div>
   <div id="conversationList"></div>
   <div id="sidebarStatus" role="status" aria-live="polite"></div>
@@ -164,6 +165,44 @@
   <p id="medicalTestResult" role="status" aria-live="polite">🔐 Medical storage tests are paused until server-side passkey verification is deployed and audited.</p>
 </dialog>
 
+<dialog id="lumiDemoDialog" aria-labelledby="lumiDemoTitle" style="box-sizing:border-box;width:min(94vw,720px);max-height:90dvh;overflow:auto;background:#111827;color:#fff;border:2px solid #9bd6f5;border-radius:16px;padding:22px;font:18px/1.5 system-ui">
+  <button id="closeLumiDemoBtn" type="button" style="float:right;padding:8px 13px;border-radius:8px;font-size:20px" aria-label="Fechar demonstração">✕</button>
+  <h2 id="lumiDemoTitle">Conheça a Lumi</h2>
+  <p>Uma assistente para conversar, organizar a rotina e compreender informações de saúde.</p>
+  <p><strong>Exemplos fictícios.</strong> Esta demonstração não coleta nem armazena informações médicas.</p>
+  <h3>Escolha uma situação</h3>
+  <div id="lumiDemoChoices" style="display:grid;gap:12px">
+    <button type="button" data-demo="routine">Quero organizar meu dia</button>
+    <button type="button" data-demo="symptom">Estou cansado depois de caminhar</button>
+    <button type="button" data-demo="visit">Quero preparar minha consulta</button>
+    <button type="button" data-demo="privacy">Como funciona a privacidade?</button>
+  </div>
+  <section aria-live="polite" style="margin-top:20px;background:#1f2937;border-radius:12px;padding:16px">
+    <h3>Exemplo de resposta</h3><p id="lumiDemoAnswer">Escolha uma situação acima.</p>
+  </section>
+  <p>O chat está disponível. O perfil médico permanece bloqueado para dados reais enquanto concluímos os testes de segurança.</p>
+  <button id="lumiDemoChatBtn" type="button">Voltar ao chat</button>
+</dialog>
+<style>
+#lumiDemoChoices button,#lumiDemoChatBtn{padding:15px;border-radius:12px;background:#215574;color:#fff;border:2px solid #9bd6f5;font:inherit;text-align:left;cursor:pointer}
+#lumiDemoChoices button:focus-visible,#lumiDemoChatBtn:focus-visible{outline:4px solid gold}
+#lumiDemoDialog::backdrop{background:rgba(0,0,0,.7)}
+</style>
+<script>
+(() => {
+ const demo=document.getElementById("lumiDemoDialog");
+ const answers={
+  routine:"Podemos começar pelos compromissos de hoje e organizar uma atividade por vez.",
+  symptom:"O cansaço pode ter várias causas. Anote quando acontece e converse com seu médico. Se houver falta de ar intensa, dor no peito ou desmaio, procure urgência.",
+  visit:"Vamos anotar três perguntas: O que mudou nos sintomas? Quais efeitos dos medicamentos devo relatar? Como posso me preparar para a próxima consulta?",
+  privacy:"Dados médicos reais ainda não devem ser inseridos. Estamos testando a confirmação de identidade e os controles de privacidade antes da liberação."
+ };
+ document.getElementById("lumiDemoBtn").addEventListener("click",()=>demo.showModal());
+ document.getElementById("closeLumiDemoBtn").addEventListener("click",()=>demo.close());
+ document.getElementById("lumiDemoChatBtn").addEventListener("click",()=>demo.close());
+ document.querySelectorAll("#lumiDemoChoices [data-demo]").forEach(b=>b.addEventListener("click",()=>{document.getElementById("lumiDemoAnswer").textContent=answers[b.dataset.demo];}));
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>const lumiScript=document.createElement("script");lumiScript.src="app.js?v="+Date.now();document.body.appendChild(lumiScript);</script>
 <script>
