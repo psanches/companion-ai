@@ -31,11 +31,12 @@ test("passkey routes reject GET",async()=>{
 test("passkey routes fail closed without binding",async()=>{
   assert.equal((await handleDevelopmentPasskeyRoute(req("/medical/passkey/register/options"),{}, {id:"alice"})).status,503);
 });
-test("passkey routes fail closed when Supabase unavailable",async()=>{
+test("passkey routes reject authentication when Supabase unavailable",async()=>{
   const response=await handleDevelopmentPasskeyRoute(req("/medical/passkey/register/options"),env,{id:"alice"},{
     fetcher:async()=>{throw Error("offline")}
   });
-  assert.equal(response.status,503);
+  assert.equal(response.status,401);
+  assert.equal((await response.json()).error,"AUTH_REQUIRED");
 });
 
 test("development-origin responses include restricted CORS headers",async()=>{
