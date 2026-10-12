@@ -33,6 +33,7 @@ export async function handleDevelopmentPasskeyRoute(request,env,user,deps={}) {
     return reply({error:"ORIGIN_DENIED"},403);
   if (!user?.id || !env?.MEDICAL_PASSKEY_DO)
     return reply({error:"PASSKEY_NOT_CONFIGURED"},503);
+  try {
   const verifiedIdentity=await verifySupabaseMedicalIdentity(request,{
     supabaseUrl:env.SUPABASE_URL,
     supabasePublishableKey:env.SUPABASE_PUBLISHABLE_KEY,
@@ -70,4 +71,7 @@ export async function handleDevelopmentPasskeyRoute(request,env,user,deps={}) {
   // Deliberately no medical access grant yet.
   return success?reply({ok:true,medicalAccess:false}):
     reply({error:"PASSKEY_VERIFICATION_FAILED"},403);
+  } catch {
+    return reply({error:"PASSKEY_SERVICE_UNAVAILABLE"},503);
+  }
 }
