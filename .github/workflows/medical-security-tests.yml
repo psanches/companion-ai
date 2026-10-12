@@ -26,4 +26,4 @@ jobs:
       - name: Run medical security unit tests
         run: npm test
       - name: Verify Cloudflare staging bundle without deploying
-        run: npm run build:staging
+        run: node assert-staging-deployment.mjs && npm run build:staging
