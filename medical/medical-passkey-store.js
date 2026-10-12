@@ -44,6 +44,14 @@ export class MedicalPasskeyStore {
     });
   }
 
+  async listCredentials(userId) {
+    if (typeof userId !== "string" || !userId) return [];
+    const entries = await this.ctx.storage.list({prefix:"credential:"});
+    return [...entries.values()]
+      .filter(c => c && c.userId === userId)
+      .map(c => ({id:c.id, transports:Array.isArray(c.transports)?c.transports:[]}));
+  }
+
   async getCredential(userId, credentialId) {
     if (!userId || !credentialId) return null;
     const value = await this.ctx.storage.get("credential:" + credentialId);
