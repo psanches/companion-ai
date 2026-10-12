@@ -200,7 +200,8 @@
   else if(step==="condition"){question.textContent="Qual condição de saúde foi diagnosticada?";freeText("other")}
   else if(step==="other"){question.textContent="Você recebeu diagnóstico de outra condição de saúde?";option("SIM","condition");option("NÃO","who")}
   else if(step==="who"){question.textContent="Foi um médico especialista que fez o diagnóstico?";option("SIM","when");option("NÃO","when")}
-  else if(step==="when"){question.textContent="Você se lembra de quando recebeu o diagnóstico?";option("SIM","first");option("NÃO","first")}
+  else if(step==="when"){question.textContent="Você se lembra de quando descobriu sua condição de saúde?";option("SIM","approxDate");option("NÃO","first")}
+  else if(step==="approxDate"){question.textContent="Você consegue me dizer aproximadamente quando foi? Pode ser só o ano, o mês e o ano, ou algo como há uns três anos.";freeText("first")}
   else if(step==="first"){question.textContent="Você gostaria de contar o que levou você a procurar atendimento?";option("SIM","firstDetail");option("NÃO","done")}
   else if(step==="firstDetail"){question.textContent="Conte com suas palavras, se desejar.";freeText("done")}
   else if(step==="general"){question.textContent="O que trouxe você aqui hoje?";["Cuido de alguém","Quero aprender sobre saúde","Quero companhia e conversar","Preciso de ajuda no dia a dia","Estou conhecendo a Lumi"].forEach(t=>option(t,"done"))}
