@@ -212,56 +212,53 @@
  document.getElementById("lumiDemoReset").addEventListener("click",()=>{step="start";render()});
 })();
 </script>
-<dialog id="lumiBetaDialog" aria-labelledby="lumiBetaTitle" style="box-sizing:border-box;width:min(96vw,960px);max-height:92dvh;overflow:auto;background:#111827;color:white;border:2px solid #a4e7c8;border-radius:16px;padding:22px;font:17px/1.5 system-ui">
+<dialog id="lumiBetaDialog" aria-labelledby="lumiBetaTitle" style="box-sizing:border-box;width:min(96vw,860px);max-height:92dvh;overflow:auto;background:#111827;color:white;border:2px solid #a4e7c8;border-radius:16px;padding:22px;font:18px/1.5 system-ui">
 <button id="lumiBetaClose" type="button" style="float:right;padding:8px 13px;border-radius:8px" aria-label="Fechar painel">✕</button>
-<h2 id="lumiBetaTitle">📊 Painel de avaliação — beta fictício</h2>
-<p><strong>SIMULAÇÃO.</strong> Todos os registros abaixo são inventados. Nenhum dado real da Lumi é lido, armazenado ou transmitido por este painel.</p>
-<p>Identificadores P001–P005 são códigos fictícios, não nomes. Em estudos reais, códigos individuais representam dados <strong>pseudonimizados</strong>, não necessariamente anônimos.</p>
-<label for="lumiBetaGroup">Visualizar grupo</label>
-<select id="lumiBetaGroup" style="padding:10px;font:inherit;background:#1f2937;color:white;border:1px solid #a4e7c8;border-radius:8px">
-<option value="all">Todos os participantes</option>
-<option value="health">Com condição de saúde informada</option>
-<option value="care">Cuidado / apoio a terceiros</option>
-<option value="general">Uso geral</option>
+<h2 id="lumiBetaTitle">📊 Avaliação da Lumi — demonstração</h2>
+<p><strong>DADOS TOTALMENTE FICTÍCIOS.</strong> Nenhuma informação real é consultada, transmitida ou armazenada neste painel.</p>
+<p>Este painel avalia a experiência com a Lumi, sem exibir nomes, códigos individuais, diagnósticos ou conversas.</p>
+<label for="lumiBetaPeriod">Período:</label>
+<select id="lumiBetaPeriod" style="padding:12px;font:inherit;background:#1f2937;color:white;border:1px solid #a4e7c8;border-radius:8px">
+<option value="all">Duas semanas</option><option value="1">Semana 1</option><option value="2">Semana 2</option>
 </select>
-<div id="lumiBetaSummary" role="status" aria-live="polite" style="margin:18px 0;padding:14px;border-radius:12px;background:#1f2937"></div>
-<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:left" id="lumiBetaTable"><thead><tr><th>Código</th><th>Perfil</th><th>Semana</th><th>Sessões</th><th>Tarefas concluídas</th><th>Facilidade (1–5)</th><th>Utilidade (1–5)</th></tr></thead><tbody></tbody></table></div>
-<p style="font-size:14px;color:#cbd5e1">Os indicadores avaliam uso e experiência, não eficácia clínica. Com apenas cinco pessoas, não é apropriado divulgar subgrupos pequenos ou combinar detalhes que permitam reidentificação.</p>
-<button id="lumiBetaCsv" type="button">Exportar CSV fictício</button>
-<button id="lumiBetaReset" type="button">Ver todos</button>
+<div id="lumiBetaSummary" role="status" aria-live="polite" style="margin:18px 0;padding:16px;border-radius:12px;background:#1f2937"></div>
+<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th>Indicador</th><th>Semana 1</th><th>Semana 2</th></tr></thead><tbody id="lumiBetaBody"></tbody></table></div>
+<p style="font-size:14px;color:#cbd5e1">Resultados demonstrativos de usabilidade, não de eficácia clínica. Nenhuma segmentação por condição de saúde ou grupo pequeno é oferecida. Antes de usar dados reais, será necessária revisão de privacidade, consentimento e controles de acesso.</p>
+<button id="lumiBetaCsv" type="button">Exportar CSV agregado fictício</button>
 </dialog>
 <style>
-#lumiBetaDialog th,#lumiBetaDialog td{padding:10px;border-bottom:1px solid #475569;white-space:nowrap}
+#lumiBetaDialog th,#lumiBetaDialog td{padding:12px;border-bottom:1px solid #475569}
 #lumiBetaDialog button{padding:12px;border-radius:10px;background:#244a3d;color:#fff;border:2px solid #a4e7c8;font:inherit;cursor:pointer;margin:5px}
-#lumiBetaDialog button:focus-visible,#lumiBetaGroup:focus-visible{outline:4px solid gold}
+#lumiBetaDialog button:focus-visible,#lumiBetaPeriod:focus-visible{outline:4px solid gold}
 #lumiBetaDialog::backdrop{background:rgba(0,0,0,.7)}
 </style>
 <script>
 (()=>{
-const rows=[
-{id:"P001",group:"health",profile:"Condição de saúde",week:1,sessions:4,completed:3,ease:4,useful:5},
-{id:"P002",group:"health",profile:"Condição de saúde",week:1,sessions:3,completed:2,ease:3,useful:4},
-{id:"P003",group:"care",profile:"Apoio a terceiros",week:1,sessions:5,completed:4,ease:5,useful:4},
-{id:"P004",group:"general",profile:"Uso geral",week:1,sessions:2,completed:1,ease:3,useful:3},
-{id:"P005",group:"health",profile:"Condição de saúde",week:1,sessions:4,completed:3,ease:4,useful:4}
-];
-const dialog=document.getElementById("lumiBetaDialog"),select=document.getElementById("lumiBetaGroup"),body=document.querySelector("#lumiBetaTable tbody"),summary=document.getElementById("lumiBetaSummary");
-const filtered=()=>rows.filter(r=>select.value==="all"||r.group===select.value);
-const avg=(rs,key)=>rs.length?(rs.reduce((a,r)=>a+r[key],0)/rs.length).toFixed(1):"—";
-function render(){
- const rs=filtered();body.replaceChildren();
- for(const r of rs){const tr=document.createElement("tr");for(const v of [r.id,r.profile,r.week,r.sessions,r.completed,r.ease,r.useful]){const td=document.createElement("td");td.textContent=String(v);tr.appendChild(td)}body.appendChild(tr)}
- summary.textContent="Participantes fictícios: "+rs.length+" | Sessões: "+rs.reduce((a,r)=>a+r.sessions,0)+" | Tarefas concluídas: "+rs.reduce((a,r)=>a+r.completed,0)+" | Facilidade média: "+avg(rs,"ease")+"/5 | Utilidade média: "+avg(rs,"useful")+"/5";
-}
-document.getElementById("lumiBetaBtn").addEventListener("click",()=>{select.value="all";render();dialog.showModal()});
-document.getElementById("lumiBetaClose").addEventListener("click",()=>dialog.close());
-document.getElementById("lumiBetaReset").addEventListener("click",()=>{select.value="all";render()});
-select.addEventListener("change",render);
-document.getElementById("lumiBetaCsv").addEventListener("click",()=>{
- const cols=["codigo","perfil","semana","sessoes","tarefas_concluidas","facilidade_1a5","utilidade_1a5"];
- const csv=[cols.join(";"),...filtered().map(r=>[r.id,r.profile,r.week,r.sessions,r.completed,r.ease,r.useful].join(";"))].join("\r\n");
- const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="lumi-beta-dados-ficticios.csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-});
+ const demo=[
+  {period:"Semana 1",sessions:18,completed:13,ease:3.8,useful:4.0,independent:60,issues:6},
+  {period:"Semana 2",sessions:23,completed:19,ease:4.2,useful:4.4,independent:80,issues:3}
+ ];
+ const metrics=[["Sessões","sessions",""],["Tarefas concluídas","completed",""],["Facilidade de uso (1–5)","ease","/5"],["Utilidade (1–5)","useful","/5"],["Tarefas sem ajuda","independent","%"],["Dificuldades relatadas","issues",""]];
+ const dialog=document.getElementById("lumiBetaDialog"),sel=document.getElementById("lumiBetaPeriod"),summary=document.getElementById("lumiBetaSummary"),tbody=document.getElementById("lumiBetaBody");
+ function render(){
+  const shown=sel.value==="all"?demo:demo.filter((_,i)=>String(i+1)===sel.value);
+  tbody.replaceChildren();
+  for(const [label,key,suffix] of metrics){
+   const tr=document.createElement("tr");const title=document.createElement("td");title.textContent=label;tr.appendChild(title);
+   for(const d of demo){const td=document.createElement("td");td.textContent=shown.includes(d)?String(d[key])+suffix:"—";tr.appendChild(td)}tbody.appendChild(tr)
+  }
+  const sessions=shown.reduce((a,d)=>a+d.sessions,0),tasks=shown.reduce((a,d)=>a+d.completed,0);
+  summary.textContent="Sessões: "+sessions+" | Tarefas concluídas: "+tasks+" | Período: "+(sel.value==="all"?"Duas semanas":shown[0].period);
+ }
+ document.getElementById("lumiBetaBtn").addEventListener("click",()=>{sel.value="all";render();dialog.showModal()});
+ document.getElementById("lumiBetaClose").addEventListener("click",()=>dialog.close());
+ sel.addEventListener("change",render);
+ document.getElementById("lumiBetaCsv").addEventListener("click",()=>{
+  const shown=sel.value==="all"?demo:demo.filter((_,i)=>String(i+1)===sel.value);
+  const csv=["periodo;sessoes;tarefas_concluidas;facilidade_1a5;utilidade_1a5;percentual_sem_ajuda;dificuldades",...shown.map(d=>[d.period,d.sessions,d.completed,d.ease,d.useful,d.independent,d.issues].join(";"))].join("\r\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="lumi-beta-agregado-ficticio.csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ });
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
