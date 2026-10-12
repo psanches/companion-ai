@@ -14,10 +14,12 @@
 import {verifySupabaseMedicalIdentity} from "./supabase-verified-identity.js";
 import {beginMedicalPasskey,completeMedicalPasskey} from "./medical-passkey-orchestrator.js";
 
+import {getDevelopmentPasskeyContext} from "./development-passkey-context.js";
+
 const reply=(data,status=200,origin)=>new Response(JSON.stringify(data),{
   status,headers:{"content-type":"application/json","cache-control":"no-store",
   "x-content-type-options":"nosniff",
-  ...(origin==="https://dev.mylumicompanion.com" ? {
+  ...(getDevelopmentPasskeyContext(origin) ? {
     "access-control-allow-origin":origin,"vary":"Origin"
   } : {})}
 });
@@ -33,7 +35,7 @@ export async function handleDevelopmentPasskeyRoute(request,env,user,deps={}) {
   const mode=routes.get(url.pathname);
   if (!mode) return reply({error:"NOT_FOUND"},404,origin);
   if (request.method!=="POST") return reply({error:"METHOD_NOT_ALLOWED"},405,origin);
-  if (origin!=="https://dev.mylumicompanion.com")
+  if (!getDevelopmentPasskeyContext(origin))
     return reply({error:"ORIGIN_DENIED"},403,origin);
   if (!user?.id || !env?.MEDICAL_PASSKEY_DO)
     return reply({error:"PASSKEY_NOT_CONFIGURED"},503,origin);
@@ -59,7 +61,7 @@ export async function handleDevelopmentPasskeyRoute(request,env,user,deps={}) {
   if (url.pathname.endsWith("/options")) {
     const credentials=await store.listCredentials(verifiedIdentity.userId);
     const result=await beginMedicalPasskey({
-      verifiedIdentity,mode,store,credentials,
+      verifiedIdentity,mode,store,credentials,ceremonyOrigin:origin,
       userName:user.email || verifiedIdentity.userId,
       generateRegistrationOptions:deps.generateRegistrationOptions,
       generateAuthenticationOptions:deps.generateAuthenticationOptions
@@ -67,7 +69,7 @@ export async function handleDevelopmentPasskeyRoute(request,env,user,deps={}) {
     return result?reply(result,200,origin):reply({error:"PASSKEY_SETUP_FAILED"},503,origin);
   }
   const success=await completeMedicalPasskey({
-    verifiedIdentity,mode,store,
+    verifiedIdentity,mode,store,ceremonyOrigin:origin,
     challengeId:body?.challengeId,response:body?.response,
     verifyRegistrationResponse:deps.verifyRegistrationResponse,
     verifyAuthenticationResponse:deps.verifyAuthenticationResponse

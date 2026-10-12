@@ -21,6 +21,8 @@ export async function registerMedicalPasskey({
         !challenge.value || !Number.isFinite(challenge.expiresAt) ||
         !Number.isFinite(challenge.issuedAt) ||
         challenge.issuedAt > now || challenge.expiresAt <= now) return false;
+    if ((challenge.origin && challenge.origin!==origin) ||
+        (challenge.rpID && challenge.rpID!==rpID)) return false;
     const verification = await verifyRegistrationResponse({
       response, expectedChallenge: challenge.value,
       expectedOrigin: origin, expectedRPID: rpID,

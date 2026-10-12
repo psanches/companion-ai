@@ -11,20 +11,22 @@ import { registerMedicalPasskey } from "./webauthn-registration.js";
 import { verifyMedicalPasskey } from "./webauthn-step-up.js";
 
 const allowedOrigin = "https://dev.mylumicompanion.com";
-const rpID = "mylumicompanion.com";
+import {getDevelopmentPasskeyContext} from "./development-passkey-context.js";
 
 export async function beginMedicalPasskey({
   verifiedIdentity, mode, userName, store, credentials,
   generateRegistrationOptions, generateAuthenticationOptions,
-  now = Date.now()
+  now = Date.now(), ceremonyOrigin = allowedOrigin
 }) {
   if (!verifiedIdentity?.userId || !verifiedIdentity?.sessionId ||
       !["register","authenticate"].includes(mode)) return null;
+  const context=getDevelopmentPasskeyContext(ceremonyOrigin);
+  if (!context) return null;
   return createPasskeyOptions({
     mode, userId:verifiedIdentity.userId,
     sessionId:verifiedIdentity.sessionId,
     userName, credentialList:credentials,
-    rpID, store, now,
+    rpID:context.rpID, origin:context.origin, store, now,
     generateRegistrationOptions, generateAuthenticationOptions
   });
 }
@@ -32,13 +34,15 @@ export async function beginMedicalPasskey({
 export async function completeMedicalPasskey({
   verifiedIdentity, mode, response, challengeId, store,
   verifyRegistrationResponse, verifyAuthenticationResponse,
-  now = Date.now()
+  now = Date.now(), ceremonyOrigin = allowedOrigin
 }) {
   if (!verifiedIdentity?.userId || !verifiedIdentity?.sessionId ||
       !["register","authenticate"].includes(mode) ||
       !response || !challengeId) return false;
+  const context=getDevelopmentPasskeyContext(ceremonyOrigin);
+  if (!context) return false;
   const common = {
-    response, challengeId, store, now, origin:allowedOrigin, rpID,
+    response, challengeId, store, now, origin:context.origin, rpID:context.rpID,
     userId:verifiedIdentity.userId, sessionId:verifiedIdentity.sessionId
   };
   if (mode === "register") {

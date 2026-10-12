@@ -25,6 +25,8 @@ export async function verifyMedicalPasskey({
         !Number.isFinite(challenge.expiresAt) ||
         challenge.expiresAt <= now || challenge.issuedAt > now ||
         !challenge.value) return false;
+    if ((challenge.origin && challenge.origin!==origin) ||
+        (challenge.rpID && challenge.rpID!==rpID)) return false;
     const credentialId = response?.id;
     if (typeof credentialId !== "string" || !credentialId) return false;
     const credential = await store.getCredential(userId, credentialId);

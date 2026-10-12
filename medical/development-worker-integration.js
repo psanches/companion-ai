@@ -7,7 +7,8 @@ import {verifySupabaseMedicalIdentity} from "./supabase-verified-identity.js";
 import {handleRealDevelopmentPasskeyRequest} from "./development-passkey-real.js";
 export {MedicalPasskeyStore} from "./medical-passkey-store.js";
 
-const origin="https://dev.mylumicompanion.com";
+import {getDevelopmentPasskeyContext} from "./development-passkey-context.js";
+import {handlePasskeyTestPage} from "./passkey-test-page.js";
 const passkeyPaths=new Set([
   "/medical/passkey/register/options",
   "/medical/passkey/register/complete",
@@ -20,8 +21,8 @@ function response(request,data,status) {
     headers:{
       "cache-control":"no-store",
       "x-content-type-options":"nosniff",
-      ...(request.headers.get("Origin")===origin?{
-        "access-control-allow-origin":origin,
+      ...(getDevelopmentPasskeyContext(request.headers.get("Origin"))?{
+        "access-control-allow-origin":request.headers.get("Origin"),
         vary:"Origin"
       }:{})
     }
@@ -35,6 +36,9 @@ export function createDevelopmentMedicalWorker(existingWorker) {
     async fetch(request,env,ctx) {
       const pathname=new URL(request.url).pathname;
       const path=pathname.startsWith("/api/")?pathname.slice(4):pathname;
+      const testResponse=await handlePasskeyTestPage(request,env);
+      if (testResponse) return testResponse;
+      const origin=request.headers.get("Origin");
       // Medical CRUD, export and future subroutes remain unconditionally locked.
       if (path==="/profile/medical" || path.startsWith("/profile/medical/"))
         return response(request,{
@@ -47,7 +51,7 @@ export function createDevelopmentMedicalWorker(existingWorker) {
           return response(request,{error:"NOT_FOUND"},404);
         return existingWorker.fetch.call(existingWorker,request,env,ctx);
       }
-      if (request.headers.get("Origin")!==origin)
+      if (!getDevelopmentPasskeyContext(origin))
         return response(request,{error:"ORIGIN_DENIED"},403);
       if (request.method==="OPTIONS") {
         const method=request.headers.get("Access-Control-Request-Method");
@@ -74,7 +78,7 @@ export function createDevelopmentMedicalWorker(existingWorker) {
         if (!identity)
           return response(request,{error:"AUTH_REQUIRED"},401);
         return await handleRealDevelopmentPasskeyRequest(
-          request,env,{id:identity.userId}
+          new Request(new URL(path,request.url),request),env,{id:identity.userId}
         );
       } catch {
         return response(request,{error:"PASSKEY_SERVICE_UNAVAILABLE"},503);

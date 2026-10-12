@@ -9,7 +9,7 @@
  */
 export async function createPasskeyOptions({
   mode, userId, sessionId, userName, credentialList = [],
-  rpName = "Lumi Development", rpID = "mylumicompanion.com",
+  rpName = "Lumi Development", rpID = "mylumicompanion.com", origin,
   store, generateRegistrationOptions, generateAuthenticationOptions,
   randomId = () => crypto.randomUUID(), now = Date.now(), ttlMs = 120000
 }) {
@@ -51,7 +51,7 @@ export async function createPasskeyOptions({
     const purpose = mode === "register"
       ? "passkey-registration" : "medical-step-up";
     const persisted = await store.createChallenge({
-      id: challengeId, value: options.challenge,
+      id: challengeId, value: options.challenge, rpID, ...(origin?{origin}:{}),
       userId, sessionId, purpose, issuedAt: now, expiresAt: now + ttlMs
     });
     if (persisted !== true) return null;
