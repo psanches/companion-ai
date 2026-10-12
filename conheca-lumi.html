@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Conheça a Lumi</title>
+<style>body{font:20px/1.5 system-ui;background:#111827;color:white;max-width:720px;margin:auto;padding:20px}button,a{display:block;margin:14px 0;padding:16px;border-radius:12px;font:inherit}button{background:#215574;color:white;border:2px solid #9bd6f5;width:100%;text-align:left}section{background:#1f2937;border-radius:16px;padding:18px;margin:20px 0}button:focus-visible{outline:4px solid gold}#answer{white-space:pre-wrap}</style>
+</head><body><a href="./">Voltar à Lumi</a><h1>Conheça a Lumi</h1>
+<p>Uma assistente para conversar, organizar a rotina e compreender informações de saúde.</p>
+<p><strong>Demonstração com exemplos fictícios.</strong> Esta página não coleta nem armazena informações médicas.</p>
+<section><h2>Escolha uma situação</h2>
+<button data-key="routine">Quero organizar meu dia</button>
+<button data-key="symptom">Estou cansado depois de caminhar</button>
+<button data-key="visit">Quero preparar minha consulta</button>
+<button data-key="privacy">Como funciona a privacidade?</button></section>
+<section aria-live="polite"><h2>Exemplo de resposta</h2><p id="answer">Escolha uma situação acima.</p></section>
+<section><h2>Experimente a Lumi</h2><p>O chat está disponível. O perfil médico ainda está bloqueado para dados reais enquanto concluímos os testes de segurança.</p><a href="./">Abrir o chat da Lumi</a></section>
+<script>
+const answers={
+routine:"Podemos começar pelos compromissos de hoje e organizar uma atividade por vez.",
+symptom:"O cansaço pode ter várias causas. Anote quando acontece e converse com seu médico. Se houver falta de ar intensa, dor no peito ou desmaio, procure urgência.",
+visit:"Vamos anotar três perguntas: O que mudou nos sintomas? Quais efeitos dos medicamentos devo relatar? Como posso me preparar para a próxima consulta?",
+privacy:"Dados médicos reais ainda não devem ser inseridos. Estamos testando a confirmação de identidade e os controles de privacidade antes da liberação."
+};
+document.querySelectorAll("button[data-key]").forEach(b=>b.addEventListener("click",()=>document.getElementById("answer").textContent=answers[b.dataset.key]));
+</script></body></html>
