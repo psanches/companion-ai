@@ -269,6 +269,80 @@ supabaseClient.auth.onAuthStateChange(() => {
 
 updateAuthUI();
 
+/* Lumi-wide inactivity sign-out: 10 minutes, development frontend only.
+   Persist last activity so reloading the page cannot bypass the timeout.
+   This is a browser UX control; server-side session enforcement is a separate gate. */
+const LUMI_IDLE_LIMIT_MS = 10 * 60 * 1000;
+const LUMI_LAST_ACTIVITY_KEY = "lumi-last-activity";
+let lumiIdleSigningOut = false;
+let lumiLastRecordedActivity = 0;
+
+async function lumiCheckIdle() {
+  if (lumiIdleSigningOut) return;
+  const last = Number(localStorage.getItem(LUMI_LAST_ACTIVITY_KEY));
+  if (!Number.isFinite(last) || last <= 0) return;
+  if (Date.now() - last < LUMI_IDLE_LIMIT_MS) return;
+  lumiIdleSigningOut = true;
+  try {
+    // Local sign-out avoids unexpectedly revoking sessions on other devices.
+    await supabaseClient.auth.signOut({ scope: "local" });
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(LUMI_LAST_ACTIVITY_KEY);
+    await updateAuthUI();
+    // Remove potentially private content still visible in the old DOM.
+    // A reload also clears unsaved UI state and returns to the sign-in screen.
+    location.reload();
+  } catch (error) {
+    console.error("Lumi idle sign-out failed", error);
+    // Fail closed for UI access, even if the network is temporarily unavailable.
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(LUMI_LAST_ACTIVITY_KEY);
+    location.reload();
+  }
+}
+
+function lumiRecordActivity() {
+  if (lumiIdleSigningOut) return;
+  const now = Date.now();
+  const previous = Number(localStorage.getItem(LUMI_LAST_ACTIVITY_KEY));
+  if (previous > 0 && now - previous >= LUMI_IDLE_LIMIT_MS) {
+    void lumiCheckIdle();
+    return;
+  }
+  // Throttle storage writes, but keep interaction responsive.
+  if (now - lumiLastRecordedActivity < 3000) return;
+  lumiLastRecordedActivity = now;
+  if (signOutBtn && !signOutBtn.hidden) {
+    localStorage.setItem(LUMI_LAST_ACTIVITY_KEY, String(now));
+  }
+}
+for (const type of ["pointerdown", "keydown", "touchstart", "wheel"]) {
+  document.addEventListener(type, lumiRecordActivity, { passive: true });
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) void lumiCheckIdle();
+});
+window.addEventListener("focus", () => { void lumiCheckIdle(); });
+window.addEventListener("storage", event => {
+  if (event.key === LUMI_LAST_ACTIVITY_KEY) void lumiCheckIdle();
+});
+setInterval(() => { void lumiCheckIdle(); }, 15000);
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === "SIGNED_OUT") {
+    localStorage.removeItem(LUMI_LAST_ACTIVITY_KEY);
+  } else if (event === "SIGNED_IN" && session) {
+    const last = Number(localStorage.getItem(LUMI_LAST_ACTIVITY_KEY));
+    if (last > 0 && Date.now() - last >= LUMI_IDLE_LIMIT_MS) {
+      setTimeout(() => { void lumiCheckIdle(); }, 0);
+    } else if (!last) {
+      localStorage.setItem(LUMI_LAST_ACTIVITY_KEY, String(Date.now()));
+    }
+  }
+});
+void lumiCheckIdle();
+
 /* =========================================================
    LEGACY LOCAL ID
    Kept temporarily for compatibility with the current UI.
