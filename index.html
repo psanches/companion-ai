@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="lumi-build" content="20261012-hide-beta-demo-v9">
+<meta name="lumi-build" content="20261012-medical-demo-limits-v10">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <meta name="description" content="Companion AI - seu assistente pessoal com memória">
@@ -164,9 +164,9 @@
     <textarea id="profileDoctors" rows="2" autocomplete="off"></textarea>
   </label>
   <h3>📎 Histórico médico — adicionar arquivo</h3>
-  <p>Teste de interface apenas. Escolha somente arquivos fictícios. Nenhum arquivo será aberto, enviado ou salvo.</p>
+  <p>Teste de interface apenas. Escolha somente arquivos fictícios. Limite previsto: 3 arquivos por pessoa, até 5 MB cada (15 MB no total). Nenhum arquivo será aberto, enviado ou salvo.</p>
   <label for="medicalDemoFile">Adicionar arquivo (PDF ou imagem)</label>
-  <input id="medicalDemoFile" type="file" accept=".pdf,image/*" aria-describedby="medicalDemoFileStatus">
+  <input id="medicalDemoFile" type="file" accept=".pdf,.jpg,.jpeg,.png" multiple aria-describedby="medicalDemoFileStatus">
   <p id="medicalDemoFileStatus" role="status" aria-live="polite">Nenhum arquivo selecionado.</p>
   <p>Exemplos fictícios para testar a interface. Ao fechar, os campos serão apagados.</p>
   <button type="button" onclick="document.getElementById('profileDialog').close()">Close</button>
@@ -351,10 +351,14 @@ document.getElementById("healthDemoBtn").addEventListener("click", () => {
 });
 /* File picker is a UI-only demo. Do not read, transmit, or persist selected files. */
 document.getElementById("medicalDemoFile").addEventListener("change", (event) => {
-  const file = event.target.files?.[0];
-  document.getElementById("medicalDemoFileStatus").textContent = file
-    ? "Arquivo selecionado para demonstração: " + file.name + " (não enviado nem salvo)"
-    : "Nenhum arquivo selecionado.";
+  const files = Array.from(event.target.files || []);
+  const valid = files.length <= 3 && files.every(file => file.size <= 5 * 1024 * 1024 && /\\.(pdf|jpe?g|png)$/i.test(file.name));
+  document.getElementById("medicalDemoFileStatus").textContent = !files.length
+    ? "Nenhum arquivo selecionado."
+    : !valid
+      ? "Limite excedido ou formato inválido. Escolha até 3 arquivos fictícios PDF, JPG ou PNG, com no máximo 5 MB cada. Nenhum arquivo foi enviado."
+      : files.length + " arquivo(s) selecionado(s) para demonstração (não enviados nem salvos).";
+  if (!valid) event.target.value = "";
 });
 /* Clear unsaved medical draft on close; no persistence or network transmission. */
 document.getElementById("profileDialog").addEventListener("close", () => {
