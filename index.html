@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="lumi-build" content="20261012-medical-demo-limits-v10">
+<meta name="lumi-build" content="20261012-home-exercises-v11">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <meta name="description" content="Companion AI - seu assistente pessoal com memória">
@@ -51,6 +51,7 @@
   <button id="sidebarNewChatBtn" type="button">＋ Nova conversa</button>
   <button id="lumiDemoBtn" type="button" style="margin:0 14px 16px;padding:14px;border-radius:12px;background:#215574;color:#fff;border:2px solid #9bd6f5;font-size:17px;cursor:pointer;text-align:left">✨ Conheça a Lumi</button>
   <button id="lumiGuideBtn" type="button" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:16px;cursor:pointer;text-align:left">❔ Como usar a Lumi</button>
+  <button id="lumiExerciseBtn" type="button" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:17px;cursor:pointer;text-align:left">🏠 Exercícios em Casa</button>
   <div class="sidebar-label">RECENTES</div>
   <div id="conversationList"></div>
   <div id="sidebarStatus" role="status" aria-live="polite"></div>
@@ -401,6 +402,23 @@ document.getElementById("profileDialog").addEventListener("close", () => {
   window.addEventListener("pageshow", () => { setTimeout(checkForUpdate, 1500); });
   setInterval(checkForUpdate, 300000);
 })();
+</script>
+<dialog id="lumiExerciseDialog" aria-labelledby="lumiExerciseTitle" style="box-sizing:border-box;width:min(95vw,690px);max-height:90dvh;overflow:auto;background:#111827;color:white;border:2px solid #9bd6f5;border-radius:16px;padding:22px;font:19px/1.6 system-ui">
+<button id="lumiExerciseClose" type="button" style="float:right;padding:10px 16px;font-size:20px" aria-label="Fechar exercícios">✕</button>
+<h2 id="lumiExerciseTitle">🏠 Exercícios em Casa</h2>
+<p>Movimentos leves para começar, sem equipamentos. Esta é uma orientação geral, não uma avaliação individual.</p>
+<p><strong>Antes de começar:</strong> use uma cadeira firme, sem rodinhas, em local livre de obstáculos. Se você tem dificuldade de equilíbrio, quedas recentes ou tontura, peça orientação de um fisioterapeuta antes de exercícios em pé.</p>
+<h3>1. Marcha sentada</h3><p>Sentado com os pés no chão, levante um joelho de cada vez, devagar. Experimente 5 vezes de cada lado.</p>
+<h3>2. Movimentos dos tornozelos</h3><p>Sentado, levante e abaixe as pontas dos pés, mantendo os calcanhares no chão; depois levante os calcanhares. Experimente 10 movimentos de cada tipo.</p>
+<h3>3. Abrir os braços</h3><p>Sentado, abra os braços suavemente até onde for confortável e volte. Experimente 5 repetições, sem forçar os ombros.</p>
+<h3>4. Postura e respiração</h3><p>Sentado, alongue suavemente a coluna, relaxe os ombros e respire naturalmente por 30 segundos. Não prenda a respiração.</p>
+<h3>5. Levantar da cadeira — somente se for seguro</h3><p>Com uma cadeira estável e apoio adequado, levante e sente lentamente até 3 vezes. Se tiver instabilidade, congelamento da marcha ou risco de queda, <strong>não faça sozinho</strong>.</p>
+<p><strong>Pare imediatamente</strong> se sentir dor no peito, falta de ar incomum, tontura, fraqueza súbita ou dor intensa. Procure atendimento urgente para sintomas graves.</p>
+<p><strong>Importante:</strong> comece com poucos movimentos, descanse quando precisar e peça ao profissional de saúde para adaptar os exercícios à sua condição.</p>
+</dialog>
+<script>
+document.getElementById("lumiExerciseBtn").addEventListener("click",()=>document.getElementById("lumiExerciseDialog").showModal());
+document.getElementById("lumiExerciseClose").addEventListener("click",()=>document.getElementById("lumiExerciseDialog").close());
 </script>
 </body>
 </html>
