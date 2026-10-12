@@ -48,25 +48,20 @@ The four passkey endpoints require the exact development origin, POST, and
 server-verified Supabase identity before real SimpleWebAuthn handling.
 Restricted OPTIONS preflight is supported; unknown passkey routes return 404.
 
-After obtaining and reviewing a fresh exact development Worker export, a
-separate bundled entrypoint can be prepared as follows:
+## Recovered baseline and integration entry
+The already shared Worker has now been recovered from its Markdown copy into
+`medical/recovered-development-baseline.js`. Formatting artifacts were removed;
+the original medical lock and existing route behavior are retained.
+`medical/development-worker-entry.js` wraps this baseline and exports the
+Durable Object class. Both plain and /api-prefixed medical routes stay locked.
+See `medical/RECOVERED_INTEGRATION.md` for provenance and remaining limitations.
 
-```js
-import existingWorker from "./reviewed-development-baseline.js";
-import {createDevelopmentMedicalWorker, MedicalPasskeyStore}
-  from "./medical/development-worker-integration.js";
-export {MedicalPasskeyStore};
-export default createDevelopmentMedicalWorker(existingWorker);
-```
-
-The baseline filename above is a required input, not an existing repository
-file. The previously shared Markdown copy confirms the routing boundary and
-medical lock, but does not prove byte-for-byte parity with the currently
-deployed Worker. No deployable entrypoint or Cloudflare configuration has been
-created from that copy. No existing Worker has been replaced.
+The recovered source passed syntax checking and unit tests exercise the actual
+integrated entrypoint. This does not establish parity with the currently
+deployed Worker or Cloudflare runtime compatibility. No Cloudflare deployment
+configuration, bindings migration, or deployment was created.
 
 The adapter rechecks Supabase identity inside the real passkey handler.
-This deliberately favors fail-closed behavior if the session becomes invalid.
-Integration tests use synthetic requests; actual binding RPC, Cloudflare
-bundling and browser/Android passkey enrollment remain unverified.
-Medical data stays locked even after a successful passkey.
+Integration tests use synthetic requests; actual binding RPC, bundling and
+browser/Android passkey enrollment remain unverified. Medical data stays
+locked even after a successful passkey.
