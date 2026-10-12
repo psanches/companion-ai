@@ -18,6 +18,18 @@ Status: NOT READY FOR REAL HEALTH DATA. No production deployment authorized.
 - [ ] Accessibility testing on Android, iPhone Safari, desktop, including passkey recovery.
 - [ ] Explicit go/no-go signoff before any participant enters real health data.
 
+
+## Welcome/onboarding — Draft 1 approved for usability review (2026-10-12)
+- [x] Universal introduction: Lumi is an AI-powered personal companion for everyday assistance, understanding health information, organization, and companionship. Do not name any specific condition in the introduction.
+- [x] Approved sentence (pt-BR): “Seja para cuidar de você, ajudar alguém de quem gosta ou simplesmente ter companhia para conversar, estou aqui para ouvir e ajudar.”
+- [x] First question: “Um médico já diagnosticou alguma condição de saúde em você?” with SIM / NÃO only.
+- [x] SIM path: ask which condition was diagnosed; ask whether other conditions were diagnosed; then gently ask who diagnosed it, when, and what led to seeking care.
+- [x] NÃO path: “O que trouxe você aqui hoje?” with options for caring for someone, learning about health, companionship, everyday help, or exploring Lumi.
+- [x] One question at a time; simple large controls; no diagnosis or prescription by Lumi; avoid the term “doença” in user-facing onboarding.
+- [x] First in-app demonstration committed to GitHub develop branch, not production; no response persistence.
+- [ ] Verify live development deployment, accessibility and comprehension with test users before beta distribution.
+- [ ] Finalize reviewed consent and medical security controls before collecting or storing real health information.
+
 ## Operational features to test
 - [ ] Google sign-in and logout
 - [ ] Chat, history, personal memory, privacy controls
