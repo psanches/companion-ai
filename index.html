@@ -202,9 +202,12 @@
   else if(step==="who"){question.textContent="Foi um médico especialista que fez o diagnóstico?";option("SIM","when");option("NÃO","when")}
   else if(step==="when"){question.textContent="Você se lembra de quando descobriu sua condição de saúde?";option("SIM","approxDate");option("NÃO","first")}
   else if(step==="approxDate"){question.textContent="Você consegue me dizer aproximadamente quando foi? Pode ser só o ano, o mês e o ano, ou algo como há uns três anos.";freeText("first")}
-  else if(step==="first"){question.textContent="Você gostaria de contar o que levou você a procurar atendimento?";option("SIM","firstDetail");option("NÃO","done")}
-  else if(step==="firstDetail"){question.textContent="Conte com suas palavras, se desejar.";freeText("done")}
-  else if(step==="general"){question.textContent="O que trouxe você aqui hoje?";["Cuido de alguém","Quero aprender sobre saúde","Quero companhia e conversar","Preciso de ajuda no dia a dia","Estou conhecendo a Lumi"].forEach(t=>option(t,"done"))}
+  else if(step==="first"){question.textContent="Você gostaria de contar o que levou você a procurar atendimento?";option("SIM","firstDetail");option("NÃO","mentalIntro")}
+  else if(step==="firstDetail"){question.textContent="Conte com suas palavras, se desejar.";freeText("mentalIntro")}
+  else if(step==="general"){question.textContent="O que trouxe você aqui hoje?";["Cuido de alguém","Quero aprender sobre saúde","Quero companhia e conversar","Preciso de ajuda no dia a dia","Estou conhecendo a Lumi"].forEach(t=>option(t,"mentalIntro"))}
+  else if(step==="mentalIntro"){question.textContent="Se você quiser, posso fazer duas perguntas sobre seu bem-estar emocional. É opcional e não é um diagnóstico.";option("SIM","mental1");option("NÃO","done")}
+  else if(step==="mental1"){question.textContent="Nas últimas duas semanas, como você tem se sentido emocionalmente?";["Bem","Mais ou menos","Triste ou desanimado(a)","Prefiro não responder"].forEach(t=>option(t,"mental2"))}
+  else if(step==="mental2"){question.textContent="Nas últimas duas semanas, você tem sentido falta de interesse ou prazer nas atividades de que normalmente gosta?";["Nunca","Alguns dias","Muitos dias","Quase todos os dias","Prefiro não responder"].forEach(t=>option(t,"done"))}
   else {question.textContent="Obrigado por conversar comigo! Podemos continuar no seu ritmo. Esta é apenas uma demonstração."}
  }
  document.getElementById("lumiDemoBtn").addEventListener("click",()=>{step="start";render();demo.showModal()});
