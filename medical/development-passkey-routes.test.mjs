@@ -32,11 +32,20 @@ test("passkey routes fail closed without binding",async()=>{
   assert.equal((await handleDevelopmentPasskeyRoute(req("/medical/passkey/register/options"),{}, {id:"alice"})).status,503);
 });
 test("passkey routes reject authentication when Supabase unavailable",async()=>{
-  const response=await handleDevelopmentPasskeyRoute(req("/medical/passkey/register/options"),env,{id:"alice"},{
-    fetcher:async()=>{throw Error("offline")}
+  const request=req("/medical/passkey/register/options");
+  request.headers.set("Authorization","Bearer offline-test-token");
+  let verificationCalls=0;
+  const response=await handleDevelopmentPasskeyRoute(request,env,{id:"alice"},{
+    fetcher:async(url,options)=>{
+      verificationCalls++;
+      assert.equal(url,"https://example.supabase.co/auth/v1/user");
+      assert.equal(options.headers.Authorization,"Bearer offline-test-token");
+      throw Error("offline");
+    }
   });
+  assert.equal(verificationCalls,1);
   assert.equal(response.status,401);
-  assert.equal((await response.json()).error,"AUTH_REQUIRED");
+  assert.deepEqual(await response.json(),{error:"AUTH_REQUIRED"});
 });
 
 test("development-origin responses include restricted CORS headers",async()=>{
