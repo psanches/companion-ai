@@ -163,6 +163,11 @@
   <label>Doctors and notes
     <textarea id="profileDoctors" rows="2" autocomplete="off"></textarea>
   </label>
+  <h3>📎 Histórico médico — adicionar arquivo</h3>
+  <p>Teste de interface apenas. Escolha somente arquivos fictícios. Nenhum arquivo será aberto, enviado ou salvo.</p>
+  <label for="medicalDemoFile">Adicionar arquivo (PDF ou imagem)</label>
+  <input id="medicalDemoFile" type="file" accept=".pdf,image/*" aria-describedby="medicalDemoFileStatus">
+  <p id="medicalDemoFileStatus" role="status" aria-live="polite">Nenhum arquivo selecionado.</p>
   <p>Exemplos fictícios para testar a interface. Ao fechar, os campos serão apagados.</p>
   <button type="button" onclick="document.getElementById('profileDialog').close()">Close</button>
   <p id="medicalTestResult" role="status" aria-live="polite">🔐 Medical storage tests are paused until server-side passkey verification is deployed and audited.</p>
@@ -293,8 +298,17 @@ document.getElementById("healthDemoBtn").addEventListener("click", () => {
   }
   document.getElementById("profileDialog").showModal();
 });
+/* File picker is a UI-only demo. Do not read, transmit, or persist selected files. */
+document.getElementById("medicalDemoFile").addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  document.getElementById("medicalDemoFileStatus").textContent = file
+    ? "Arquivo selecionado para demonstração: " + file.name + " (não enviado nem salvo)"
+    : "Nenhum arquivo selecionado.";
+});
 /* Clear unsaved medical draft on close; no persistence or network transmission. */
 document.getElementById("profileDialog").addEventListener("close", () => {
+  document.getElementById("medicalDemoFile").value = "";
+  document.getElementById("medicalDemoFileStatus").textContent = "Nenhum arquivo selecionado.";
   for (const id of ["profileConditions","profileMedications","profileAllergies","profileDoctors"]) {
     document.getElementById(id).value = "";
   }
