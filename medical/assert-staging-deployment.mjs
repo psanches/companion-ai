@@ -1,7 +1,8 @@
 import {execFileSync} from "node:child_process";
 import {readFileSync} from "node:fs";
 const branch=execFileSync("git",["branch","--show-current"],{encoding:"utf8"}).trim();
-const ref=process.env.CF_PAGES_BRANCH || process.env.WORKERS_CI_BRANCH || branch;
+// Verify the actual checked-out branch, never a browser-supplied label.
+const ref=branch;
 if(ref!=="feature/medical-security-gates-20261012")
   throw Error("Deployment refused: exact medical security branch required");
 const config=JSON.parse(readFileSync(new URL("./wrangler.staging.jsonc",import.meta.url),"utf8"));
