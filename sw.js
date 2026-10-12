@@ -1,4 +1,4 @@
-const CACHE_NAME = "lumi-v6";
+const CACHE_NAME = "lumi-v7";
 
 const STATIC_FILES = [
   "./",
