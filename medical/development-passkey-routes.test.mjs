@@ -64,3 +64,88 @@ test("rejected foreign origin never receives CORS permission",async()=>{
   assert.equal(response.status,403);
   assert.equal(response.headers.get("access-control-allow-origin"),null);
 });
+
+const passkeyPaths=[
+  "/medical/passkey/register/options",
+  "/medical/passkey/register/complete",
+  "/medical/passkey/authenticate/options",
+  "/medical/passkey/authenticate/complete"
+];
+function authenticatedRequest(path,body="{}") {
+  return new Request("https://lumi-develop.example"+path,{
+    method:"POST",
+    headers:{
+      Origin:"https://dev.mylumicompanion.com",
+      "content-type":"application/json",
+      Authorization:"Bearer synthetic-test-token"
+    },
+    body
+  });
+}
+function guardedEnvironment() {
+  let storageCalls=0;
+  return {
+    environment:{...env,MEDICAL_PASSKEY_DO:{
+      idFromName(){storageCalls++;throw Error("Unexpected storage access");},
+      get(){storageCalls++;throw Error("Unexpected storage access");}
+    }},
+    storageCalls:()=>storageCalls
+  };
+}
+for (const path of passkeyPaths) {
+  test(path+" rejects a different Supabase identity before storage",async()=>{
+    const guard=guardedEnvironment();
+    let verificationCalls=0;
+    const response=await handleDevelopmentPasskeyRoute(
+      authenticatedRequest(path),guard.environment,{id:"alice"},{
+        fetcher:async()=>{
+          verificationCalls++;
+          return Response.json({id:"bob"});
+        }
+      }
+    );
+    assert.equal(verificationCalls,1);
+    assert.equal(response.status,401);
+    assert.deepEqual(await response.json(),{error:"AUTH_REQUIRED"});
+    assert.equal(guard.storageCalls(),0);
+    assert.equal(response.headers.get("cache-control"),"no-store");
+  });
+  test(path+" rejects missing bearer before verification or storage",async()=>{
+    const guard=guardedEnvironment();
+    let verificationCalls=0;
+    const response=await handleDevelopmentPasskeyRoute(
+      req(path),guard.environment,{id:"alice"},{
+        fetcher:async()=>{verificationCalls++;return Response.json({id:"alice"});}
+      }
+    );
+    assert.equal(response.status,401);
+    assert.deepEqual(await response.json(),{error:"AUTH_REQUIRED"});
+    assert.equal(verificationCalls,0);
+    assert.equal(guard.storageCalls(),0);
+  });
+  test(path+" rejects malformed JSON after identity verification",async()=>{
+    const guard=guardedEnvironment();
+    let verificationCalls=0;
+    const response=await handleDevelopmentPasskeyRoute(
+      authenticatedRequest(path,"{"),guard.environment,{id:"alice"},{
+        fetcher:async()=>{verificationCalls++;return Response.json({id:"alice"});}
+      }
+    );
+    assert.equal(verificationCalls,1);
+    assert.equal(response.status,400);
+    assert.deepEqual(await response.json(),{error:"INVALID_JSON"});
+    assert.equal(guard.storageCalls(),0);
+  });
+  test(path+" rejects oversized body without trusting content-length",async()=>{
+    const guard=guardedEnvironment();
+    const response=await handleDevelopmentPasskeyRoute(
+      authenticatedRequest(path,JSON.stringify({data:"x".repeat(65536)})),
+      guard.environment,{id:"alice"},{
+        fetcher:async()=>Response.json({id:"alice"})
+      }
+    );
+    assert.equal(response.status,413);
+    assert.deepEqual(await response.json(),{error:"PAYLOAD_TOO_LARGE"});
+    assert.equal(guard.storageCalls(),0);
+  });
+}
