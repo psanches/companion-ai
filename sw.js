@@ -1,13 +1,9 @@
-const CACHE_NAME = "lumi-v7";
+const CACHE_NAME = "lumi-v8";
 
-const STATIC_FILES = [
-  "./",
-  "./index.html",
-  "./style.css",
-  "./manifest.json"
-];
+// Only public app-shell assets are cached. Private chats, auth and medical
+// responses must never enter a service-worker cache.
+const STATIC_FILES = ["./style.css", "./manifest.json"];
 
-// Install the new Service Worker.
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -16,66 +12,47 @@ self.addEventListener("install", event => {
   );
 });
 
-// Remove old Lumi caches and activate immediately.
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
-      .then(keys =>
-        Promise.all(
-          keys
-            .filter(key => key.startsWith("lumi-") && key !== CACHE_NAME)
+      .then(keys => Promise.all(
+        keys.filter(key => key.startsWith("lumi-") && key !== CACHE_NAME)
             .map(key => caches.delete(key))
-        )
-      )
+      ))
       .then(() => self.clients.claim())
   );
 });
 
-// Network-first for all same-origin resources.
-// Never cache JavaScript, API calls, or authentication.
 self.addEventListener("fetch", event => {
   const request = event.request;
-
   if (request.method !== "GET") return;
-
   const url = new URL(request.url);
-
   if (url.origin !== self.location.origin) return;
 
-  if (url.pathname.endsWith("/app.js")) {
-    event.respondWith(
-      fetch(request, { cache: "no-store" })
-    );
+  // Always request the current document and scripts from the network.
+  // Do not serve a cached HTML login or medical screen when offline.
+  if (request.mode === "navigate" ||
+      /\.(?:html|js)$/i.test(url.pathname) ||
+      url.pathname.endsWith("/")) {
+    event.respondWith(fetch(request, { cache: "no-store" }));
     return;
   }
 
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request, { cache: "no-store" })
-        .catch(async () =>
-          (await caches.match("./index.html")) ||
-          (await caches.match("./")) ||
-          Response.error()
-        )
-    );
+  // Public shell assets may be cached; nothing else.
+  if (!STATIC_FILES.some(path => url.pathname.endsWith(path.slice(1)))) {
+    event.respondWith(fetch(request, { cache: "no-store" }));
     return;
   }
 
   event.respondWith(
-    fetch(request)
+    fetch(request, { cache: "no-store" })
       .then(response => {
-        if (response.ok) {
+        if (response.ok && response.type === "basic") {
           const copy = response.clone();
-          event.waitUntil(
-            caches.open(CACHE_NAME)
-              .then(cache => cache.put(request, copy))
-          );
+          event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(request, copy)));
         }
         return response;
       })
-      .catch(async () =>
-        (await caches.match(request)) ||
-        Response.error()
-      )
+      .catch(async () => (await caches.match(request)) || Response.error())
   );
 });
