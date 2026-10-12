@@ -72,6 +72,7 @@
   onclick="document.getElementById('profileDialog').showModal()">
   👤
 </button>
+  <button id="healthDemoBtn" type="button" aria-label="Saúde (demonstração fictícia)" title="Saúde (demonstração fictícia)">🩺</button>
   <button id="memoryBtn" type="button" aria-label="Minha memória" title="Minha memória">🧠</button>
   <button id="soundButton" type="button" aria-label="Ligar voz da Lumi" title="Ligar voz da Lumi">🔇</button>
   <button id="settingsBtn" type="button" aria-label="Configurações" title="Configurações">⚙️</button>
@@ -147,8 +148,8 @@
   <label>Interests and preferences
     <textarea rows="3"></textarea>
   </label>
-  <h3>Medical information</h3>
-  <p id="medicalDraftNotice" role="status">🔒 Medical fields are editable for testing only. They are NOT saved or sent to a server. Please do not enter real medical information until secure storage is verified.</p>
+  <h3>🩺 Saúde — demonstração fictícia</h3>
+  <p id="medicalDraftNotice" role="status">🔒 EXEMPLO FICTÍCIO. Este formulário não salva nem envia informações. Não informe dados reais de saúde.</p>
   <label>Medical conditions
     <textarea id="profileConditions" rows="2" autocomplete="off"></textarea>
   </label>
@@ -161,7 +162,7 @@
   <label>Doctors and notes
     <textarea id="profileDoctors" rows="2" autocomplete="off"></textarea>
   </label>
-  <p>Nothing entered here is stored. Closing the form clears the medical fields.</p>
+  <p>Exemplos fictícios para testar a interface. Ao fechar, os campos serão apagados.</p>
   <button type="button" onclick="document.getElementById('profileDialog').close()">Close</button>
   <p id="medicalTestResult" role="status" aria-live="polite">🔐 Medical storage tests are paused until server-side passkey verification is deployed and audited.</p>
 </dialog>
@@ -278,6 +279,19 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>const lumiScript=document.createElement("script");lumiScript.src="app.js?v="+Date.now();document.body.appendChild(lumiScript);</script>
 <script>
+/* Medical demo: fictional sample only, never saved or sent. */
+document.getElementById("healthDemoBtn").addEventListener("click", () => {
+  const examples = {
+    profileConditions: "Exemplo fictício: hipertensão",
+    profileMedications: "Exemplo fictício: medicamento A (sem dose)",
+    profileAllergies: "Exemplo fictício: nenhuma alergia informada",
+    profileDoctors: "Exemplo fictício: acompanhamento médico regular"
+  };
+  for (const [id, value] of Object.entries(examples)) {
+    document.getElementById(id).value = value;
+  }
+  document.getElementById("profileDialog").showModal();
+});
 /* Clear unsaved medical draft on close; no persistence or network transmission. */
 document.getElementById("profileDialog").addEventListener("close", () => {
   for (const id of ["profileConditions","profileMedications","profileAllergies","profileDoctors"]) {
