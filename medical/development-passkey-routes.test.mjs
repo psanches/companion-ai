@@ -37,3 +37,20 @@ test("passkey routes fail closed when Supabase unavailable",async()=>{
   });
   assert.equal(response.status,503);
 });
+
+test("development-origin responses include restricted CORS headers",async()=>{
+  const response=await handleDevelopmentPasskeyRoute(
+    req("/medical/passkey/register/options"),{}, {id:"alice"}
+  );
+  assert.equal(response.headers.get("access-control-allow-origin"),
+    "https://dev.mylumicompanion.com");
+  assert.equal(response.headers.get("vary"),"Origin");
+});
+test("rejected foreign origin never receives CORS permission",async()=>{
+  const response=await handleDevelopmentPasskeyRoute(
+    req("/medical/passkey/register/options","POST","https://evil.example"),
+    env,{id:"alice"}
+  );
+  assert.equal(response.status,403);
+  assert.equal(response.headers.get("access-control-allow-origin"),null);
+});
