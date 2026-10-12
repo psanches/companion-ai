@@ -221,10 +221,10 @@
 <h2 id="lumiBetaTitle">📊 Avaliação da Lumi — demonstração</h2>
 <p><strong>DADOS TOTALMENTE FICTÍCIOS.</strong> Nenhuma informação real é consultada, transmitida ou armazenada neste painel.</p>
 <p>Este painel avalia a experiência com a Lumi, sem exibir nomes, códigos individuais, diagnósticos ou conversas.</p>
-<label for="lumiBetaPeriod">Período:</label>
-<select id="lumiBetaPeriod" style="padding:12px;font:inherit;background:#1f2937;color:white;border:1px solid #a4e7c8;border-radius:8px">
+<div class="lumi-beta-period"><label for="lumiBetaPeriod">Período:</label>
+<select id="lumiBetaPeriod">
 <option value="all">Duas semanas</option><option value="1">Semana 1</option><option value="2">Semana 2</option>
-</select>
+</select></div>
 <div id="lumiBetaSummary" role="status" aria-live="polite" style="margin:18px 0;padding:16px;border-radius:12px;background:#1f2937"></div>
 <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th>Indicador</th><th>Semana 1</th><th>Semana 2</th></tr></thead><tbody id="lumiBetaBody"></tbody></table></div>
 <section aria-labelledby="lumiHealthIssuesTitle" style="margin:20px 0;padding:16px;background:#1f2937;border-radius:12px">
@@ -238,6 +238,9 @@
 </dialog>
 <style>
 #lumiBetaDialog th,#lumiBetaDialog td{padding:12px;border-bottom:1px solid #475569}
+.lumi-beta-period{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0}
+#lumiBetaPeriod{display:block;box-sizing:border-box;max-width:100%;width:min(100%,260px);min-width:0;padding:10px 12px;font:inherit;background:#1f2937;color:white;border:1px solid #a4e7c8;border-radius:8px}
+@media(max-width:600px){.lumi-beta-period{display:block}.lumi-beta-period label{display:block;margin-bottom:8px}#lumiBetaPeriod{width:100%;font-size:16px}#lumiBetaDialog{padding:16px!important;font-size:16px!important}}
 #lumiBetaDialog button{padding:12px;border-radius:10px;background:#244a3d;color:#fff;border:2px solid #a4e7c8;font:inherit;cursor:pointer;margin:5px}
 #lumiBetaDialog button:focus-visible,#lumiBetaPeriod:focus-visible{outline:4px solid gold}
 #lumiBetaDialog::backdrop{background:rgba(0,0,0,.7)}
