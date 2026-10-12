@@ -33,7 +33,8 @@ export function createDevelopmentMedicalWorker(existingWorker) {
   return {
     ...existingWorker,
     async fetch(request,env,ctx) {
-      const path=new URL(request.url).pathname;
+      const pathname=new URL(request.url).pathname;
+      const path=pathname.startsWith("/api/")?pathname.slice(4):pathname;
       // Medical CRUD, export and future subroutes remain unconditionally locked.
       if (path==="/profile/medical" || path.startsWith("/profile/medical/"))
         return response(request,{
