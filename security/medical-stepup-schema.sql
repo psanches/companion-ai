@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS medical_stepup_grants (
   grant_hash TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   session_id TEXT NOT NULL,
+  action TEXT NOT NULL,
   expires_at INTEGER NOT NULL,
   revoked_at INTEGER
 );
