@@ -1201,7 +1201,13 @@ inviteBtn?.addEventListener(
     const shareData = {
       title: "Lumi",
       text:
-        "Conheça a Lumi, sua assistente pessoal com memória.",
+        "Conheça a Lumi, sua assistente pessoal com memória.\n\n" +
+        "Para começar:\n" +
+        "1. Abra o link abaixo.\n" +
+        "2. Toque em \"Sign in\" (entrar).\n" +
+        "3. Informe seu e-mail.\n" +
+        "4. Abra o e-mail da Lumi e toque no link de acesso. Se não encontrar, confira o spam.\n" +
+        "5. Ao voltar à Lumi, escreva sua primeira mensagem.",
       url:
         "https://mylumicompanion.com/"
     };
@@ -1213,14 +1219,14 @@ inviteBtn?.addEventListener(
       }
 
       await navigator.clipboard.writeText(
-        shareData.url
+        shareData.text + "\n\n" + shareData.url
       );
 
       const originalContent =
         inviteBtn.textContent;
 
       inviteBtn.textContent = "✓";
-      inviteBtn.title = "Link copiado!";
+      inviteBtn.title = "Convite copiado com instruções de entrada!";
 
       setTimeout(() => {
         inviteBtn.textContent =

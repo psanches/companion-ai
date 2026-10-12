@@ -683,3 +683,29 @@ hr {
     font-size: 12px;
   }
 }
+
+/* Text authentication buttons must not inherit square icon sizing. */
+#authBox {
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+#authBox .auth-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: 76px;
+  padding: 0 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .app-header {
+    flex-wrap: wrap;
+  }
+  .header-actions {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
