@@ -48,6 +48,21 @@ export function createDevelopmentMedicalWorker(existingWorker) {
       }
       if (request.headers.get("Origin")!==origin)
         return response(request,{error:"ORIGIN_DENIED"},403);
+      if (request.method==="OPTIONS") {
+        const method=request.headers.get("Access-Control-Request-Method");
+        const headers=(request.headers.get("Access-Control-Request-Headers")||"")
+          .split(",").map(value=>value.trim().toLowerCase()).filter(Boolean);
+        if (method!=="POST" || headers.some(value=>
+          !["authorization","content-type"].includes(value)))
+          return response(request,{error:"PREFLIGHT_DENIED"},403);
+        return new Response(null,{status:204,headers:{
+          "access-control-allow-origin":origin,
+          "access-control-allow-methods":"POST",
+          "access-control-allow-headers":"Authorization, Content-Type",
+          "cache-control":"no-store",
+          vary:"Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
+        }});
+      }
       if (request.method!=="POST")
         return response(request,{error:"METHOD_NOT_ALLOWED"},405);
       try {
