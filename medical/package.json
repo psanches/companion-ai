@@ -2,9 +2,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test ./*.test.mjs"
+    "test": "node --test ./*.test.mjs",
+    "build:staging": "wrangler deploy --dry-run --config wrangler.staging.jsonc",
+    "deploy:staging": "node ./assert-staging-deployment.mjs && wrangler deploy --config wrangler.staging.jsonc"
   },
   "dependencies": {
     "@simplewebauthn/server": "^13.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
   }
 }

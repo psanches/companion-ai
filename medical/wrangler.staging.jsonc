@@ -1,0 +1,27 @@
+{
+  "name": "lumi-medical-security-staging",
+  "main": "cloudflare-staging-entry.js",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "preview_urls": false,
+  "routes": [],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MEDICAL_PASSKEY_DO",
+        "class_name": "StagingMedicalPasskeyStore"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "medical-staging-v1",
+      "new_sqlite_classes": [
+        "StagingMedicalPasskeyStore"
+      ]
+    }
+  ]
+}
