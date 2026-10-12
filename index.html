@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="lumi-build" content="20261012-health-auto-update-1">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <meta name="description" content="Companion AI - seu assistente pessoal com memória">
@@ -299,6 +300,38 @@ document.getElementById("profileDialog").addEventListener("close", () => {
   }
 });
 
+</script>
+<script>
+/* Check the deployed HTML version without using browser or service-worker cache.
+   Refresh only when the user returns to the tab, to avoid interrupting a conversation. */
+(() => {
+  const current = document.querySelector('meta[name="lumi-build"]')?.content;
+  if (!current) return;
+  let checking = false;
+  async function checkForUpdate() {
+    if (checking || document.visibilityState !== "visible") return;
+    checking = true;
+    try {
+      const url = new URL("./index.html", location.href);
+      url.searchParams.set("_lumi_check", Date.now().toString());
+      const response = await fetch(url, {cache:"no-store"});
+      if (!response.ok) return;
+      const html = await response.text();
+      const next = html.match(/<meta name="lumi-build" content="([^"]+)"/)?.[1];
+      if (next && next !== current) {
+        const destination = new URL(location.href);
+        destination.searchParams.set("_lumi_version", next);
+        location.replace(destination.href);
+      }
+    } catch (error) { console.warn("Lumi version check unavailable", error); }
+    finally { checking = false; }
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForUpdate();
+  });
+  window.addEventListener("pageshow", () => { setTimeout(checkForUpdate, 1500); });
+  setInterval(checkForUpdate, 300000);
+})();
 </script>
 </body>
 </html>
