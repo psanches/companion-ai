@@ -235,6 +235,16 @@ async function updateAuthUI() {
   const signedIn = !!data?.session && !error;
   if (signInBtn) signInBtn.hidden = signedIn;
   if (signOutBtn) signOutBtn.hidden = !signedIn;
+  // Never display locally cached conversation content while signed out.
+  if (!signedIn) {
+    state.messages = [];
+    fullHistory = [];
+    const stored = JSON.parse(localStorage.getItem(STORAGE) || "{}");
+    delete stored.messages;
+    localStorage.setItem(STORAGE, JSON.stringify(stored));
+    if (messagesEl) messagesEl.replaceChildren();
+    if (loadEarlierBtn) loadEarlierBtn.hidden = true;
+  }
   const dialog = document.getElementById("lumiAuthDialog");
   if (signedIn && dialog?.open) dialog.close();
 }
@@ -332,6 +342,9 @@ setInterval(() => { void lumiCheckIdle(); }, 15000);
 supabaseClient.auth.onAuthStateChange((event, session) => {
   if (event === "SIGNED_OUT") {
     localStorage.removeItem(LUMI_LAST_ACTIVITY_KEY);
+    state.messages = [];
+    fullHistory = [];
+    if (messagesEl) messagesEl.replaceChildren();
   } else if (event === "SIGNED_IN" && session) {
     const last = Number(localStorage.getItem(LUMI_LAST_ACTIVITY_KEY));
     if (last > 0 && Date.now() - last >= LUMI_IDLE_LIMIT_MS) {
@@ -482,7 +495,9 @@ async function loadSharedHistory() {
    the user has an authenticated Supabase session.
   */
   if (!token) {
-    render();
+    state.messages = [];
+    fullHistory = [];
+    if (messagesEl) messagesEl.replaceChildren();
     return;
   }
 
