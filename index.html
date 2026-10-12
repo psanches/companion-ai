@@ -165,42 +165,50 @@
   <p id="medicalTestResult" role="status" aria-live="polite">🔐 Medical storage tests are paused until server-side passkey verification is deployed and audited.</p>
 </dialog>
 
-<dialog id="lumiDemoDialog" aria-labelledby="lumiDemoTitle" style="box-sizing:border-box;width:min(94vw,720px);max-height:90dvh;overflow:auto;background:#111827;color:#fff;border:2px solid #9bd6f5;border-radius:16px;padding:22px;font:18px/1.5 system-ui">
-  <button id="closeLumiDemoBtn" type="button" style="float:right;padding:8px 13px;border-radius:8px;font-size:20px" aria-label="Fechar demonstração">✕</button>
-  <h2 id="lumiDemoTitle">Conheça a Lumi</h2>
-  <p>Uma assistente para conversar, organizar a rotina e compreender informações de saúde.</p>
-  <p><strong>Exemplos fictícios.</strong> Esta demonstração não coleta nem armazena informações médicas.</p>
-  <h3>Escolha uma situação</h3>
-  <div id="lumiDemoChoices" style="display:grid;gap:12px">
-    <button type="button" data-demo="routine">Quero organizar meu dia</button>
-    <button type="button" data-demo="symptom">Estou cansado depois de caminhar</button>
-    <button type="button" data-demo="visit">Quero preparar minha consulta</button>
-    <button type="button" data-demo="privacy">Como funciona a privacidade?</button>
-  </div>
-  <section aria-live="polite" style="margin-top:20px;background:#1f2937;border-radius:12px;padding:16px">
-    <h3>Exemplo de resposta</h3><p id="lumiDemoAnswer">Escolha uma situação acima.</p>
-  </section>
-  <p>O chat está disponível. O perfil médico permanece bloqueado para dados reais enquanto concluímos os testes de segurança.</p>
-  <button id="lumiDemoChatBtn" type="button">Voltar ao chat</button>
+<dialog id="lumiDemoDialog" aria-labelledby="lumiDemoTitle" style="box-sizing:border-box;width:min(94vw,720px);max-height:90dvh;overflow:auto;background:#111827;color:#fff;border:2px solid #9bd6f5;border-radius:16px;padding:22px;font:19px/1.5 system-ui">
+<button id="closeLumiDemoBtn" type="button" style="float:right;padding:8px 13px;border-radius:8px;font-size:20px" aria-label="Fechar">✕</button>
+<h2 id="lumiDemoTitle">Conheça a Lumi 💙</h2>
+<p>Olá! Sou a Lumi, sua companheira pessoal com inteligência artificial.</p>
+<p>Estou aqui para facilitar seu dia a dia, ajudar a entender informações de saúde, organizar sua rotina e oferecer apoio e companhia.</p>
+<p>Seja para cuidar da sua saúde, ajudar alguém ou simplesmente conversar, estou aqui para ouvir e ajudar.</p>
+<p>Não precisa entender de tecnologia. Vamos conversar, uma pergunta de cada vez.</p>
+<div id="lumiWelcomeStep" aria-live="polite" style="background:#1f2937;padding:16px;border-radius:12px"></div>
+<p style="font-size:14px;color:#cbd5e1">Demonstração fictícia: nenhuma resposta é salva ou enviada. Não informe dados médicos reais nesta versão.</p>
+<button id="lumiDemoReset" type="button">Recomeçar</button>
+<button id="lumiDemoChatBtn" type="button">Voltar ao chat</button>
 </dialog>
 <style>
-#lumiDemoChoices button,#lumiDemoChatBtn{padding:15px;border-radius:12px;background:#215574;color:#fff;border:2px solid #9bd6f5;font:inherit;text-align:left;cursor:pointer}
-#lumiDemoChoices button:focus-visible,#lumiDemoChatBtn:focus-visible{outline:4px solid gold}
+#lumiWelcomeStep button,#lumiDemoReset,#lumiDemoChatBtn{padding:13px 17px;border-radius:12px;background:#215574;color:#fff;border:2px solid #9bd6f5;font:inherit;cursor:pointer;margin:5px}
+#lumiWelcomeStep input{width:100%;box-sizing:border-box;font:inherit;padding:12px;background:#fff;color:#111827;border-radius:9px}
+#lumiWelcomeStep button:focus-visible{outline:4px solid gold}
 #lumiDemoDialog::backdrop{background:rgba(0,0,0,.7)}
 </style>
 <script>
 (() => {
  const demo=document.getElementById("lumiDemoDialog");
- const answers={
-  routine:"Podemos começar pelos compromissos de hoje e organizar uma atividade por vez.",
-  symptom:"O cansaço pode ter várias causas. Anote quando acontece e converse com seu médico. Se houver falta de ar intensa, dor no peito ou desmaio, procure urgência.",
-  visit:"Vamos anotar três perguntas: O que mudou nos sintomas? Quais efeitos dos medicamentos devo relatar? Como posso me preparar para a próxima consulta?",
-  privacy:"Dados médicos reais ainda não devem ser inseridos. Estamos testando a confirmação de identidade e os controles de privacidade antes da liberação."
- };
- document.getElementById("lumiDemoBtn").addEventListener("click",()=>demo.showModal());
+ const area=document.getElementById("lumiWelcomeStep");
+ let step="start";
+ function render(){
+  area.replaceChildren();
+  const question=document.createElement("p");
+  const choices=document.createElement("div");
+  area.append(question,choices);
+  function option(label,next){const b=document.createElement("button");b.type="button";b.textContent=label;b.addEventListener("click",()=>{step=next;render()});choices.appendChild(b)}
+  function freeText(next){const input=document.createElement("input");input.placeholder="Escreva aqui, se quiser";input.setAttribute("aria-label","Resposta opcional");choices.appendChild(input);option("Continuar",next)}
+  if(step==="start"){question.textContent="Um médico já diagnosticou alguma condição de saúde em você?";option("SIM","condition");option("NÃO","general")}
+  else if(step==="condition"){question.textContent="Qual condição de saúde foi diagnosticada?";freeText("other")}
+  else if(step==="other"){question.textContent="Você recebeu diagnóstico de outra condição de saúde?";option("SIM","condition");option("NÃO","who")}
+  else if(step==="who"){question.textContent="Foi um médico especialista que fez o diagnóstico?";option("SIM","when");option("NÃO","when")}
+  else if(step==="when"){question.textContent="Você se lembra de quando recebeu o diagnóstico?";option("SIM","first");option("NÃO","first")}
+  else if(step==="first"){question.textContent="Você gostaria de contar o que levou você a procurar atendimento?";option("SIM","firstDetail");option("NÃO","done")}
+  else if(step==="firstDetail"){question.textContent="Conte com suas palavras, se desejar.";freeText("done")}
+  else if(step==="general"){question.textContent="O que trouxe você aqui hoje?";["Cuido de alguém","Quero aprender sobre saúde","Quero companhia e conversar","Preciso de ajuda no dia a dia","Estou conhecendo a Lumi"].forEach(t=>option(t,"done"))}
+  else {question.textContent="Obrigado por conversar comigo! Podemos continuar no seu ritmo. Esta é apenas uma demonstração."}
+ }
+ document.getElementById("lumiDemoBtn").addEventListener("click",()=>{step="start";render();demo.showModal()});
  document.getElementById("closeLumiDemoBtn").addEventListener("click",()=>demo.close());
  document.getElementById("lumiDemoChatBtn").addEventListener("click",()=>demo.close());
- document.querySelectorAll("#lumiDemoChoices [data-demo]").forEach(b=>b.addEventListener("click",()=>{document.getElementById("lumiDemoAnswer").textContent=answers[b.dataset.demo];}));
+ document.getElementById("lumiDemoReset").addEventListener("click",()=>{step="start";render()});
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
