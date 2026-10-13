@@ -7,7 +7,7 @@ export function createLumiAtivaIntegration(original,assets,fetcher=fetch){if(!or
  const sendDemo=(target,options)=>env?.LUMI_ATIVA_DEMO?env.LUMI_ATIVA_DEMO.fetch(new Request(target,{...options,signal:undefined})):fetcher(target,options);
  const path=url.pathname;const normalized=path.startsWith('/api/')?path.slice(4):path;
  if(normalized==='/medical'||normalized.startsWith('/medical/')||normalized==='/profile/medical'||normalized.startsWith('/profile/medical/'))return response({code:'MEDICAL_STEP_UP_REQUIRED',error:'Registros médicos reais continuam bloqueados.'},403);
- if(path==='/ativa-status')return response({demo:'lumi-ativa-integration',fictional:true,backend:'isolated-synthetic-demo',originalBaselinePreserved:true});
+ if(path==='/ativa-status')return response({demo:'lumi-ativa-integration',fictional:true,backend:'isolated-synthetic-demo',originalBaselinePreserved:true,build:'lumi-ativa-local-v2',syntheticServiceBound:Boolean(env?.LUMI_ATIVA_DEMO)});
  if(path==='/demo-api/session'||path==='/demo-api/explain'){
   if(!['GET','POST','DELETE'].includes(request.method))return response({error:'Método não permitido.'},405);
   if(request.method!=='GET'&&request.headers.get('origin')!==url.origin)return response({error:'Origem não autorizada.'},403);
