@@ -26,3 +26,7 @@ All production source, root Worker configuration and existing medical security f
 ## Deliberate demo limits
 
 No real patient data; no production record storage; only exact sample PDFs accepted; no arbitrary medical chat/upload text; prepared explanations explicitly distinguished from generated AI. Sample PDFs use basic Helvetica/ASCII transliteration; UI retains Brazilian Portuguese accents. A shared demo code does not provide individual patient authentication. No clinical, privacy, accessibility or penetration-testing certification is claimed.
+
+## Hosting access update
+
+Cloudflare rejected the Google sign-in and later returned login API HTTP 403 after secure email/password submission. No deployment occurred. The isolated GitHub deployment alternative is now prepared: it requires four demo-specific Actions secrets, fails closed when absent, and runs medical/demo tests before deployment. No live key/token has been accessed, stored in source, or logged. GitHub test run `38460758107` for implementation commit `8c0fa37e9d1ff8e478d5909099a3be9978d689ed` succeeded.

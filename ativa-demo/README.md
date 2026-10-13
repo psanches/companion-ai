@@ -57,3 +57,16 @@ npx wrangler secret put DEMO_ACCESS_CODE --config wrangler.jsonc
 ## Verification status
 
 See `STATUS.md` for verified checks and pending live deployment/device verification. This is not production medical-record storage and has no clinical validity.
+
+## GitHub deployment alternative (when dashboard sign-in is unavailable)
+
+Configure these four **repository Actions secrets** directly in GitHub Settings → Secrets and variables → Actions. Never paste values into chat, source files, workflow inputs, or logs:
+
+- `ATIVA_CLOUDFLARE_API_TOKEN`: token for the chosen Cloudflare account with Worker script deployment and Durable Object management permissions. Limit its account scope and lifetime; it is a deployment credential, not a patient-data credential.
+- `ATIVA_CLOUDFLARE_ACCOUNT_ID`: that account's identifier.
+- `ATIVA_OPENAI_API_KEY`: the user-authorized existing Lumi Research key.
+- `ATIVA_DEMO_ACCESS_CODE`: private presenter code, at least 20 characters.
+
+The `Ativa isolated preview deployment` workflow runs only on `feature/ativa-medical-demo`, only when the workflow or `ativa-demo/preview-deploy.json` changes. Missing credentials cause an explicit **no-deployment** summary rather than an attempted deploy. After configuring secrets, increment `request` in that marker on this demo branch to trigger deployment. It runs the existing 139 security tests, demo tests and build before calling the isolated deploy script. No credentials appear in CLI arguments or logs. OpenAI smoke verification uses only the fixed synthetic consultation and consumes at most one upstream call, within the budget.
+
+Do not merge this workflow to production or change its branch/name/config guards. Root Lumi and medical staging Workers are never deployed by it. A green skipped deployment is not a working preview; use the returned URL and explicit successful HTTP/AI summary as deployment evidence.

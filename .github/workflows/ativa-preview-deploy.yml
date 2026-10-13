@@ -1,0 +1,53 @@
+name: Ativa isolated preview deployment
+on:
+  push:
+    branches: [feature/ativa-medical-demo]
+    paths: ['ativa-demo/preview-deploy.json', '.github/workflows/ativa-preview-deploy.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ativa-isolated-preview
+  cancel-in-progress: false
+jobs:
+  isolated-preview:
+    if: github.ref == 'refs/heads/feature/ativa-medical-demo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check isolated demo credentials without exposing values
+        id: credentials
+        env:
+          CF_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
+          AI_KEY: ${{ secrets.ATIVA_OPENAI_API_KEY }}
+          ACCESS_CODE: ${{ secrets.ATIVA_DEMO_ACCESS_CODE }}
+        run: |
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';
+          const names={CF_TOKEN:'ATIVA_CLOUDFLARE_API_TOKEN',CF_ACCOUNT:'ATIVA_CLOUDFLARE_ACCOUNT_ID',AI_KEY:'ATIVA_OPENAI_API_KEY',ACCESS_CODE:'ATIVA_DEMO_ACCESS_CODE'};
+          const missing=Object.entries(names).filter(([k])=>!process.env[k]?.trim()).map(([,name])=>name);
+          const valid=missing.length===0 && process.env.ACCESS_CODE.length>=20;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`ready=${valid}\n`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,valid?'Demo credentials configured. Tests must pass before isolated deployment.\n':`Deployment NOT performed. Configure demo repository secrets: ${missing.join(', ')||'ATIVA_DEMO_ACCESS_CODE (at least 20 characters)'}. Never paste values into logs or chat.\n`);
+          JS
+      - name: Verify existing medical security tests
+        if: steps.credentials.outputs.ready == 'true'
+        working-directory: medical
+        run: npm install --ignore-scripts --no-audit --no-fund && npm test
+      - name: Verify isolated demo tests and bundle
+        if: steps.credentials.outputs.ready == 'true'
+        working-directory: ativa-demo
+        run: npm ci --ignore-scripts --no-audit --no-fund && npm test && npm run build
+      - name: Deploy only the new synthetic demo Worker
+        if: steps.credentials.outputs.ready == 'true'
+        working-directory: ativa-demo
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
+          OPENAI_API_KEY: ${{ secrets.ATIVA_OPENAI_API_KEY }}
+          DEMO_ACCESS_CODE: ${{ secrets.ATIVA_DEMO_ACCESS_CODE }}
+        run: node deploy-preview.mjs
