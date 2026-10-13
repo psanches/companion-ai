@@ -1,0 +1,39 @@
+import fs from 'node:fs';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
+const request=JSON.parse(fs.readFileSync(new URL('./request.json',import.meta.url)));
+assert.equal(request.target,'lumi-develop');assert.equal(request.mode,'deploy');
+assert.equal(process.env.GITHUB_REF,'refs/heads/feature/lumi-develop-ativa-integration');
+const originalHash='4aa869208a980a8c5a0cd9c29458d782373492cbc7cb1f955d44f49b1f60fde4';
+const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API_TOKEN;if(!account||!token)throw Error('Missing Cloudflare deployment access');
+const base=`https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/lumi-develop`;
+const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+async function cf(url,options={}){const r=await fetch(url,{...options,headers:{authorization:`Bearer ${token}`,...options.headers},signal:AbortSignal.timeout(45000)});if(!r.ok){let codes=[];try{codes=(await r.json()).errors?.map(e=>e.code)||[];}catch{}throw Error(`Cloudflare operation failed: HTTP ${r.status}, codes ${codes.join(',')}. No credential/source values logged.`);}return r;}
+const settingsBefore=(await (await cf(base+'/settings')).json()).result;assert.ok(settingsBefore);assert.ok(!settingsBefore.assets,'Unreviewed asset configuration: inspection required');
+const current=await cf(base+'/content/v2');assert.equal(current.headers.get('cf-entrypoint'),'worker.js');assert.match(current.headers.get('content-type'),/multipart\/form-data/);
+const originals=[];for(const [name,file] of await current.formData()){if(typeof file==='string')continue;originals.push({name,type:file.type,bytes:Buffer.from(await file.arrayBuffer())});}
+const original=originals.find(m=>m.name==='ativa-baseline-preserved.mjs')||originals.find(m=>m.name==='worker.js');assert.ok(original);assert.equal(sha(original.bytes),originalHash,'Deployed baseline changed since inspection; integration refused');
+if(original.name==='worker.js')assert.equal(originals.length,1,'Additional current modules require review');
+const productionUrl=base.replace('/lumi-develop','/companion-ai')+'/content/v2';async function contentHash(url){const r=await cf(url);if(!r.headers.get('content-type')?.includes('multipart/form-data'))return sha(Buffer.from(await r.arrayBuffer()));const modules=[];for(const [name,file] of await r.formData()){if(typeof file==='string')continue;modules.push({name,type:file.type,sha:sha(Buffer.from(await file.arrayBuffer()))});}return sha(JSON.stringify(modules.sort((a,b)=>a.name.localeCompare(b.name))));}
+const productionHash=await contentHash(productionUrl);
+const sandbox='https://lumi-develop.psanchesnle.workers.dev';
+async function http(path,options={}){return fetch(sandbox+path,{...options,redirect:'error',signal:AbortSignal.timeout(30000)});}
+const before={};for(const path of ['/health','/memory','/calendar/events']){const r=await http(path);before[path]={status:r.status,type:r.headers.get('content-type')};await r.arrayBuffer();}
+function form(modules){const fd=new FormData();fd.set('metadata',new Blob([JSON.stringify({main_module:'worker.js'})],{type:'application/json'}));for(const m of modules)fd.set(m.name,new Blob([m.bytes],{type:m.type}),m.name);return fd;}
+const entry=`// LUMI_ATIVA_INTEGRATION_VERSION=1\nimport baseline from './ativa-baseline-preserved.mjs';\nimport assets from './ativa-assets.mjs';\nimport {createLumiAtivaIntegration} from './ativa-factory.mjs';\nexport * from './ativa-baseline-preserved.mjs';\nexport default createLumiAtivaIntegration(baseline,assets);\n`;
+const modules=[{name:'worker.js',type:'application/javascript+module',bytes:Buffer.from(entry)},{name:'ativa-baseline-preserved.mjs',type:original.type,bytes:original.bytes},{name:'ativa-factory.mjs',type:'application/javascript+module',bytes:fs.readFileSync(new URL('./factory.mjs',import.meta.url))},{name:'ativa-assets.mjs',type:'application/javascript+module',bytes:fs.readFileSync(new URL('./assets.generated.mjs',import.meta.url))}];
+let changed=false;
+try{
+ await cf(base+'/content',{method:'PUT',body:form(modules)});changed=true;
+ const settingsAfter=(await (await cf(base+'/settings')).json()).result;
+ const config=s=>JSON.stringify({date:s.compatibility_date,flags:s.compatibility_flags||[],bindings:[...(s.bindings||[])].sort((a,b)=>a.name.localeCompare(b.name)),assets:s.assets});assert.ok(config(settingsAfter)===config(settingsBefore),'Existing development configuration changed unexpectedly');
+ const saved=await cf(base+'/content/v2');const savedForm=await saved.formData();const preserved=savedForm.get('ativa-baseline-preserved.mjs');assert.ok(preserved);assert.equal(sha(Buffer.from(await preserved.arrayBuffer())),originalHash,'Original development source was not preserved');
+ const page=await http('/');assert.equal(page.status,200);assert.match(await page.text(),/Lumi · Ativa Parkinson/);
+ const health=await http('/ativa-status');assert.equal(health.status,200);assert.equal((await health.json()).fictional,true);
+ const module=await http('/ativa-ui/app.js');assert.equal(module.status,200);assert.match(await module.text(),/Somente perguntas predefinidas|topics=/);
+ const medical=await http('/ativa-medical/');assert.equal(medical.status,200);assert.match(await medical.text(),/Helena Exemplo/);assert.equal(medical.headers.get('x-frame-options'),'SAMEORIGIN');
+ for(const path of ['/profile/medical','/api/profile/medical','/medical/profile'])assert.equal((await http(path)).status,403,'Real medical route must stay blocked');
+ for(const [path,expected] of Object.entries(before)){const r=await http(path);assert.equal(r.status,expected.status,`Original route status changed: ${path}`);assert.equal(r.headers.get('content-type'),expected.type);await r.arrayBuffer();}
+ assert.equal(await contentHash(productionUrl),productionHash,'Production source hash changed');
+ const code=process.env.DEMO_ACCESS_CODE;assert.ok(code);const login=await http('/demo-api/session',{method:'POST',headers:{origin:sandbox,'content-type':'application/json'},body:JSON.stringify({code})});assert.equal(login.status,200,'Integrated demo login failed');const cookie=login.headers.get('set-cookie')?.split(';')[0];assert.ok(cookie);
+ const ai=await http('/demo-api/explain',{method:'POST',headers:{origin:sandbox,cookie,'content-type':'application/json'},body:JSON.stringify({recordId:'laboratorio',questionId:'explicar'})});assert.equal(ai.status,200,'Integrated synthetic AI check failed');const answer=await ai.json();assert.equal(answer.fictional,true);assert.ok(answer.reply?.length);
+ const result={url:sandbox+'/',medicalUrl:sandbox+'/ativa-medical/',fictional:true,baselineSha256:originalHash,productionSourceUnchanged:true,bindingsPreserved:true,liveAI:true};console.log(JSON.stringify(result,null,2));if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'## Lumi + Ativa deployed in authorized development sandbox\n\n```json\n'+JSON.stringify(result,null,2)+'\n```\nReal medical routes remain blocked; original code and bindings preserved. No private source/secret values exported.\n');
+}catch(error){if(changed){try{await cf(base+'/content',{method:'PUT',body:form(originals)});console.error('Integration check failed; exact prior development code restored.');}catch{console.error('Automatic restoration failed; development Worker needs immediate review. Production was not deployed.');}}throw error;}

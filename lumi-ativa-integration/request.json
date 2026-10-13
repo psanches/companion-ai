@@ -1,1 +1,1 @@
-{"mode":"inspect","target":"lumi-develop","request":1}
+{"mode":"deploy","target":"lumi-develop","request":2,"medicalData":"synthetic-only","baselineSha256":"4aa869208a980a8c5a0cd9c29458d782373492cbc7cb1f955d44f49b1f60fde4"}

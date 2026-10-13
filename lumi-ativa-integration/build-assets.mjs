@@ -1,0 +1,4 @@
+import fs from 'node:fs';import path from 'node:path';
+const dir=new URL('./public/',import.meta.url);const assets={};for(const name of fs.readdirSync(dir)){const bytes=fs.readFileSync(new URL(name,dir));const ext=path.extname(name);const type=({'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.png':'image/png'})[ext];if(!type)throw Error('Unexpected public file extension');assets['/ativa-ui/'+name]={type,encoding:ext==='.png'?'base64':'utf8',content:ext==='.png'?bytes.toString('base64'):bytes.toString('utf8')};}
+assets['/ativa-ui/data.js']={type:'application/javascript; charset=utf-8',encoding:'utf8',content:fs.readFileSync(new URL('../ativa-demo/public/data.js',import.meta.url),'utf8')};
+fs.writeFileSync(new URL('./assets.generated.mjs',import.meta.url),'export default '+JSON.stringify(assets)+';\n');console.log('Synthetic Lumi public assets packaged; no credentials or runtime source included.');
