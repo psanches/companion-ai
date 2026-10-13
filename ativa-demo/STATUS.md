@@ -1,32 +1,39 @@
-# Ativa demo implementation status · 13 October 2026
+# Lumi Ativa demo — verified deployment, 13 October 2026
 
-## Implemented
+Preview: https://lumi-ativa-medical-demo.psanchesnle.workers.dev/
 
-Five entirely synthetic records; patient profile; timeline; prescriptions; lab results; reports; full-text search; PDF creation/view/download/local import/removal; illustrative Portuguese explanations; server-side AI implementation; synthetic-only input boundary; shared-code demo sessions; durable global AI budget and caching; responsive CSS; large-text mode; keyboard/status accessibility.
+Implementation branch: `feature/ativa-medical-demo`.
+Deployed source commit: `ff99a278215c305bbce64a8e65c6e2fdeb45568c`.
+Successful deployment run: https://github.com/psanches/companion-ai/actions/runs/38465668784
 
-All production source, root Worker configuration and existing medical security files/tests are unchanged. The new branch originates from `feature/medical-security-gates-20261012`.
+## Working and verified
 
-## Confirmed locally
+- Fictional patient Helena Exemplo and five wholly invented clinical records.
+- Profile/history, prescription, laboratory table and reports; accent-insensitive document/history search and type filters.
+- Valid one-page sample PDFs; native desktop Chromium viewer, download and exact-sample import into browser session memory. Real/modified PDF rejection is covered by automated tests. Browser download and reimport passed.
+- Prepared Brazilian Portuguese explanations, explicitly labeled as prepared rather than generated AI.
+- Server-side OpenAI explanations: a real response passed the hosted HTTP smoke check after deployment. Fixed synthetic IDs/questions only, no arbitrary patient text or uploaded documents sent to AI.
+- Private AI session, secure HttpOnly cookie, same-origin POST, durable atomic global budget, daily response caching.
+- Existing medical security suite: **139 passed**; demo backend/security/frontend DOM suite: **18 passed**. Both suites passed again in the deployment run before any deployment.
+- Public HTTP page, blocked medical/API/history/memory routes, private session login and live synthetic AI response passed on the deployed Worker.
+- Desktop browser QA: loaded page, search, PDF display, download/reimport, illustrative explanation, tab navigation and reset.
+- Deployment and source use only the new `lumi-ativa-medical-demo` Worker. Production domain, `lumi-develop`, root Worker files/configuration and existing medical gates/tests were not changed.
+- Desktop screenshot: `screenshots/desktop.jpg`.
 
-- Existing medical security suite: 139 passing tests.
-- Demo unit/security and frontend DOM suite: 18 passing tests, including blocked medical routes, synthetic PDF allowlist, HMAC sessions, origin checks, strict AI input, upstream errors, concurrency-safe budget and restart persistence model.
-- Isolated Wrangler dry-run bundle: succeeds; assets, new budget Durable Object and synthetic-only variables are the only bindings.
-- Original medical staging assertion refuses the demo branch by design. No attempt to bypass or change it.
+## Remaining verification
 
-- Local Wrangler runtime preview could not start in this container (`uv_interface_addresses` system error). Hosted runtime and actual browser/device checks remain pending; dry-run bundling succeeds.
+Actual Android device verification remains pending. Responsive CSS, viewport declaration, large-text control, touch-sized buttons and frontend DOM tests are implemented, but these do not establish a real-device test. Android browsers that do not embed PDFs have a native-viewer/download fallback.
 
-## Pending before claiming a working hosted demo
+## Deliberate limits and security boundary
 
-- Cloudflare sign-in/account access. No Cloudflare account token is available in the current workspace; cloud browser shows login.
-- Configure existing user-authorized Lumi Research API key securely on the new Worker, and a new demo access-code secret. No live key has been accessed or written.
-- Deploy new Worker and record returned URL. No demonstration URL is available until successful deployment.
-- Verify a real OpenAI response and provider quota/model availability.
-- Actual visual/device QA on desktop and Android; frontend DOM interaction tests do not replace device tests. Android PDF rendering varies by browser, so a native viewer/download fallback is supplied.
+The workers.dev preview exposes only synthetic demo content; the access code protects AI usage, not the fictional profile or static source. It is not real-patient authentication or production medical-record storage.
 
-## Deliberate demo limits
+Only original sample PDF bytes are accepted. Imported records live only in browser memory and disappear on reload/reset/removal; nothing is uploaded to a server. No arbitrary chat or editable patient-data fields are available.
 
-No real patient data; no production record storage; only exact sample PDFs accepted; no arbitrary medical chat/upload text; prepared explanations explicitly distinguished from generated AI. Sample PDFs use basic Helvetica/ASCII transliteration; UI retains Brazilian Portuguese accents. A shared demo code does not provide individual patient authentication. No clinical, privacy, accessibility or penetration-testing certification is claimed.
+OpenAI key and demo access code are server secrets on the new Worker, provisioned through masked GitHub Actions secrets. The key is reused with user authorization and shares its OpenAI project billing/quota with Lumi Research. AI is capped at 50 upstream calls/day (UTC), 500 output tokens/call, a 25-second timeout, fixed input and daily caching. `store:false` is set; no zero-retention certification is claimed.
 
-## Hosting access update
+The temporary Cloudflare deployment token expires on 17 October 2026. Its expiry does not stop the already deployed app; a new token is needed for later deployments. The token can edit Workers within the chosen account, while the workflow/script enforce the exact isolated Worker/config and never deploy root Lumi or medical staging.
 
-Cloudflare rejected the Google sign-in and later returned login API HTTP 403 after secure email/password submission. No deployment occurred. The isolated GitHub deployment alternative is now prepared: it requires four demo-specific Actions secrets, fails closed when absent, and runs medical/demo tests before deployment. No live key/token has been accessed, stored in source, or logged. GitHub test run `38460758107` for implementation commit `8c0fa37e9d1ff8e478d5909099a3be9978d689ed` succeeded.
+The PDF iframe sandbox was removed after a real-browser failure prevented native Chromium PDF display. CSP permits blob objects/frames only for this generated, allowlisted PDF viewer; existing medical security code/tests remain unchanged.
+
+No clinical validity, accessibility certification, or penetration-test certification is claimed.
