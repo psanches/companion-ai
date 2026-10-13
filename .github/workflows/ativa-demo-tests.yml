@@ -1,0 +1,31 @@
+name: Ativa isolated demo tests
+on:
+  push:
+    branches: [feature/ativa-medical-demo]
+    paths: ['ativa-demo/**', '.github/workflows/ativa-demo-tests.yml']
+  pull_request:
+    paths: ['ativa-demo/**', '.github/workflows/ativa-demo-tests.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  demo-and-medical-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Existing medical security tests (unchanged)
+        working-directory: medical
+        run: npm install --ignore-scripts --no-audit --no-fund && npm test
+      - name: Install demo dependencies
+        working-directory: ativa-demo
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Test demo and frontend interactions
+        working-directory: ativa-demo
+        run: npm test
+      - name: Bundle isolated demo without deployment
+        working-directory: ativa-demo
+        run: npm run build
