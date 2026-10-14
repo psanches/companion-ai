@@ -12,3 +12,19 @@ test('session code only and signed cookie are forwarded securely; unknown API ro
 test('upstream failures are explicit and never expose tokens',async()=>{const wrapper=createLumiAtivaIntegration({fetch:async()=>new Response('original')},assets,async()=>{throw Error('sensitive upstream token');});const r=await wrapper.fetch(req('/demo-api/session'),{},{});assert.equal(r.status,502);assert.equal((await r.text()).includes('sensitive'),false);});
 test('internal service binding is used instead of URL fetch and retains synthetic boundary',async()=>{let calls=0;const wrapper=createLumiAtivaIntegration({fetch:async()=>new Response('original')},assets,async()=>{throw Error('public URL should not be called');});const env={LUMI_ATIVA_DEMO:{fetch:async request=>{calls++;assert.equal(new URL(request.url).origin,DEMO_ORIGIN);return Response.json({fictional:true});}}};const r=await wrapper.fetch(req('/demo-api/session'),env,{});assert.equal(r.status,200);assert.equal(calls,1);});
 test('internal HTTP request uses manual redirect mode and never follows external redirects',async()=>{const wrapper=createLumiAtivaIntegration({fetch:async()=>new Response('original')},assets);const env={LUMI_ATIVA_DEMO:{fetch:async request=>{assert.equal(request.redirect,'manual');return new Response(null,{status:302,headers:{location:'https://evil.example'}});}}};const r=await wrapper.fetch(req('/demo-api/session'),env,{});assert.equal(r.status,502);assert.equal(r.headers.get('location'),null);});
+
+test('original Lumi home is served only for GET/HEAD and original POST is delegated',async()=>{
+ let forwarded=0;
+ const original={fetch:async()=>{forwarded++;return new Response('original-post',{status:202});}};
+ const wrapper=createLumiAtivaIntegration(original,assets);
+ const home=await wrapper.fetch(req('/'),{},{});
+ assert.equal(home.status,200);
+ assert.match(await home.text(),/Original Lumi/);
+ const post=new Request(root+'/',{method:'POST',body:'chat message'});
+ const result=await wrapper.fetch(post,{},{});
+ assert.equal(result.status,202);
+ assert.equal(await result.text(),'original-post');
+ assert.equal(forwarded,1);
+ const demo=await wrapper.fetch(req('/ativa'),{},{});
+ assert.match(await demo.text(),/Lumi fictional/);
+});
