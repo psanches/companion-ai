@@ -21,6 +21,15 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
   const healthFields=content.slice(healthHeading,healthEnd).replace("document.getElementById('profileDialog').close()","document.getElementById('healthDialog').close()");
   content=content.slice(0,healthHeading)+content.slice(healthEnd);
   content=content.replace('<dialog id="lumiDemoDialog"',`<dialog id="healthDialog" aria-label="Saúde fictícia" style="width:min(520px,94vw);max-height:85dvh;overflow-y:auto;border:1px solid #374151;border-radius:16px;padding:24px;background:#111827;color:#f9fafb"><h2>🩺 Meu Cuidado — dados fictícios</h2>${healthFields}</dialog><dialog id="lumiDemoDialog"`);
+  // Scope the visual polish to the fictional Health dialog only.
+  content=content.replace('>Close</button>','>Fechar</button>');
+  content=content.replace('<dialog id="healthDialog"',`<style>
+#healthDialog {box-sizing:border-box;max-width:94vw;font:16px/1.5 system-ui}
+#healthDialog label {display:block!important;width:100%!important;margin:14px 0 6px!important}
+#healthDialog textarea {display:block!important;width:100%!important;max-width:100%!important;box-sizing:border-box;padding:10px!important;margin:6px 0!important;border-radius:8px;color:#111827;background:#fff}
+#healthDialog input[type=file] {display:block;max-width:100%;margin:10px 0;color:#fff}
+#healthDialog button {padding:10px 18px;border-radius:8px;margin-top:12px}
+</style><dialog id="healthDialog"'`);
   const medicalButtonStart=content.indexOf('document.getElementById("healthDemoBtn").addEventListener("click", () => {');
   const medicalButtonEnd=content.indexOf('/* File picker is a UI-only demo.',medicalButtonStart);
   if(medicalButtonStart<0||medicalButtonEnd<0)throw Error('Original Lumi health button changed: abort injection');
