@@ -15,6 +15,12 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
   // Sandbox-only: keep Lumi's original chat, personality, memory and auth unchanged.
   // The existing health button opens a strictly fictional document viewer in-place.
   content=content.replace('aria-label="Saúde (demonstração fictícia)" title="Saúde (demonstração fictícia)"','aria-label="Meu Cuidado (somente dados fictícios)" title="Meu Cuidado (somente dados fictícios)"');
+  const healthHeading=content.indexOf('  <h3>🩺 Saúde — demonstração fictícia</h3>');
+  const healthEnd=content.indexOf('</dialog>',healthHeading);
+  if(healthHeading<0||healthEnd<0)throw Error('Original health section markers changed');
+  const healthFields=content.slice(healthHeading,healthEnd).replace("document.getElementById('profileDialog').close()","document.getElementById('healthDialog').close()");
+  content=content.slice(0,healthHeading)+content.slice(healthEnd);
+  content=content.replace('<dialog id="lumiDemoDialog"',`<dialog id="healthDialog" aria-label="Saúde fictícia" style="width:min(520px,94vw);max-height:85dvh;overflow-y:auto;border:1px solid #374151;border-radius:16px;padding:24px;background:#111827;color:#f9fafb"><h2>🩺 Meu Cuidado — dados fictícios</h2>${healthFields}</dialog><dialog id="lumiDemoDialog"`);
   const medicalButtonStart=content.indexOf('document.getElementById("healthDemoBtn").addEventListener("click", () => {');
   const medicalButtonEnd=content.indexOf('/* File picker is a UI-only demo.',medicalButtonStart);
   if(medicalButtonStart<0||medicalButtonEnd<0)throw Error('Original Lumi health button changed: abort injection');
@@ -28,7 +34,7 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
   for (const [id, value] of Object.entries(examples)) {
     document.getElementById(id).value = value;
   }
-  document.getElementById("profileDialog").showModal();
+  document.getElementById("healthDialog").showModal();
 });
 `+content.slice(medicalButtonEnd);
   if(content.includes('id="lumiCareDialog"'))throw Error('Unexpected extra care dialog in original UI');
