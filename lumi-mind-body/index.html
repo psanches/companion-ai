@@ -10,7 +10,7 @@ nav,.actions,.choices{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0}
 section{background:#1e293b;border-radius:16px;padding:20px;margin:16px 0}
 [hidden]{display:none!important}.choices button{flex:1 1 125px}.status{font-weight:700;color:#a7f3d0}
 small{color:#cbd5e1}input{font:inherit;min-height:48px;width:min(100%,280px);border-radius:8px}
-</style></head><body>
+ .movement-art{width:min(100%,440px);margin:18px auto;padding:12px;background:#f1f5f9;border-radius:16px;color:#172554}.movement-art svg{display:block;width:100%;height:auto;max-height:230px}.movement-art svg *{vector-effect:non-scaling-stroke}.movement-art figcaption{color:#334155;text-align:center;font-size:.95rem;margin-top:8px}</style></head><body>
 <header><h1>💙 Lumi — Mente e Corpo</h1><p>Protótipo educativo, inspirado em boas práticas para Parkinson. Não substitui fisioterapia ou avaliação individual.</p></header>
 <nav><button id="mindTab">🧠 Mente</button><button id="bodyTab">🚶 Corpo</button></nav>
 <section id="mind"><h2>Jogo de memória e atenção</h2><p>Observe as três palavras. Depois escolha qual delas apareceu.</p><div id="study"><p id="words" style="font-size:1.5rem;font-weight:bold"></p><button id="ready">Já memorizei</button></div><div id="quiz" hidden><p>Qual palavra estava na lista?</p><div id="options" class="choices"></div></div><p id="mindFeedback" class="status" aria-live="polite"></p><button id="nextMind" hidden>Próxima rodada</button><p><small>Sem cronômetro e sem penalidade por erros.</small></p></section>
@@ -35,8 +35,19 @@ const exercises=[
  {title:'Abrir e fechar as mãos',steps:'Com os braços apoiados, abra os dedos de maneira confortável e feche as mãos suavemente. Faça algumas repetições, sem forçar.'},
  {title:'Movimentos dos tornozelos',steps:'Sentado e com os pés apoiados, eleve a ponta de um pé e depois relaxe. Alterne os lados lentamente.'},
  {title:'Alongar os braços',steps:'Sentado, estenda um braço à frente dentro de uma amplitude confortável e volte. Alterne os braços. Evite se inclinar para fora da cadeira.'}
-];let bodyIndex=0;
-function renderBody(){const e=exercises[bodyIndex];$('bodyExercise').replaceChildren();const h=document.createElement('h3');h.textContent=(bodyIndex+1)+' de '+exercises.length+' — '+e.title;const p=document.createElement('p');p.textContent=e.steps;$('bodyExercise').append(h,p);$('previousBody').disabled=bodyIndex===0;$('nextBody').disabled=bodyIndex===exercises.length-1;}
+
+];
+// Ilustrações vetoriais locais: linhas simples, sem imagens externas ou dados pessoais.
+const common='<circle cx="115" cy="47" r="18"/><path d="M115 65 V137 M115 83 L80 117 M115 83 L150 117 M115 137 L88 179 M115 137 L150 179"/>';
+const drawings=[
+ {label:'Pessoa sentada respirando calmamente',svg:'<circle cx="110" cy="42" r="17"/><path d="M110 60 V122 M110 82 L85 110 M110 82 L136 110 M110 122 L152 122 L152 164 M110 122 L94 164 M82 164 H170 M88 123 H164 V180 M55 66 C39 79 39 97 55 109 M166 66 C182 79 182 97 166 109"/><path d="M45 71 L55 66 L58 78 M176 103 L166 109 L163 97"/>'},
+ {label:'Duas mãos com dedos abertos e uma mão fechada',svg:'<path d="M48 166 V95 Q48 86 55 86 Q62 86 62 95 V55 Q62 45 70 45 Q78 45 78 55 V90 V41 Q78 31 86 31 Q94 31 94 41 V90 V49 Q94 39 102 39 Q110 39 110 49 V99 V66 Q110 56 118 56 Q126 56 126 66 V133 Q126 166 98 177 H75 Q48 177 48 166 Z"/><path d="M154 162 V117 Q154 103 167 103 H192 Q207 103 207 117 V150 Q207 173 184 176 H174 Q154 176 154 162 Z M154 128 L143 116 Q137 110 143 104 Q149 98 156 105 L169 117"/>'},
+ {label:'Pessoa sentada elevando a ponta do pé',svg:'<circle cx="89" cy="43" r="17"/><path d="M89 61 V121 M89 84 L65 110 M89 84 L122 110 M89 121 L143 122 L154 160 L183 160 M89 121 L82 159 L112 171 M58 124 H154 V184 M46 184 H168"/><path d="M173 140 V112 M173 112 L164 123 M173 112 L182 123"/>'},
+ {label:'Pessoa sentada estendendo um braço à frente',svg:'<circle cx="85" cy="43" r="17"/><path d="M85 61 V122 M85 84 L62 110 M85 84 L137 84 L185 84 M85 122 L130 122 L143 161 L168 161 M85 122 L75 161 L108 171 M53 124 H140 V184 M43 184 H156"/><path d="M177 73 L189 84 L177 95"/>'}
+];
+function movementFigure(i){const d=drawings[i];const f=document.createElement('figure');f.className='movement-art';f.innerHTML='<svg viewBox="0 0 240 200" role="img" aria-label="'+d.label+'" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#172554" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">'+d.svg+'</g></svg><figcaption>Ilustração simplificada do movimento</figcaption>';return f;}
+let bodyIndex=0;
+function renderBody(){const e=exercises[bodyIndex];$('bodyExercise').replaceChildren();const h=document.createElement('h3');h.textContent=(bodyIndex+1)+' de '+exercises.length+' — '+e.title;const p=document.createElement('p');p.textContent=e.steps;$('bodyExercise').append(h,movementFigure(bodyIndex),p);$('previousBody').disabled=bodyIndex===0;$('nextBody').disabled=bodyIndex===exercises.length-1;}
 $('previousBody').onclick=()=>{bodyIndex--;renderBody();};$('nextBody').onclick=()=>{bodyIndex++;renderBody();};
 showRound();renderBody();
 </script></body></html>
