@@ -30,6 +30,11 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
 #healthDialog input[type=file] {display:block;max-width:100%;margin:10px 0;color:#fff}
 #healthDialog button {padding:10px 18px;border-radius:8px;margin-top:12px}
 </style><dialog id="healthDialog"'`);
+  // In-browser fictional report only: no fetch, storage, or AI transmission.
+  content=content.replace('  <h3>🩺 Saúde — demonstração fictícia</h3>','  <h3>🩺 Saúde — demonstração fictícia</h3>');
+  content=content.replace('>Medical conditions','>Condições médicas').replace('>Medications and dosages','>Medicamentos e dosagens').replace('>Allergies','>Alergias').replace('>Doctors and notes','>Médicos e observações');
+  content=content.replace('</dialog><dialog id="lumiDemoDialog"',`<div id="fictionalReportActions" style="display:flex;flex-wrap:wrap;gap:8px;margin:16px 0"><button id="fictionalReportBtn" type="button">Gerar relatório fictício</button><button id="fictionalClearBtn" type="button">Limpar dados</button></div><section id="fictionalReport" hidden aria-live="polite" style="padding:16px;border:1px solid #64748b;border-radius:10px;background:#fff;color:#111827;white-space:pre-wrap"></section><button id="fictionalPrintBtn" type="button" hidden>Imprimir / Salvar em PDF</button></dialog><dialog id="lumiDemoDialog"`);
+  content=content.replace('</body>',`<style>@media print {body>*:not(#healthDialog){display:none!important}#healthDialog{position:static!important;display:block!important;max-height:none!important;overflow:visible!important;border:0!important;width:100%!important;color:#111!important;background:white!important}#healthDialog>*:not(#fictionalReport){display:none!important}#fictionalReport{display:block!important;border:0!important;white-space:pre-wrap!important}#fictionalReportActions,#fictionalPrintBtn{display:none!important}}</style></body>`);
   const medicalButtonStart=content.indexOf('document.getElementById("healthDemoBtn").addEventListener("click", () => {');
   const medicalButtonEnd=content.indexOf('/* File picker is a UI-only demo.',medicalButtonStart);
   if(medicalButtonStart<0||medicalButtonEnd<0)throw Error('Original Lumi health button changed: abort injection');
@@ -46,6 +51,26 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
   document.getElementById("healthDialog").showModal();
 });
 `+content.slice(medicalButtonEnd);
+  const reportScript=`(function(){
+  const ids=['profileConditions','profileMedications','profileAllergies','profileDoctors'];
+  const labels=['Condições médicas','Medicamentos e dosagens','Alergias','Médicos e observações'];
+  const byId=id=>document.getElementById(id);
+  byId('fictionalReportBtn').addEventListener('click',()=>{
+    const values=ids.map(id=>byId(id).value.trim()||'Não informado');
+    const report=['RELATÓRIO DEMONSTRATIVO — DADOS FICTÍCIOS','SEM VALIDADE CLÍNICA','',...labels.flatMap((label,i)=>[label+':',values[i],'']),'Gerado localmente no navegador. Não enviado ou armazenado.'].join('\\n');
+    byId('fictionalReport').textContent=report;
+    byId('fictionalReport').hidden=false;
+    byId('fictionalPrintBtn').hidden=false;
+  });
+  byId('fictionalPrintBtn').addEventListener('click',()=>window.print());
+  byId('fictionalClearBtn').addEventListener('click',()=>{
+    ids.forEach(id=>byId(id).value='');
+    byId('fictionalReport').textContent='';
+    byId('fictionalReport').hidden=true;
+    byId('fictionalPrintBtn').hidden=true;
+  });
+})();`;
+  content=content.replace('</body>','<script>'+reportScript+'</script></body>');
   if(content.includes('id="lumiCareDialog"'))throw Error('Unexpected extra care dialog in original UI');
  }
  assets['/lumi-original/'+name]={type,encoding:ext==='.png'?'base64':'utf8',content};
