@@ -83,7 +83,13 @@ html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-o
   // original HTML. Add it only to this development copy, avoiding a null listener.
   const betaAnchor='<button id="lumiExerciseBtn"';
   if(!content.includes(betaAnchor))throw Error('Lumi beta button insertion anchor missing');
-  content=content.replace(betaAnchor,'<a href="/lumi-mind-body.html" style="display:block;margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;text-decoration:none;font-size:16px">🧠🚶 Mente e Corpo — exercícios</a>'+betaAnchor);
+  // Replace the generic legacy exercise entry with the new specialized module.
+  // Keep the original dialog and event handlers intact to avoid breaking legacy app.js.
+  content=content.replace('>🏠 Exercícios em Casa</button>', '>🧠🚶 Mente e Corpo</button>');
+  content=content.replace('id="lumiExerciseBtn" type="button"', 'id="lumiExerciseBtn" type="button" data-mind-body="true"');
+  content=content.replace('document.getElementById("lumiExerciseBtn").addEventListener("click",()=>document.getElementById("lumiExerciseDialog").showModal());', 'document.getElementById("lumiExerciseBtn").addEventListener("click",()=>{ window.location.href="/lumi-mind-body.html"; });');
+  // The generic modal is removed from the development UI, but its markup remains for compatibility.
+  content=content.replace('<dialog id="lumiExerciseDialog"', '<dialog hidden id="lumiExerciseDialog"');
   content=content.replace(betaAnchor,
     '<button id="lumiBetaBtn" type="button" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:16px;cursor:pointer;text-align:left">📊 Painel beta fictício</button>\n  '+betaAnchor);
   // Sandbox-only: keep Lumi's original chat, personality, memory and auth unchanged.
