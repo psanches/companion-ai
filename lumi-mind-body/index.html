@@ -10,7 +10,7 @@ nav,.actions,.choices{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0}
 section{background:#1e293b;border-radius:16px;padding:20px;margin:16px 0}
 [hidden]{display:none!important}.choices button{flex:1 1 125px}.status{font-weight:700;color:#a7f3d0}
 small{color:#cbd5e1}input{font:inherit;min-height:48px;width:min(100%,280px);border-radius:8px}
- .movement-art{width:min(100%,440px);margin:18px auto;padding:12px;background:#f1f5f9;border-radius:16px;color:#172554}.movement-art svg{display:block;width:100%;height:auto;max-height:230px}.movement-art svg *{vector-effect:non-scaling-stroke}.movement-art figcaption{color:#334155;text-align:center;font-size:.95rem;margin-top:8px}</style></head><body>
+ .movement-art{width:min(100%,440px);margin:18px auto;padding:12px;background:#f1f5f9;border-radius:16px;color:#172554}.movement-art img{display:block;width:100%;height:auto;border-radius:10px}.movement-art svg *{vector-effect:non-scaling-stroke}.movement-art figcaption{color:#334155;text-align:center;font-size:.95rem;margin-top:8px}</style></head><body>
 <header><h1>💙 Lumi — Mente e Corpo</h1><p>Protótipo educativo, inspirado em boas práticas para Parkinson. Não substitui fisioterapia ou avaliação individual.</p></header>
 <nav><button id="mindTab">🧠 Mente</button><button id="bodyTab">🚶 Corpo</button></nav>
 <section id="mind"><h2>Jogo de memória e atenção</h2><p>Observe as três palavras. Depois escolha qual delas apareceu.</p><div id="study"><p id="words" style="font-size:1.5rem;font-weight:bold"></p><button id="ready">Já memorizei</button></div><div id="quiz" hidden><p>Qual palavra estava na lista?</p><div id="options" class="choices"></div></div><p id="mindFeedback" class="status" aria-live="polite"></p><button id="nextMind" hidden>Próxima rodada</button><p><small>Sem cronômetro e sem penalidade por erros.</small></p></section>
@@ -39,23 +39,13 @@ const exercises=[
 ];
 // Ilustrações vetoriais locais: linhas simples, sem imagens externas ou dados pessoais.
 // Figuras didáticas em estilo de cartilha: contornos arredondados, cadeira e setas.
-const chair='<path d="M80 108 V173 M80 131 H156 V173 M70 173 H90 M146 173 H166" stroke="#64748b" stroke-width="5" fill="none"/>';
-const head='<path d="M101 38 Q100 16 120 16 Q141 16 140 38 L138 53 Q133 67 120 67 Q106 67 102 53 Z" fill="#f6c6a6" stroke="#334155" stroke-width="2.5"/><path d="M101 37 Q100 12 120 13 Q145 12 141 42 Q136 28 126 27 Q113 36 101 37" fill="#7c8190" stroke="#334155" stroke-width="2"/><path d="M114 49 Q120 54 126 49" stroke="#925d53" stroke-width="2" fill="none"/>';
-const torso='<path d="M104 67 Q88 69 84 84 L78 125 Q99 138 141 125 L155 88 Q151 71 136 67 Z" fill="#93c5fd" stroke="#334155" stroke-width="2.5"/>';
-const legs='<path d="M84 125 Q93 137 116 137 H149 L164 165 H190 M111 136 L104 166 H136" fill="none" stroke="#334155" stroke-width="15" stroke-linecap="round"/><path d="M164 165 H194 M103 167 H138" stroke="#64748b" stroke-width="8" stroke-linecap="round"/>';
-const arrow=(d)=>'<path d="'+d+'" fill="none" stroke="#1673c8" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>';
-const seated=chair+legs+torso+head;
-const drawings=[
- {label:'Pessoa sentada respirando tranquilamente, com setas suaves',svg:seated+'<path d="M94 82 Q78 103 102 109 M146 82 Q162 103 137 109" stroke="#f6c6a6" stroke-width="11" fill="none" stroke-linecap="round"/>'+arrow('M58 86 Q43 106 60 126')+arrow('M182 125 Q197 104 182 85')},
- {label:'Pessoa sentada abrindo e fechando os dedos das mãos',svg:seated+'<path d="M92 83 L69 97 L58 83 M148 83 L171 97 L182 83" fill="none" stroke="#f6c6a6" stroke-width="12" stroke-linecap="round"/><path d="M58 83 L46 68 M58 83 L59 62 M58 83 L73 65 M182 83 L168 65 M182 83 L183 62 M182 83 L195 68" stroke="#b67c5c" stroke-width="4" stroke-linecap="round"/>'+arrow('M42 113 Q32 93 42 75')+arrow('M198 113 Q208 93 198 75')},
- {label:'Pessoa sentada levantando a ponta do pé, com seta indicativa',svg:seated+'<path d="M160 162 L193 151" stroke="#334155" stroke-width="10" stroke-linecap="round"/>'+arrow('M205 163 Q213 146 201 133')},
- {label:'Pessoa sentada estendendo suavemente os braços à frente',svg:seated+'<path d="M92 84 L67 86 L38 86 M148 84 L173 86 L202 86" stroke="#f6c6a6" stroke-width="12" stroke-linecap="round" fill="none"/>'+arrow('M55 67 H30')+arrow('M185 67 H210')}
+const illustrations=[
+ {src:'images/exercicio-1.webp',alt:'Pessoa sentada demonstrando respiração tranquila'},
+ {src:'images/exercicio-2.webp',alt:'Pessoa sentada abrindo e fechando as mãos'},
+ {src:'images/exercicio-3.webp',alt:'Pessoa sentada movimentando os tornozelos'},
+ {src:'images/exercicio-4.webp',alt:'Pessoa sentada estendendo um braço à frente'}
 ];
-function movementFigure(i){
- const d=drawings[i],f=document.createElement('figure');f.className='movement-art';
- f.innerHTML='<svg viewBox="0 0 240 195" role="img" aria-label="'+d.label+'" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3.5" markerHeight="3.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#1673c8"/></marker></defs>'+d.svg+'</svg><figcaption>Ilustração orientativa — faça apenas o movimento confortável</figcaption>';
- return f;
-}
+function movementFigure(i){const d=illustrations[i],f=document.createElement('figure');f.className='movement-art';const img=document.createElement('img');img.src=d.src;img.alt=d.alt;img.loading='lazy';const c=document.createElement('figcaption');c.textContent='Ilustração orientativa — faça apenas o movimento confortável';f.append(img,c);return f;}
 let bodyIndex=0;
 function renderBody(){const e=exercises[bodyIndex];$('bodyExercise').replaceChildren();const h=document.createElement('h3');h.textContent=(bodyIndex+1)+' de '+exercises.length+' — '+e.title;const p=document.createElement('p');p.textContent=e.steps;$('bodyExercise').append(h,movementFigure(bodyIndex),p);$('previousBody').disabled=bodyIndex===0;$('nextBody').disabled=bodyIndex===exercises.length-1;}
 $('previousBody').onclick=()=>{bodyIndex--;renderBody();};$('nextBody').onclick=()=>{bodyIndex++;renderBody();};
