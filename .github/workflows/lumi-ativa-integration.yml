@@ -1,4 +1,5 @@
 name: Lumi development Ativa integration
+# Authorized one-time Lumi Develop research rollout; production is excluded.
 on:
   push:
     branches: [feature/restore-lumi-home-20261014]
