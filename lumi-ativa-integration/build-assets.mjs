@@ -31,6 +31,14 @@ html:not(.lumi-authenticated) #lumiExerciseBtn,
 html:not(.lumi-authenticated) .companion-status {display:none!important}
 html:not(.lumi-authenticated) .app:after {content:"Please sign in to continue.";display:block;text-align:center;margin:15vh auto 0;padding:1rem;color:#e5e7eb;font:500 1.1rem system-ui}
 html:not(.lumi-authenticated) #signInBtn {display:inline-flex!important;visibility:visible!important}
+/* Explicitly restore all personal actions after verified sign-in. */
+html.lumi-authenticated #profileBtn,
+html.lumi-authenticated #healthDemoBtn,
+html.lumi-authenticated #memoryBtn,
+html.lumi-authenticated #inviteBtn,
+html.lumi-authenticated #soundButton,
+html.lumi-authenticated #settingsBtn,
+html.lumi-authenticated #chatHistoryBtn {display:grid!important;visibility:visible!important}
 html.lumi-authenticated #signInBtn {display:none!important}
 html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-out infinite}
 @keyframes lumiSignInPulse {0%,65%,100%{box-shadow:0 0 0 0 rgba(125,211,252,0)} 80%{box-shadow:0 0 0 7px rgba(125,211,252,.28)}}
