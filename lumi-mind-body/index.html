@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lumi — Mente e Corpo (protótipo)</title>
+<style>
+:root{font-family:system-ui,sans-serif;color-scheme:dark;background:#101827;color:#f8fafc}
+body{max-width:760px;margin:auto;padding:18px}h1{font-size:clamp(1.7rem,5vw,2.5rem)}p,li{line-height:1.6}
+button{font:inherit;min-height:52px;border-radius:12px;padding:12px 16px;border:1px solid #7dd3fc;background:#20354b;color:white;cursor:pointer}
+button:focus-visible{outline:3px solid #facc15}button:disabled{opacity:.45}
+nav,.actions,.choices{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0}
+section{background:#1e293b;border-radius:16px;padding:20px;margin:16px 0}
+[hidden]{display:none!important}.choices button{flex:1 1 125px}.status{font-weight:700;color:#a7f3d0}
+small{color:#cbd5e1}input{font:inherit;min-height:48px;width:min(100%,280px);border-radius:8px}
+</style></head><body>
+<header><h1>💙 Lumi — Mente e Corpo</h1><p>Protótipo educativo, inspirado em boas práticas para Parkinson. Não substitui fisioterapia ou avaliação individual.</p></header>
+<nav><button id="mindTab">🧠 Mente</button><button id="bodyTab">🚶 Corpo</button></nav>
+<section id="mind"><h2>Jogo de memória e atenção</h2><p>Observe as três palavras. Depois escolha qual delas apareceu.</p><div id="study"><p id="words" style="font-size:1.5rem;font-weight:bold"></p><button id="ready">Já memorizei</button></div><div id="quiz" hidden><p>Qual palavra estava na lista?</p><div id="options" class="choices"></div></div><p id="mindFeedback" class="status" aria-live="polite"></p><button id="nextMind" hidden>Próxima rodada</button><p><small>Sem cronômetro e sem penalidade por erros.</small></p></section>
+<section id="body" hidden><h2>Movimento seguro, sentado</h2><p><strong>Antes de começar:</strong> use cadeira firme, sem rodas, pés apoiados no chão. Faça apenas movimentos confortáveis. Se houver tontura, dor, falta de ar ou instabilidade, pare.</p><div id="bodyExercise"></div><div class="actions"><button id="previousBody">Anterior</button><button id="nextBody">Próximo</button></div><p><small>Evite exercícios de equilíbrio em pé sem orientação profissional. Não há coleta de dados de saúde.</small></p></section>
+<footer><p id="progress" aria-live="polite"></p><small>Versão experimental — para revisão posterior pela equipe Ativa Parkinson. Sem armazenamento ou envio de respostas.</small></footer>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+function tab(name){$('mind').hidden=name!=='mind';$('body').hidden=name!=='body';}
+$('mindTab').onclick=()=>tab('mind');$('bodyTab').onclick=()=>tab('body');
+const rounds=[
+ {words:['CASA','FLOR','SOL'],answer:'FLOR',options:['FLOR','LIVRO','PONTE']},
+ {words:['GATO','LUA','MESA'],answer:'MESA',options:['BOLA','MESA','CHAVE']},
+ {words:['ÁRVORE','CAFÉ','RIO'],answer:'RIO',options:['RIO','NUVEM','SAPATO']},
+ {words:['PÃO','MAR','JANELA'],answer:'PÃO',options:['PÃO','RELÓGIO','CADERNO']}
+];let index=0,correct=0;
+function showRound(){const r=rounds[index%rounds.length];$('words').textContent=r.words.join(' · ');$('study').hidden=false;$('quiz').hidden=true;$('nextMind').hidden=true;$('mindFeedback').textContent='';$('options').replaceChildren();}
+$('ready').onclick=()=>{const r=rounds[index%rounds.length];$('study').hidden=true;$('quiz').hidden=false;for(const option of r.options){const b=document.createElement('button');b.textContent=option;b.onclick=()=>{const ok=option===r.answer;if(ok)correct++;$('mindFeedback').textContent=ok?'Muito bem!':'Tudo bem. A resposta era '+r.answer+'.';$('options').querySelectorAll('button').forEach(x=>x.disabled=true);$('nextMind').hidden=false;$('progress').textContent='Rodadas concluídas: '+(index+1)+' · Acertos: '+correct;};$('options').append(b);}};
+$('nextMind').onclick=()=>{index++;showRound();};
+const exercises=[
+ {title:'Respiração tranquila',steps:'Sentado confortavelmente, inspire de forma natural e solte o ar devagar. Repita algumas vezes sem prender a respiração.'},
+ {title:'Abrir e fechar as mãos',steps:'Com os braços apoiados, abra os dedos de maneira confortável e feche as mãos suavemente. Faça algumas repetições, sem forçar.'},
+ {title:'Movimentos dos tornozelos',steps:'Sentado e com os pés apoiados, eleve a ponta de um pé e depois relaxe. Alterne os lados lentamente.'},
+ {title:'Alongar os braços',steps:'Sentado, estenda um braço à frente dentro de uma amplitude confortável e volte. Alterne os braços. Evite se inclinar para fora da cadeira.'}
+];let bodyIndex=0;
+function renderBody(){const e=exercises[bodyIndex];$('bodyExercise').replaceChildren();const h=document.createElement('h3');h.textContent=(bodyIndex+1)+' de '+exercises.length+' — '+e.title;const p=document.createElement('p');p.textContent=e.steps;$('bodyExercise').append(h,p);$('previousBody').disabled=bodyIndex===0;$('nextBody').disabled=bodyIndex===exercises.length-1;}
+$('previousBody').onclick=()=>{bodyIndex--;renderBody();};$('nextBody').onclick=()=>{bodyIndex++;renderBody();};
+showRound();renderBody();
+</script></body></html>
