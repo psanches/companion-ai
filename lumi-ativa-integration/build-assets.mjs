@@ -3,6 +3,8 @@ const dir=new URL('./public/',import.meta.url);const assets={};for(const name of
 assets['/ativa-ui/data.js']={type:'application/javascript; charset=utf-8',encoding:'utf8',content:fs.readFileSync(new URL('../ativa-demo/public/data.js',import.meta.url),'utf8')};
 for(const name of fs.readdirSync(new URL('../ativa-demo/public/',import.meta.url))){const ext=path.extname(name);const type=({'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.svg':'image/svg+xml'})[ext];if(!type)throw Error('Unexpected medical public asset');let content=fs.readFileSync(new URL('../ativa-demo/public/'+name,import.meta.url),'utf8');if(name==='index.html')content=content.replace(/(src|href)="\/(app\.js|style\.css|data\.js|favicon\.svg)"/g,'$1="/ativa-medical/$2"').replace('</head>','<link rel="stylesheet" href="/ativa-ui/medical-theme.css"></head>');assets['/ativa-medical/'+name]={type,encoding:'utf8',content};}
 
+assets['/lumi-original/lumi-research.js']={type:'application/javascript; charset=utf-8',encoding:'utf8',content:fs.readFileSync(new URL('../lumi-research/browser.js',import.meta.url),'utf8')};
+
  // Preserve the original Lumi conversation UI as the development home.
  // Assets are copied from the existing develop app; no production deployment.
 const root=new URL('../',import.meta.url);
@@ -69,7 +71,7 @@ html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-o
   else ready();
 })();
 </script>`;
-  content=content.replace('</body>',authObserver+'</body>');
+  content=content.replace('</body>',authObserver+'<script src="/lumi-research.js" defer></script></body>');
 
   // Development-only signed-in actions: make profile and fictional health visible
   // even when a previously installed frontend or mobile viewport has stale layout.
