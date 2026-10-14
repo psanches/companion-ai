@@ -18,6 +18,8 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Test restored routing and synthetic demo
         run: node --test lumi-ativa-integration/tests/*.test.mjs
+      - name: Test Lumi research adapter (mock API, no deploy)
+        run: node --test lumi-research/research.test.mjs
       - name: Package both frontends without deploying
         run: node lumi-ativa-integration/build-assets.mjs
       - name: Verify original frontend is packaged
