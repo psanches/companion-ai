@@ -38,14 +38,24 @@ const exercises=[
 
 ];
 // Ilustrações vetoriais locais: linhas simples, sem imagens externas ou dados pessoais.
-const common='<circle cx="115" cy="47" r="18"/><path d="M115 65 V137 M115 83 L80 117 M115 83 L150 117 M115 137 L88 179 M115 137 L150 179"/>';
+// Figuras didáticas em estilo de cartilha: contornos arredondados, cadeira e setas.
+const chair='<path d="M80 108 V173 M80 131 H156 V173 M70 173 H90 M146 173 H166" stroke="#64748b" stroke-width="5" fill="none"/>';
+const head='<path d="M101 38 Q100 16 120 16 Q141 16 140 38 L138 53 Q133 67 120 67 Q106 67 102 53 Z" fill="#f6c6a6" stroke="#334155" stroke-width="2.5"/><path d="M101 37 Q100 12 120 13 Q145 12 141 42 Q136 28 126 27 Q113 36 101 37" fill="#7c8190" stroke="#334155" stroke-width="2"/><path d="M114 49 Q120 54 126 49" stroke="#925d53" stroke-width="2" fill="none"/>';
+const torso='<path d="M104 67 Q88 69 84 84 L78 125 Q99 138 141 125 L155 88 Q151 71 136 67 Z" fill="#93c5fd" stroke="#334155" stroke-width="2.5"/>';
+const legs='<path d="M84 125 Q93 137 116 137 H149 L164 165 H190 M111 136 L104 166 H136" fill="none" stroke="#334155" stroke-width="15" stroke-linecap="round"/><path d="M164 165 H194 M103 167 H138" stroke="#64748b" stroke-width="8" stroke-linecap="round"/>';
+const arrow=(d)=>'<path d="'+d+'" fill="none" stroke="#1673c8" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>';
+const seated=chair+legs+torso+head;
 const drawings=[
- {label:'Pessoa sentada respirando calmamente',svg:'<circle cx="110" cy="42" r="17"/><path d="M110 60 V122 M110 82 L85 110 M110 82 L136 110 M110 122 L152 122 L152 164 M110 122 L94 164 M82 164 H170 M88 123 H164 V180 M55 66 C39 79 39 97 55 109 M166 66 C182 79 182 97 166 109"/><path d="M45 71 L55 66 L58 78 M176 103 L166 109 L163 97"/>'},
- {label:'Duas mãos com dedos abertos e uma mão fechada',svg:'<path d="M48 166 V95 Q48 86 55 86 Q62 86 62 95 V55 Q62 45 70 45 Q78 45 78 55 V90 V41 Q78 31 86 31 Q94 31 94 41 V90 V49 Q94 39 102 39 Q110 39 110 49 V99 V66 Q110 56 118 56 Q126 56 126 66 V133 Q126 166 98 177 H75 Q48 177 48 166 Z"/><path d="M154 162 V117 Q154 103 167 103 H192 Q207 103 207 117 V150 Q207 173 184 176 H174 Q154 176 154 162 Z M154 128 L143 116 Q137 110 143 104 Q149 98 156 105 L169 117"/>'},
- {label:'Pessoa sentada elevando a ponta do pé',svg:'<circle cx="89" cy="43" r="17"/><path d="M89 61 V121 M89 84 L65 110 M89 84 L122 110 M89 121 L143 122 L154 160 L183 160 M89 121 L82 159 L112 171 M58 124 H154 V184 M46 184 H168"/><path d="M173 140 V112 M173 112 L164 123 M173 112 L182 123"/>'},
- {label:'Pessoa sentada estendendo um braço à frente',svg:'<circle cx="85" cy="43" r="17"/><path d="M85 61 V122 M85 84 L62 110 M85 84 L137 84 L185 84 M85 122 L130 122 L143 161 L168 161 M85 122 L75 161 L108 171 M53 124 H140 V184 M43 184 H156"/><path d="M177 73 L189 84 L177 95"/>'}
+ {label:'Pessoa sentada respirando tranquilamente, com setas suaves',svg:seated+'<path d="M94 82 Q78 103 102 109 M146 82 Q162 103 137 109" stroke="#f6c6a6" stroke-width="11" fill="none" stroke-linecap="round"/>'+arrow('M58 86 Q43 106 60 126')+arrow('M182 125 Q197 104 182 85')},
+ {label:'Pessoa sentada abrindo e fechando os dedos das mãos',svg:seated+'<path d="M92 83 L69 97 L58 83 M148 83 L171 97 L182 83" fill="none" stroke="#f6c6a6" stroke-width="12" stroke-linecap="round"/><path d="M58 83 L46 68 M58 83 L59 62 M58 83 L73 65 M182 83 L168 65 M182 83 L183 62 M182 83 L195 68" stroke="#b67c5c" stroke-width="4" stroke-linecap="round"/>'+arrow('M42 113 Q32 93 42 75')+arrow('M198 113 Q208 93 198 75')},
+ {label:'Pessoa sentada levantando a ponta do pé, com seta indicativa',svg:seated+'<path d="M160 162 L193 151" stroke="#334155" stroke-width="10" stroke-linecap="round"/>'+arrow('M205 163 Q213 146 201 133')},
+ {label:'Pessoa sentada estendendo suavemente os braços à frente',svg:seated+'<path d="M92 84 L67 86 L38 86 M148 84 L173 86 L202 86" stroke="#f6c6a6" stroke-width="12" stroke-linecap="round" fill="none"/>'+arrow('M55 67 H30')+arrow('M185 67 H210')}
 ];
-function movementFigure(i){const d=drawings[i];const f=document.createElement('figure');f.className='movement-art';f.innerHTML='<svg viewBox="0 0 240 200" role="img" aria-label="'+d.label+'" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#172554" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">'+d.svg+'</g></svg><figcaption>Ilustração simplificada do movimento</figcaption>';return f;}
+function movementFigure(i){
+ const d=drawings[i],f=document.createElement('figure');f.className='movement-art';
+ f.innerHTML='<svg viewBox="0 0 240 195" role="img" aria-label="'+d.label+'" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3.5" markerHeight="3.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#1673c8"/></marker></defs>'+d.svg+'</svg><figcaption>Ilustração orientativa — faça apenas o movimento confortável</figcaption>';
+ return f;
+}
 let bodyIndex=0;
 function renderBody(){const e=exercises[bodyIndex];$('bodyExercise').replaceChildren();const h=document.createElement('h3');h.textContent=(bodyIndex+1)+' de '+exercises.length+' — '+e.title;const p=document.createElement('p');p.textContent=e.steps;$('bodyExercise').append(h,movementFigure(bodyIndex),p);$('previousBody').disabled=bodyIndex===0;$('nextBody').disabled=bodyIndex===exercises.length-1;}
 $('previousBody').onclick=()=>{bodyIndex--;renderBody();};$('nextBody').onclick=()=>{bodyIndex++;renderBody();};
