@@ -13,6 +13,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install isolated demo test dependencies
+        working-directory: ativa-demo
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Test restored routing and synthetic demo
         run: node --test lumi-ativa-integration/tests/*.test.mjs
       - name: Package both frontends without deploying
