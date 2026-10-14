@@ -50,6 +50,11 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
   document.getElementById("healthDialog").showModal();
 });
 `+content.slice(medicalButtonEnd);
+  // Development-only: display selected fictional filenames without reading or uploading files.
+  content=content.replace('files.length + " arquivo(s) selecionado(s) para demonstração (não enviados nem salvos)."',
+    'files.map(file => file.name + " (" + (file.size / 1024).toFixed(1) + " KB)").join(" | ") + " — somente demonstração; não enviados nem salvos."');
+  content=content.replace('document.getElementById("profileDialog").addEventListener("close", () => {\n  document.getElementById("medicalDemoFile").value = "";',
+    'document.getElementById("healthDialog").addEventListener("close", () => {\n  document.getElementById("medicalDemoFile").value = "";');
   const reportScript=`(function(){
   const ids=['profileConditions','profileMedications','profileAllergies','profileDoctors'];
   const labels=['Condições médicas','Medicamentos e dosagens','Alergias','Médicos e observações'];
