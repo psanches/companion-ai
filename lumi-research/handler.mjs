@@ -5,8 +5,10 @@ import {createSupabaseVerifier} from './supabase-auth.mjs';
 // after deployment bindings and rate limits have been reviewed.
 export function createLumiResearchHandler({fetcher=fetch}={}) {
   const verifyToken=createSupabaseVerifier({fetcher});
+  const publicAuth={SUPABASE_URL:'https://hjdrnxqvmpwfztlrqknp.supabase.co',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv'};
   const route=createResearchRoute({verifyToken,fetcher});
   return async (request,env)=>{
+    env={...env,...publicAuth};
     // Fail closed until a server-managed per-user rate limiter is configured.
     if (!env?.LUMI_RESEARCH_RATE_LIMIT || typeof env.LUMI_RESEARCH_RATE_LIMIT.limit!=='function')
       return Response.json({status:'unavailable',answer:'Pesquisa temporariamente indisponível.'},{status:503});
