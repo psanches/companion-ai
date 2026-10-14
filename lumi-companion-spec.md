@@ -42,3 +42,13 @@ Scope: Lumi as a general companion. No Ativa Parkinson or medical-demo features.
 3. Add automated behavioral tests and confirm green.
 4. Explicit approval before any deployment to lumi-develop.
 5. Production mylumicompanion.com remains unchanged.
+
+## Research follow-through — mandatory behavior
+- When Lumi lacks a factual answer, she should offer or initiate authorized research instead of ending with "I don't know".
+- If live research is available, research in the same interaction and provide a sourced answer, or a clear account of why verification failed.
+- Do not say "I'll research and get back to you" unless a durable, scheduled follow-up has actually been created and confirmed.
+- For research that cannot finish in the current request, create a persistent pending research job with user/account scope, question, status, timestamps, bounded retries, privacy rules and delivery destination. Only promise a later response after job creation succeeds.
+- A worker or scheduler must process pending jobs and send a completion or failure notification without requiring the user to ask again. Do not claim this works until it has been implemented and tested end to end.
+- Ensure idempotent delivery, cancellation, expiry, bounded cost and no cross-user exposure.
+- On transient errors, retry within budget; on final failure, deliver an honest status rather than silently dropping the task.
+- Acceptance: question requiring research -> verified answer with citations; delayed question -> confirmed job -> eventual unsolicited result; failed job -> explicit failure notification; unavailable scheduler -> no false promise.
