@@ -14,18 +14,24 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
  if(name==='index.html'){
   // Sandbox-only: keep Lumi's original chat, personality, memory and auth unchanged.
   // The existing health button opens a strictly fictional document viewer in-place.
-  content=content.replace('aria-label="Saúde (demonstração fictícia)" title="Saúde (demonstração fictícia)"','aria-label="Meu Cuidado (demo fictício)" title="Meu Cuidado (demo fictício)"');
+  content=content.replace('aria-label="Saúde (demonstração fictícia)" title="Saúde (demonstração fictícia)"','aria-label="Meu Cuidado (somente dados fictícios)" title="Meu Cuidado (somente dados fictícios)"');
   const medicalButtonStart=content.indexOf('document.getElementById("healthDemoBtn").addEventListener("click", () => {');
   const medicalButtonEnd=content.indexOf('/* File picker is a UI-only demo.',medicalButtonStart);
   if(medicalButtonStart<0||medicalButtonEnd<0)throw Error('Original Lumi health button changed: abort injection');
   content=content.slice(0,medicalButtonStart)+`document.getElementById("healthDemoBtn").addEventListener("click", () => {
-  document.getElementById("lumiCareDialog").showModal();
+  const examples = {
+    profileConditions: "EXEMPLO FICTÍCIO: hipertensão",
+    profileMedications: "EXEMPLO FICTÍCIO: medicamento A (sem dose)",
+    profileAllergies: "EXEMPLO FICTÍCIO: nenhuma alergia conhecida",
+    profileDoctors: "EXEMPLO FICTÍCIO: acompanhamento médico regular"
+  };
+  for (const [id, value] of Object.entries(examples)) {
+    document.getElementById(id).value = value;
+  }
+  document.getElementById("profileDialog").showModal();
 });
 `+content.slice(medicalButtonEnd);
-  content=content.replace('</body>',`<dialog id="lumiCareDialog" aria-label="Meu Cuidado fictício" style="width:min(1100px,96vw);height:min(86dvh,900px);max-width:none;max-height:none;padding:0;border:1px solid #41526c;border-radius:14px;background:#101827;color:white">
-<header style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px"><strong>🩺 Meu Cuidado · Ativa (dados 100% fictícios)</strong><button type="button" onclick="document.getElementById('lumiCareDialog').close()" aria-label="Voltar à Lumi" style="padding:8px 14px;border-radius:8px">Voltar à Lumi ✕</button></header>
-<iframe src="/ativa-medical/" title="Documentos fictícios da Ativa Parkinson" style="display:block;width:100%;height:calc(100% - 58px);border:0" loading="lazy"></iframe>
-</dialog></body>`);
+  if(content.includes('id="lumiCareDialog"'))throw Error('Unexpected extra care dialog in original UI');
  }
  assets['/lumi-original/'+name]={type,encoding:ext==='.png'?'base64':'utf8',content};
 }
