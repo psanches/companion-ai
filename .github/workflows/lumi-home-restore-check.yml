@@ -27,7 +27,7 @@ jobs:
       - name: Test Lumi research adapter (mock API, no deploy)
         run: node --test lumi-research/research.test.mjs
       - name: Live research smoke test (manual opt-in only; no deploy)
-        if: github.event_name == 'workflow_dispatch' && inputs.live_research == true
+        if: (github.event_name == 'workflow_dispatch' && inputs.live_research == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[lumi-live-smoke-once]'))
         env:
           OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
         run: |
