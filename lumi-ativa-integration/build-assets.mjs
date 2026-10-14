@@ -11,7 +11,42 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
  const ext=path.extname(name);
  const type=({'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png'})[ext];
  let content=ext==='.png'?bytes.toString('base64'):bytes.toString('utf8');
+ if(name==='app.js'){
+  const anchor='  if (signInBtn) signInBtn.hidden = signedIn;';
+  if(!content.includes(anchor))throw Error('Authentication state anchor missing');
+  content=content.replace(anchor, `  document.documentElement.classList.toggle("lumi-authenticated", signedIn);
+  document.documentElement.classList.toggle("lumi-signed-out", !signedIn);
+  if (!signedIn) {
+    for (const panel of document.querySelectorAll("dialog[open]")) panel.close();
+  }
+`+anchor);
+ }
  if(name==='index.html'){
+  const authCss=`<style>
+/* Development-only fail-closed visibility until Supabase session verification. */
+html:not(.lumi-authenticated) #conversationSidebar,
+html:not(.lumi-authenticated) #sidebarBackdrop,
+html:not(.lumi-authenticated) #chatHistoryBtn,
+html:not(.lumi-authenticated) #inviteBtn,
+html:not(.lumi-authenticated) #profileBtn,
+html:not(.lumi-authenticated) #healthDemoBtn,
+html:not(.lumi-authenticated) #memoryBtn,
+html:not(.lumi-authenticated) #soundButton,
+html:not(.lumi-authenticated) #settingsBtn,
+html:not(.lumi-authenticated) #newChatBtn,
+html:not(.lumi-authenticated) #loadEarlierBtn,
+html:not(.lumi-authenticated) #messages,
+html:not(.lumi-authenticated) #chatForm,
+html:not(.lumi-authenticated) #lumiExerciseBtn,
+html:not(.lumi-authenticated) .companion-status {display:none!important}
+html:not(.lumi-authenticated) .app:after {content:"Please sign in to continue.";display:block;text-align:center;margin:15vh auto 0;padding:1rem;color:#e5e7eb;font:500 1.1rem system-ui}
+html:not(.lumi-authenticated) #signInBtn {display:inline-flex!important;visibility:visible!important}
+html.lumi-authenticated #signInBtn {display:none!important}
+html.lumi-signed-out #signInBtn {animation:lumiSignInPulse 3s ease-in-out infinite}
+@keyframes lumiSignInPulse {0%,65%,100%{box-shadow:0 0 0 0 rgba(125,211,252,0)} 80%{box-shadow:0 0 0 7px rgba(125,211,252,.28)}}
+@media(prefers-reduced-motion:reduce){html.lumi-signed-out #signInBtn{animation:none;outline:2px solid #7dd3fc;outline-offset:2px}}
+</style>`;
+  content=content.replace('</head>',authCss+'</head>');
   // Sandbox-only: keep Lumi's original chat, personality, memory and auth unchanged.
   // The existing health button opens a strictly fictional document viewer in-place.
   content=content.replace('aria-label="Saúde (demonstração fictícia)" title="Saúde (demonstração fictícia)"','aria-label="Meu Cuidado (somente dados fictícios)" title="Meu Cuidado (somente dados fictícios)"');
