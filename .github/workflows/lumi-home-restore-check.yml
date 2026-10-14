@@ -31,16 +31,16 @@ jobs:
           import assets from './lumi-ativa-integration/assets.generated.mjs';
           const original=fs.readFileSync('index.html','utf8');
           const embedded=assets['/lumi-original/index.html'].content;
-          assert.match(embedded,/id="lumiCareDialog"/);
-          assert.match(embedded,/iframe src="\/ativa-medical\/"/);
-          assert.match(embedded,/Voltar à Lumi/);
+          assert.doesNotMatch(embedded,/id="lumiCareDialog"/);
+          assert.match(embedded,/id="profileDialog"/);
+          assert.match(embedded,/id="profileConditions"/);\n          assert.match(embedded,/id="profileMedications"/);\n          assert.match(embedded,/id="profileAllergies"/);\n          assert.match(embedded,/id="profileDoctors"/);\n          assert.match(embedded,/EXEMPLO FICTÍCIO: hipertensão/);
           assert.match(embedded,/id="healthDemoBtn"/);
-          assert.match(embedded,/getElementById\("lumiCareDialog"\)\.showModal\(\)/);
+          assert.match(embedded,/getElementById\("profileDialog"\)\.showModal\(\)/);
           assert.doesNotMatch(original,/id="lumiCareDialog"/,'Original repo UI must remain unchanged');
           for(const marker of ['id="chatForm"','id="messages"','id="authBox"','id="memoryBtn"','id="soundButton"']) {
             assert.ok(original.includes(marker)&&embedded.includes(marker),'Original Lumi UI element lost: '+marker);
           }
           assert.equal(assets['/lumi-original/app.js'].content,fs.readFileSync('app.js','utf8'),'Original personality and authentication script changed');
           assert.ok(assets['/ativa-medical/index.html'],'Fictional medical documents missing');
-          console.log('PASS: original Lumi preserved; care viewer integrated; synthetic medical content isolated');
+          console.log('PASS: original Lumi health form restored; fictional-only fields; chat and medical boundaries preserved');
           NODE
