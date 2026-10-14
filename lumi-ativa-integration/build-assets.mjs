@@ -71,6 +71,11 @@ html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-o
 </script>`;
   content=content.replace('</body>',authObserver+'</body>');
 
+  // Development-only signed-in actions: make profile and fictional health visible
+  // even when a previously installed frontend or mobile viewport has stale layout.
+  const headerEnd='<div class="header-actions">';
+  if(!content.includes(headerEnd))throw Error('Lumi header missing');
+  content=content.replace(headerEnd,headerEnd+'<style>html.lumi-authenticated .header-actions{flex-wrap:wrap;justify-content:flex-end}html.lumi-authenticated #profileBtn,html.lumi-authenticated #healthDemoBtn{display:grid!important;opacity:1!important;visibility:visible!important;flex:0 0 42px!important}</style>');
   // The original beta dashboard listener expects a trigger that is absent from the
   // original HTML. Add it only to this development copy, avoiding a null listener.
   const betaAnchor='<button id="lumiExerciseBtn"';
