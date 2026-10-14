@@ -48,7 +48,7 @@ jobs:
               fetcher: (url, opts) => fetch(url, {...opts, signal: controller.signal})
             });
             if (result.status !== 'complete') throw new Error('Live research status: '+result.status);
-            if (!result.citations?.some(c => /^https:\/\//.test(c.url))) throw new Error('No HTTPS citations returned');
+            if (!result.citations?.some(c => /^https:\/\//.test(c.url))) throw new Error('No HTTPS citations returned; research text alone is not sufficient');
             console.log('PASS: Live research returned an answer and HTTPS citations. No answer or credentials logged.');
           } finally { clearTimeout(timer); }
           NODE
