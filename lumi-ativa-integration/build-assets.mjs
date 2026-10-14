@@ -39,15 +39,14 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
   const medicalButtonEnd=content.indexOf('/* File picker is a UI-only demo.',medicalButtonStart);
   if(medicalButtonStart<0||medicalButtonEnd<0)throw Error('Original Lumi health button changed: abort injection');
   content=content.slice(0,medicalButtonStart)+`document.getElementById("healthDemoBtn").addEventListener("click", () => {
-  const examples = {
-    profileConditions: "EXEMPLO FICTÍCIO: hipertensão",
-    profileMedications: "EXEMPLO FICTÍCIO: medicamento A (sem dose)",
-    profileAllergies: "EXEMPLO FICTÍCIO: nenhuma alergia conhecida",
-    profileDoctors: "EXEMPLO FICTÍCIO: acompanhamento médico regular"
-  };
-  for (const [id, value] of Object.entries(examples)) {
-    document.getElementById(id).value = value;
-  }
+  // Start each demo with empty fields. Never populate medical information automatically.
+  ["profileConditions","profileMedications","profileAllergies","profileDoctors"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  const report = document.getElementById("fictionalReport");
+  if (report) { report.textContent = ""; report.hidden = true; }
+  const printButton = document.getElementById("fictionalPrintBtn");
+  if (printButton) printButton.hidden = true;
   document.getElementById("healthDialog").showModal();
 });
 `+content.slice(medicalButtonEnd);
