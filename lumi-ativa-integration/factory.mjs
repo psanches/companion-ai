@@ -10,7 +10,7 @@ export function createLumiAtivaIntegration(original,assets,fetcher=fetch,researc
  if(normalized==='/medical'||normalized.startsWith('/medical/')||normalized==='/profile/medical'||normalized.startsWith('/profile/medical/'))return response({code:'MEDICAL_STEP_UP_REQUIRED',error:'Registros médicos reais continuam bloqueados.'},403);
  // Restore the original Lumi frontend as the default development experience.
  // The medical presentation remains isolated at /ativa.
- if(['GET','HEAD'].includes(request.method)&&(path==='/'||path==='/index.html'||['/app.js','/style.css','/manifest.json','/sw.js','/icon-192.png','/icon-512.png','/lumi-calendar-v2.js'].includes(path))){
+ if(['GET','HEAD'].includes(request.method)&&(path==='/'||path==='/index.html'||['/app.js','/style.css','/manifest.json','/sw.js','/icon-192.png','/icon-512.png','/lumi-calendar-v2.js','/lumi-research.js'].includes(path))){
   const name=(path==='/'||path==='/index.html')?'index.html':path.slice(1);
   const asset=assets['/lumi-original/'+name];
   if(!asset)return response({error:'Lumi frontend asset missing'},503);
