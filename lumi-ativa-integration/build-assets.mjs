@@ -83,7 +83,7 @@ html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-o
   // original HTML. Add it only to this development copy, avoiding a null listener.
   const betaAnchor='<button id="lumiExerciseBtn"';
   if(!content.includes(betaAnchor))throw Error('Lumi beta button insertion anchor missing');
-  content=content.replace(betaAnchor,'<a href="/lumi-mind-body.html" style="display:block;margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;text-decoration:none;font-size:16px">🧠🚶 Mente e Corpo — exercícios</a>\\n  '+betaAnchor);
+  content=content.replace(betaAnchor,'<a href="/lumi-mind-body.html" style="display:block;margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;text-decoration:none;font-size:16px">🧠🚶 Mente e Corpo — exercícios</a>'+betaAnchor);
   content=content.replace(betaAnchor,
     '<button id="lumiBetaBtn" type="button" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:16px;cursor:pointer;text-align:left">📊 Painel beta fictício</button>\n  '+betaAnchor);
   // Sandbox-only: keep Lumi's original chat, personality, memory and auth unchanged.
