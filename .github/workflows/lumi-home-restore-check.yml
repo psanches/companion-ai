@@ -33,7 +33,11 @@ jobs:
           const embedded=assets['/lumi-original/index.html'].content;
           assert.doesNotMatch(embedded,/id="lumiCareDialog"/);
           assert.match(embedded,/id="profileDialog"/);
-          assert.match(embedded,/id="profileConditions"/);\n          assert.match(embedded,/id="profileMedications"/);\n          assert.match(embedded,/id="profileAllergies"/);\n          assert.match(embedded,/id="profileDoctors"/);\n          assert.match(embedded,/EXEMPLO FICTÍCIO: hipertensão/);
+          assert.match(embedded,/id="profileConditions"/);
+          assert.match(embedded,/id="profileMedications"/);
+          assert.match(embedded,/id="profileAllergies"/);
+          assert.match(embedded,/id="profileDoctors"/);
+          assert.match(embedded,/EXEMPLO FICTÍCIO: hipertensão/);
           assert.match(embedded,/id="healthDemoBtn"/);
           assert.match(embedded,/getElementById\("profileDialog"\)\.showModal\(\)/);
           assert.doesNotMatch(original,/id="lumiCareDialog"/,'Original repo UI must remain unchanged');
