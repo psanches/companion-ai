@@ -7,6 +7,15 @@ export function createLumiAtivaIntegration(original,assets,fetcher=fetch){if(!or
  const sendDemo=(target,options)=>env?.LUMI_ATIVA_DEMO?env.LUMI_ATIVA_DEMO.fetch(new Request(target,{...options,signal:undefined})):fetcher(target,options);
  const path=url.pathname;const normalized=path.startsWith('/api/')?path.slice(4):path;
  if(normalized==='/medical'||normalized.startsWith('/medical/')||normalized==='/profile/medical'||normalized.startsWith('/profile/medical/'))return response({code:'MEDICAL_STEP_UP_REQUIRED',error:'Registros médicos reais continuam bloqueados.'},403);
+ // Restore the original Lumi frontend as the default development experience.
+ // The medical presentation remains isolated at /ativa.
+ if(path==='/'||path==='/index.html'||['/app.js','/style.css','/manifest.json','/sw.js','/icon-192.png','/icon-512.png','/lumi-calendar-v2.js'].includes(path)){
+  const name=(path==='/'||path==='/index.html')?'index.html':path.slice(1);
+  const asset=assets['/lumi-original/'+name];
+  if(!asset)return response({error:'Lumi frontend asset missing'},503);
+  const body=asset.encoding==='base64'?Uint8Array.from(atob(asset.content),c=>c.charCodeAt(0)):asset.content;
+  return response(request.method==='HEAD'?null:body,200,asset.type);
+ }
  if(path==='/ativa-status')return response({demo:'lumi-ativa-integration',fictional:true,backend:'isolated-synthetic-demo',originalBaselinePreserved:true,build:'lumi-ativa-local-v2',syntheticServiceBound:Boolean(env?.LUMI_ATIVA_DEMO)});
  if(path==='/demo-api/session'||path==='/demo-api/explain'){
   if(!['GET','POST','DELETE'].includes(request.method))return response({error:'Método não permitido.'},405);
