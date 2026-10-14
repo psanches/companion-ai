@@ -40,10 +40,10 @@ const exercises=[
 // Ilustrações vetoriais locais: linhas simples, sem imagens externas ou dados pessoais.
 // Figuras didáticas em estilo de cartilha: contornos arredondados, cadeira e setas.
 const illustrations=[
- {src:'images/exercicio-1.webp',alt:'Pessoa sentada demonstrando respiração tranquila'},
- {src:'images/exercicio-2.webp',alt:'Pessoa sentada abrindo e fechando as mãos'},
- {src:'images/exercicio-3.webp',alt:'Pessoa sentada movimentando os tornozelos'},
- {src:'images/exercicio-4.webp',alt:'Pessoa sentada estendendo um braço à frente'}
+ {src:'exercicio-1.webp',alt:'Pessoa sentada demonstrando respiração tranquila'},
+ {src:'exercicio-2.webp',alt:'Pessoa sentada abrindo e fechando as mãos'},
+ {src:'exercicio-3.webp',alt:'Pessoa sentada movimentando os tornozelos'},
+ {src:'exercicio-4.webp',alt:'Pessoa sentada estendendo um braço à frente'}
 ];
 function movementFigure(i){const d=illustrations[i],f=document.createElement('figure');f.className='movement-art';const img=document.createElement('img');img.src=d.src;img.alt=d.alt;img.loading='lazy';const c=document.createElement('figcaption');c.textContent='Ilustração orientativa — faça apenas o movimento confortável';f.append(img,c);return f;}
 let bodyIndex=0;
