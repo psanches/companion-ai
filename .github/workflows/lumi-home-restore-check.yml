@@ -3,6 +3,12 @@ on:
   push:
     branches: [feature/restore-lumi-home-20261014]
   workflow_dispatch:
+    inputs:
+      live_research:
+        description: 'Run one live OpenAI research request (uses dedicated secret, no deploy)'
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
@@ -20,6 +26,32 @@ jobs:
         run: node --test lumi-ativa-integration/tests/*.test.mjs
       - name: Test Lumi research adapter (mock API, no deploy)
         run: node --test lumi-research/research.test.mjs
+      - name: Live research smoke test (manual opt-in only; no deploy)
+        if: github.event_name == 'workflow_dispatch' && inputs.live_research == true
+        env:
+          OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Missing LUMI_RESEARCH_OPENAI_API_KEY secret"
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import { researchNow } from './lumi-research/research.mjs';
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 45000);
+          try {
+            const result = await researchNow({
+              question: 'What is the official website of the World Health Organization?',
+              authorized: true,
+              apiKey: process.env.OPENAI_API_KEY,
+              maxOutputTokens: 250,
+              fetcher: (url, opts) => fetch(url, {...opts, signal: controller.signal})
+            });
+            if (result.status !== 'complete') throw new Error('Live research status: '+result.status);
+            if (!result.citations?.some(c => /^https:\/\//.test(c.url))) throw new Error('No HTTPS citations returned');
+            console.log('PASS: Live research returned an answer and HTTPS citations. No answer or credentials logged.');
+          } finally { clearTimeout(timer); }
+          NODE
       - name: Package both frontends without deploying
         run: node lumi-ativa-integration/build-assets.mjs
       - name: Verify original frontend is packaged
