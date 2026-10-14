@@ -1,0 +1,22 @@
+name: Validate Lumi home restoration (no deploy)
+on:
+  push:
+    branches: [feature/restore-lumi-home-20261014]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test restored routing and synthetic demo
+        run: node --test lumi-ativa-integration/tests/*.test.mjs
+      - name: Package both frontends without deploying
+        run: node lumi-ativa-integration/build-assets.mjs
+      - name: Verify original frontend is packaged
+        run: |
+          node --input-type=module -e "import a from './lumi-ativa-integration/assets.generated.mjs'; for (const p of ['/lumi-original/index.html','/lumi-original/app.js','/lumi-original/style.css','/ativa-ui/index.html']) if (!a[p]) throw Error('Missing '+p);"
