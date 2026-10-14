@@ -1,0 +1,27 @@
+name: Lumi development Ativa integration
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DEPLOY_LUMI_DEVELOP_ONLY to publish sandbox (never production)'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  guard:
+    if: github.ref != 'refs/heads/feature/restore-lumi-home-20261014'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prevent deployments from default or unreviewed branches
+        run: |
+          echo "Deployment permitted only from feature/restore-lumi-home-20261014."
+          exit 1
+  instructions:
+    if: github.ref == 'refs/heads/feature/restore-lumi-home-20261014'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatcher placeholder on default branch
+        run: |
+          echo "Select the restoration branch, which contains the guarded deploy job."
+          exit 1
