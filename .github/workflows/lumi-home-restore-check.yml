@@ -23,7 +23,7 @@ jobs:
         working-directory: ativa-demo
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Test restored routing and synthetic demo
-        run: node --test lumi-ativa-integration/tests/*.test.mjs
+        run: node --test lumi-ativa-integration/tests/*.test.mjs lumi-ativa-integration/research-hook.test.mjs
       - name: Test Lumi research adapter (mock API, no deploy)
         run: node --test lumi-research/*.test.mjs
       - name: Live research smoke test (manual opt-in only; no deploy)
