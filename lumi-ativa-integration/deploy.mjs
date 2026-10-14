@@ -1,7 +1,8 @@
 import fs from 'node:fs';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
 const request=JSON.parse(fs.readFileSync(new URL('./request.json',import.meta.url)));
 assert.equal(request.target,'lumi-develop');assert.equal(request.mode,'deploy');
-assert.equal(process.env.GITHUB_REF,'refs/heads/feature/lumi-develop-ativa-integration');
+assert.equal(process.env.GITHUB_REF,'refs/heads/feature/restore-lumi-home-20261014');
+assert.equal(process.env.LUMI_DEPLOY_CONFIRM,'DEPLOY_LUMI_DEVELOP_ONLY');
 const originalHash='4aa869208a980a8c5a0cd9c29458d782373492cbc7cb1f955d44f49b1f60fde4';
 const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API_TOKEN;if(!account||!token)throw Error('Missing Cloudflare deployment access');
 const base=`https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/lumi-develop`;
