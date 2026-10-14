@@ -43,7 +43,7 @@ jobs:
           assert.ok(embedded.indexOf('id="profileConditions"')>embedded.indexOf('id="healthDialog"'),"Medical fields must belong to Health dialog");
           assert.ok(embedded.indexOf('id="profileConditions"')<embedded.indexOf('</dialog>',embedded.indexOf('id="healthDialog"')),"Medical fields must not belong to Personal Profile");
           assert.match(embedded,/id="healthDemoBtn"/);
-          assert.match(embedded,/getElementById\("profileDialog"\)\.showModal\(\)/);
+          assert.match(embedded,/onclick="document\.getElementById\('profileDialog'\)\.showModal\(\)"/);
           assert.doesNotMatch(original,/id="lumiCareDialog"/,'Original repo UI must remain unchanged');
           for(const marker of ['id="chatForm"','id="messages"','id="authBox"','id="memoryBtn"','id="soundButton"']) {
             assert.ok(original.includes(marker)&&embedded.includes(marker),'Original Lumi UI element lost: '+marker);
