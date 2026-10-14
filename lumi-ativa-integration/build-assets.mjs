@@ -50,9 +50,8 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
   document.getElementById("healthDialog").showModal();
 });
 `+content.slice(medicalButtonEnd);
-  // Correct the legacy double-escaped file extension regex in generated HTML.
-  // The original /\\.(pdf|...)/ matches a backslash, not a literal dot.
-  content=content.replace(String.raw\`/\\\\.(pdf|jpe?g|png)$/i\`, String.raw\`/\\.(pdf|jpe?g|png)$/i\`);
+  // Correct the double-escaped extension regex in generated browser JavaScript.
+  content=content.replace('/\\\\.(pdf|jpe?g|png)$/i', '/\\.(pdf|jpe?g|png)$/i');
   // Development-only: display selected fictional filenames without reading or uploading files.
   content=content.replace('files.length + " arquivo(s) selecionado(s) para demonstração (não enviados nem salvos)."',
     'files.map(file => file.name + " (" + (file.size / 1024).toFixed(1) + " KB)").join(" | ") + " — somente demonstração; não enviados nem salvos."');
