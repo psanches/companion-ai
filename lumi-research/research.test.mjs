@@ -22,9 +22,10 @@ test('bounded web research extracts text and citations', async () => {
   const result=await researchNow({question:'  What happened?  ',authorized:true,apiKey:'test',
     maxOutputTokens:5000,fetcher:async (_url,opts)=>{
       request=JSON.parse(opts.body);
-      return {ok:true,json:async()=>({output:[{content:[{type:'output_text',text:'Verified answer',annotations:[{type:'url_citation',url:'https://example.org',title:'Source'}]}]}]})};
+      return {ok:true,json:async()=>({output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Verified answer',annotations:[{type:'url_citation',url:'https://example.org',title:'Source'}]}]}]})};
     }});
   assert.equal(request.max_output_tokens,800);
+  assert.equal(request.tool_choice,'required');
   assert.equal(request.input[1].content,'What happened?');
   assert.deepEqual(request.tools,[{type:'web_search'}]);
   assert.equal(result.answer,'Verified answer');
@@ -33,4 +34,16 @@ test('bounded web research extracts text and citations', async () => {
 test('API failure is explicit, not a promised callback', async () => {
   const result=await researchNow({question:'What?',authorized:true,apiKey:'test',fetcher:async()=>({ok:false})});
   assert.equal(result.status,'failed');
+});
+
+test('rejects uncited or unsearched answer as unverified', async () => {
+  for (const output of [
+    [{content:[{type:'output_text',text:'An uncited answer'}]}],
+    [{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'No citations'}]}],
+    [{content:[{type:'output_text',text:'Cited but no search',annotations:[{type:'url_citation',url:'https://example.org'}]}]}]
+  ]) {
+    const result=await researchNow({question:'Verify this',authorized:true,apiKey:'test',
+      fetcher:async()=>({ok:true,json:async()=>({output})})});
+    assert.equal(result.status,'unverified');
+  }
 });
