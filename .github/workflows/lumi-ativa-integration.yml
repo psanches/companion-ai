@@ -1,8 +1,11 @@
 name: Lumi development Ativa integration
 on:
-  push:
-    branches: [feature/lumi-develop-ativa-integration]
-    paths: ['lumi-ativa-integration/request.json', '.github/workflows/lumi-ativa-integration.yml']
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DEPLOY_LUMI_DEVELOP_ONLY to publish sandbox (never production)'
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -10,6 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   integrate:
+    if: github.ref == 'refs/heads/feature/restore-lumi-home-20261014' && inputs.confirm == 'DEPLOY_LUMI_DEVELOP_ONLY'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -25,16 +29,9 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund && npm test && node --test ../lumi-ativa-integration/tests/*.test.mjs
       - name: Package synthetic Lumi UI
         run: node lumi-ativa-integration/build-assets.mjs
-      - name: Update synthetic AI tone to Lumi personality
-        working-directory: ativa-demo
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
-          OPENAI_API_KEY: ${{ secrets.ATIVA_OPENAI_API_KEY }}
-          DEMO_ACCESS_CODE: ${{ secrets.ATIVA_DEMO_ACCESS_CODE }}
-        run: node deploy-preview.mjs
       - name: Integrate only authorized lumi-develop sandbox, preserving baseline and bindings
         env:
+          LUMI_DEPLOY_CONFIRM: ${{ inputs.confirm }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
           DEMO_ACCESS_CODE: ${{ secrets.ATIVA_DEMO_ACCESS_CODE }}
