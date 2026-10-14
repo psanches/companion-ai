@@ -71,6 +71,12 @@ html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-o
 </script>`;
   content=content.replace('</body>',authObserver+'</body>');
 
+  // The original beta dashboard listener expects a trigger that is absent from the
+  // original HTML. Add it only to this development copy, avoiding a null listener.
+  const betaAnchor='<button id="lumiExerciseBtn"';
+  if(!content.includes(betaAnchor))throw Error('Lumi beta button insertion anchor missing');
+  content=content.replace(betaAnchor,
+    '<button id="lumiBetaBtn" type="button" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:16px;cursor:pointer;text-align:left">📊 Painel beta fictício</button>\n  '+betaAnchor);
   // Sandbox-only: keep Lumi's original chat, personality, memory and auth unchanged.
   // The existing health button opens a strictly fictional document viewer in-place.
   content=content.replace('aria-label="Saúde (demonstração fictícia)" title="Saúde (demonstração fictícia)"','aria-label="Meu Cuidado (somente dados fictícios)" title="Meu Cuidado (somente dados fictícios)"');
