@@ -1,6 +1,6 @@
 name: Lumi development Ativa integration
 # Authorized one-time Lumi Develop research rollout; production is excluded.
-# Retry after verified CI and Cloudflare version-discovery fix.
+# Retry after verified CI, version discovery and asset propagation fixes.
 on:
   push:
     branches: [feature/restore-lumi-home-20261014]
