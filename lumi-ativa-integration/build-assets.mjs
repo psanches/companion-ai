@@ -3,7 +3,16 @@ const dir=new URL('./public/',import.meta.url);const assets={};for(const name of
 assets['/ativa-ui/data.js']={type:'application/javascript; charset=utf-8',encoding:'utf8',content:fs.readFileSync(new URL('../ativa-demo/public/data.js',import.meta.url),'utf8')};
 for(const name of fs.readdirSync(new URL('../ativa-demo/public/',import.meta.url))){const ext=path.extname(name);const type=({'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.svg':'image/svg+xml'})[ext];if(!type)throw Error('Unexpected medical public asset');let content=fs.readFileSync(new URL('../ativa-demo/public/'+name,import.meta.url),'utf8');if(name==='index.html')content=content.replace(/(src|href)="\/(app\.js|style\.css|data\.js|favicon\.svg)"/g,'$1="/ativa-medical/$2"').replace('</head>','<link rel="stylesheet" href="/ativa-ui/medical-theme.css"></head>');assets['/ativa-medical/'+name]={type,encoding:'utf8',content};}
 
-assets['/lumi-original/lumi-mind-body.html']={type:'text/html; charset=utf-8',encoding:'utf8',content:fs.readFileSync(new URL('../lumi-mind-body/index.html',import.meta.url),'utf8')};
+// Inline approved WEBP images into the development-only HTML asset. Fail the build
+// if any image is missing, so a green deployment never shows broken illustrations.
+let mindBodyHtml=fs.readFileSync(new URL('../lumi-mind-body/index.html',import.meta.url),'utf8');
+for(let i=1;i<=4;i++){
+ const file=new URL('../lumi-mind-body/images/exercicio-'+i+'.webp',import.meta.url);
+ const bytes=fs.readFileSync(file);
+ if(bytes.length<1000)throw Error('Invalid Mind & Body illustration: '+file.pathname);
+ mindBodyHtml=mindBodyHtml.replace('images/exercicio-'+i+'.webp','data:image/webp;base64,'+bytes.toString('base64'));
+}
+assets['/lumi-original/lumi-mind-body.html']={type:'text/html; charset=utf-8',encoding:'utf8',content:mindBodyHtml};
 assets['/lumi-original/lumi-research.js']={type:'application/javascript; charset=utf-8',encoding:'utf8',content:fs.readFileSync(new URL('../lumi-research/browser.js',import.meta.url),'utf8')};
 
  // Preserve the original Lumi conversation UI as the development home.
