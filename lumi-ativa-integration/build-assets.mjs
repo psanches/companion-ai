@@ -7,10 +7,10 @@ for(const name of fs.readdirSync(new URL('../ativa-demo/public/',import.meta.url
 // if any image is missing, so a green deployment never shows broken illustrations.
 let mindBodyHtml=fs.readFileSync(new URL('../lumi-mind-body/index.html',import.meta.url),'utf8');
 for(let i=1;i<=4;i++){
- const file=new URL('../lumi-mind-body/images/exercicio-'+i+'.webp',import.meta.url);
+ const file=new URL('../lumi-mind-body/exercicio-'+i+'.webp',import.meta.url);
  const bytes=fs.readFileSync(file);
  if(bytes.length<1000)throw Error('Invalid Mind & Body illustration: '+file.pathname);
- mindBodyHtml=mindBodyHtml.replace('images/exercicio-'+i+'.webp','data:image/webp;base64,'+bytes.toString('base64'));
+ mindBodyHtml=mindBodyHtml.replace('exercicio-'+i+'.webp','data:image/webp;base64,'+bytes.toString('base64'));
 }
 assets['/lumi-original/lumi-mind-body.html']={type:'text/html; charset=utf-8',encoding:'utf8',content:mindBodyHtml};
 assets['/lumi-original/lumi-research.js']={type:'application/javascript; charset=utf-8',encoding:'utf8',content:fs.readFileSync(new URL('../lumi-research/browser.js',import.meta.url),'utf8')};
