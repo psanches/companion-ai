@@ -41,7 +41,7 @@ jobs:
           const timer = setTimeout(() => controller.abort(), 45000);
           try {
             const result = await researchNow({
-              question: 'What is the official website of the World Health Organization?',
+              question: 'According to the World Health Organization website, what is the latest published global malaria cases estimate? Search the web and cite the WHO page.',
               authorized: true,
               apiKey: process.env.OPENAI_API_KEY,
               maxOutputTokens: 250,
