@@ -14,7 +14,7 @@ export function createLumiAtivaIntegration(original,assets,fetcher=fetch){if(!or
   const asset=assets['/lumi-original/'+name];
   if(!asset)return response({error:'Lumi frontend asset missing'},503);
   const body=asset.encoding==='base64'?Uint8Array.from(atob(asset.content),c=>c.charCodeAt(0)):asset.content;
-  return response(request.method==='HEAD'?null:body,200,asset.type);
+  return new Response(request.method==='HEAD'?null:body,{status:200,headers:{'content-type':asset.type,'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
  }
  if(path==='/ativa-status')return response({demo:'lumi-ativa-integration',fictional:true,backend:'isolated-synthetic-demo',originalBaselinePreserved:true,build:'lumi-ativa-local-v2',syntheticServiceBound:Boolean(env?.LUMI_ATIVA_DEMO)});
  if(path==='/demo-api/session'||path==='/demo-api/explain'){
@@ -32,7 +32,7 @@ export function createLumiAtivaIntegration(original,assets,fetcher=fetch){if(!or
   const asset=assets[target];if(!asset)return response({error:'Documento indisponível.'},404);
   return response(request.method==='HEAD'?null:asset.content,200,asset.type,{'x-frame-options':'SAMEORIGIN','content-security-policy':headers['content-security-policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'")});
  }
- const assetPath=(path==='/'||path==='/ativa'||path==='/ativa/')?'/ativa-ui/index.html':path;
+ const assetPath=(path==='/ativa'||path==='/ativa/')?'/ativa-ui/index.html':path;
  if(assetPath.startsWith('/ativa-ui/')){if(!['GET','HEAD'].includes(request.method))return response({error:'Gravação bloqueada.'},403);const asset=assets[assetPath];if(!asset)return response({error:'NOT_FOUND'},404);const bytes=asset.encoding==='base64'?Uint8Array.from(atob(asset.content),c=>c.charCodeAt(0)):asset.content;return response(request.method==='HEAD'?null:bytes,200,asset.type);}
  // Existing non-demo backend routes remain on their exact deployed baseline and bindings.
  return original.fetch.call(original,request,env,ctx);
