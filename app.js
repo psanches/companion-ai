@@ -847,7 +847,8 @@ return {
         /^\d{4}-\d{2}-\d{2}$/.test(event.start);
 
       if (allDay) {
-        return `• ${event.start} — Dia inteiro — ${event.title || "Evento"}`;
+        const [year, month, day] = event.start.split("-");
+        return `• ${day}/${month}/${year} — Dia inteiro — ${event.title || "Evento"}`;
       }
 
       const start = new Date(event.start);
