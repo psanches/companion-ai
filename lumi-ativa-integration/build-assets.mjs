@@ -105,6 +105,24 @@ html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-o
 
   // Development-only signed-in actions: make profile and fictional health visible
   // even when a previously installed frontend or mobile viewport has stale layout.
+  // Android: the original exercise entry lives inside the off-canvas
+  // conversation sidebar. Add a visible main-area shortcut after login.
+  // This is a separate link, so it does not depend on sidebar state or JS.
+  const mainAnchor='<main class="app">';
+  if(!content.includes(mainAnchor))throw Error('Lumi main area missing');
+  content=content.replace(mainAnchor,mainAnchor+`
+<style>
+#lumiMindBodyMobile {display:none}
+@media(max-width:900px){
+ html.lumi-authenticated #lumiMindBodyMobile {
+  display:block!important;flex:0 0 auto;margin:8px 12px 4px;
+  padding:12px 14px;border:1px solid #7dd3fc;border-radius:12px;
+  background:#20354b;color:#fff;text-decoration:none;
+  font:600 16px/1.4 system-ui;text-align:center
+ }
+}
+</style>
+<a id="lumiMindBodyMobile" href="/lumi-mind-body.html">🧠🚶 Mente, Corpo e Psicologia</a>`);
   const headerEnd='<div class="header-actions">';
   if(!content.includes(headerEnd))throw Error('Lumi header missing');
   content=content.replace(headerEnd,headerEnd+'<style>html.lumi-authenticated .header-actions{flex-wrap:wrap;justify-content:flex-end}html.lumi-authenticated #profileBtn,html.lumi-authenticated #healthDemoBtn{display:grid!important;opacity:1!important;visibility:visible!important;flex:0 0 42px!important}</style>');
