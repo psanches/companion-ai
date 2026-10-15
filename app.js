@@ -749,7 +749,11 @@ async function getReply(text) {
     /\b(calendar|agenda|compromisso|compromissos|evento|eventos|appointment|appointments)\b/i
       .test(text);
 
-  if (calendarRequest && !calendarCreationRequest) {
+  // Explicit confirmation must reach the Worker, never the listing handler.
+  const calendarConfirmation =
+    /^CONFIRMAR EVENTO$/i.test(text.trim());
+
+  if (calendarRequest && !calendarCreationRequest && !calendarConfirmation) {
 
     const response =
       await authFetch(
