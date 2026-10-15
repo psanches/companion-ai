@@ -69,6 +69,8 @@ html.lumi-authenticated #inviteBtn,
 html.lumi-authenticated #soundButton,
 html.lumi-authenticated #settingsBtn,
 html.lumi-authenticated #chatHistoryBtn {display:grid!important;visibility:visible!important}
+/* Restore the development module entry on narrow Android viewports after login. */
+html.lumi-authenticated #lumiExerciseBtn {display:block!important;visibility:visible!important;opacity:1!important;width:calc(100% - 28px)!important;box-sizing:border-box!important}
 html.lumi-authenticated #signInBtn {display:none!important}
 html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-out infinite}
 @keyframes lumiSignInPulse {0%,65%,100%{box-shadow:0 0 0 0 rgba(125,211,252,0)} 80%{box-shadow:0 0 0 7px rgba(125,211,252,.28)}}
