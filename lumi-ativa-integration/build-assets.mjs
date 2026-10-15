@@ -23,6 +23,24 @@ for(const name of ['index.html','app.js','style.css','manifest.json','sw.js','ic
  const ext=path.extname(name);
  const type=({'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png'})[ext];
  let content=ext==='.png'?bytes.toString('base64'):bytes.toString('utf8');
+ // Identidade exclusiva do aplicativo de desenvolvimento no Android.
+if(name==='manifest.json'){
+  const manifest=JSON.parse(content);
+  manifest.id='/lumi-develop-app';
+  manifest.name='Lumi Develop — testes';
+  manifest.short_name='Lumi Dev';
+  manifest.start_url='/?source=lumi-develop';
+  manifest.scope='/';
+  content=JSON.stringify(manifest);
+}
+
+// Cache separado para o ambiente de desenvolvimento.
+if(name==='sw.js'){
+  content=content.replace(
+    /const CACHE_NAME = "lumi-v[^"]+";/,
+    'const CACHE_NAME = "lumi-develop-v1";'
+  );
+}
  if(name==='index.html'){
   const authCss=`<style>
 /* Development-only fail-closed visibility until Supabase session verification. */
