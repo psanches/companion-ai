@@ -8,7 +8,8 @@ const files = {
   'research.mjs': '../lumi-research/research.mjs',
   'supabase-auth.mjs': '../lumi-research/supabase-auth.mjs',
   'health-news-worker.mjs': './health-news-worker.mjs',
-  'health-news-daily.mjs': '../health-news-daily.mjs'
+  'health-news-daily.mjs': '../health-news-daily.mjs',
+  'health-news-verification.mjs': '../health-news-verification.mjs'
 };
 export function packageWorker(original) {
   return [{name:'ativa-baseline-preserved.mjs',type:original.type,bytes:original.bytes},

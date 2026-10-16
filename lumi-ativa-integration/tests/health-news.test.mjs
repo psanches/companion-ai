@@ -7,7 +7,7 @@ import {pathToFileURL} from 'node:url';
 import {packageWorker} from '../package-worker.mjs';
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'lumi-health-'));
 for(const name of ['health-news-worker.mjs']) fs.copyFileSync(new URL('../'+name,import.meta.url),path.join(dir,name));
-fs.copyFileSync(new URL('../../health-news-daily.mjs',import.meta.url),path.join(dir,'health-news-daily.mjs'));
+for(const name of ['health-news-daily.mjs','health-news-verification.mjs'])fs.copyFileSync(new URL('../../'+name,import.meta.url),path.join(dir,name));
 const {withHealthNews}=await import(pathToFileURL(path.join(dir,'health-news-worker.mjs')));
 test.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
 test('cron dispatch uses scheduled time and exposes failures without swallowing them',async()=>{
@@ -42,36 +42,34 @@ test('deployment package includes executable default scheduled handler and all i
   const response=await worker.fetch(new Request('https://other.example/chat'),{},{});assert.equal(await response.text(),'baseline');
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
-test('daily generator reuses Brazilian-day cache and retains last good digest on API failure',async()=>{
- const {generateHealthDigest}=await import('../../health-news-daily.mjs');
- const savedFetch=globalThis.fetch;let requests=0,puts=[];
- const cached={date:'2026-10-16',items:['existing']};
- try{
-  globalThis.fetch=async()=>{requests++;return new Response('failure',{status:503});};
-  const env={OPENAI_API_KEY:'test-only',HEALTH_NEWS_KV:{get:async(key)=>key==='health-news:date:2026-10-16'?cached:null,put:async(...args)=>puts.push(args)}};
-  assert.equal(await generateHealthDigest(env,new Date('2026-10-16T09:00:00Z')),cached);assert.equal(requests,0);
-  env.HEALTH_NEWS_KV.get=async()=>null;
-  await assert.rejects(generateHealthDigest(env,new Date('2026-10-17T09:00:00Z')),/503/);
-  assert.equal(puts.length,1,'Cached history repairs only the latest pointer');assert.equal(puts[0][0],'health-news:latest');assert.equal(requests,1);
-  await assert.rejects(generateHealthDigest({}),/required/);
- }finally{globalThis.fetch=savedFetch;}
+test('verified edition is reused; legacy cache is hidden and does not prevent regeneration',async()=>{
+ const {generateHealthDigest,getLatestHealthDigest,validEdition}=await import('../../health-news-daily.mjs');
+ const cached={policyVersion:2,date:'2026-10-16',items:[{url:'https://www.nia.nih.gov/news/test',publishedAt:'2026-10-15',dateVerified:true,language:'pt-BR',summary:'Texto'}]};
+ let writes=[];const env={OPENAI_API_KEY:'test',HEALTH_NEWS_KV:{get:async()=>cached,put:async(...a)=>writes.push(a)}};
+ assert.equal(await generateHealthDigest(env,new Date('2026-10-16T09:00:00Z')),cached);assert.equal(writes.length,1);
+ assert.equal(validEdition({...cached,policyVersion:1},'2026-10-16'),false);
+ env.HEALTH_NEWS_KV.get=async()=>({date:'2026-10-16',items:['legacy']});
+ assert.equal(await getLatestHealthDigest(env),null);
+ await assert.rejects(generateHealthDigest(env,new Date('2026-10-16T09:00:00Z'),async()=>new Response('',{status:503})),/503/);assert.equal(writes.length,1);
 });
-
-test('generator requests strict JSON and refuses incomplete or unsearched results',async()=>{
- const {generateHealthDigest}=await import('../../health-news-daily.mjs');
- const savedFetch=globalThis.fetch;const writes=[];
- const env={LUMI_RESEARCH_OPENAI_API_KEY:'test-only',HEALTH_NEWS_KV:{get:async()=>null,put:async(...args)=>writes.push(args)}};
- let payload;
- try{
-  globalThis.fetch=async(url,opts)=>{payload=JSON.parse(opts.body);return Response.json({status:'incomplete',incomplete_details:{reason:'max_output_tokens'}});};
-  await assert.rejects(generateHealthDigest(env),/incomplete: max_output_tokens/);
-  assert.equal(payload.text.format.type,'json_schema');assert.equal(payload.text.format.strict,true);
-  assert.equal(payload.reasoning.effort,'low');assert.equal(payload.max_tool_calls,3);
-  globalThis.fetch=async()=>Response.json({status:'completed',output:[]});
-  await assert.rejects(generateHealthDigest(env),/did not perform web search/);
-  assert.equal(writes.length,0);
-  const items=Array.from({length:5},(_,i)=>({title:'Story '+i,summary:'Summary',source:'Source',url:'https://example.org/'+i}));
-  globalThis.fetch=async()=>Response.json({status:'completed',output:[{type:'web_search_call'},{type:'message',content:[{type:'output_text',text:JSON.stringify({items})}]}]});
-  assert.equal((await generateHealthDigest(env)).items.length,5);assert.equal(writes.length,2);
- }finally{globalThis.fetch=savedFetch;}
+test('international source is date-verified before Portuguese translation and persistence',async()=>{
+ const {generateHealthDigest}=await import('../../health-news-daily.mjs');let calls=0,writes=[];
+ const source='https://www.nia.nih.gov/news/test';
+ const env={LUMI_RESEARCH_OPENAI_API_KEY:'test',HEALTH_NEWS_KV:{get:async()=>null,put:async(...a)=>writes.push(a)}};
+ const response=output=>Response.json({status:'completed',output});
+ const message=items=>({type:'message',content:[{type:'output_text',text:JSON.stringify({items})}]});
+ const fetcher=async(url,opts)=>{
+  if(url===source)return new Response('<meta property="article:published_time" content="2026-10-15T10:00:00Z"><h1>Research news</h1><p>'+('Evidence and limitations of a supervised study. '.repeat(20))+'</p>',{headers:{'content-type':'text/html'}});
+  const body=JSON.parse(opts.body);calls++;
+  if(calls===1){assert.equal(body.max_tool_calls,6);assert.ok(body.input.includes('português E inglês'));return response([{type:'web_search_call',action:{sources:[{url:source}]}},message([{url:source,publishedAt:'2026-10-15'}])]);}
+  assert.equal(body.tools,undefined);assert.match(body.input[0].content,/português do Brasil/);
+  return response([message([{id:0,title:'Estudo sobre mobilidade',summary:'Uma pesquisa avaliou a mobilidade. Os resultados ainda são preliminares.'}])]);
+ };
+ const digest=await generateHealthDigest(env,new Date('2026-10-16T09:00:00Z'),fetcher);
+ assert.equal(calls,2);assert.equal(writes.length,2);assert.equal(digest.items.length,1);assert.equal(digest.items[0].region,'Internacional');assert.equal(digest.items[0].publishedAt,'2026-10-15');assert.equal(digest.items[0].dateVerified,true);assert.equal(digest.items[0].sourceText,undefined);
+});
+test('incomplete discovery fails without overwriting storage',async()=>{
+ const {generateHealthDigest}=await import('../../health-news-daily.mjs');let writes=0;
+ const env={OPENAI_API_KEY:'test',HEALTH_NEWS_KV:{get:async()=>null,put:async()=>writes++}};
+ await assert.rejects(generateHealthDigest(env,new Date(),async()=>Response.json({status:'incomplete',incomplete_details:{reason:'max_output_tokens'}})),/incomplete/);assert.equal(writes,0);
 });

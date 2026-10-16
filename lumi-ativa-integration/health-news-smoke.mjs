@@ -27,7 +27,7 @@ export default {async fetch(request,env,ctx){
 }};`;
 const form=new FormData();
 form.set('metadata',new Blob([JSON.stringify({main_module:'worker.js',compatibility_date:settings.compatibility_date,bindings:[binding,{type:'secret_text',name:'OPENAI_API_KEY',text:key},{type:'secret_text',name:'CHECK_TOKEN',text:checkToken}]})],{type:'application/json'}));
-for(const [module,content] of [['worker.js',entry],['health-news-worker.mjs',fs.readFileSync(new URL('./health-news-worker.mjs',import.meta.url))],['health-news-daily.mjs',fs.readFileSync(new URL('../health-news-daily.mjs',import.meta.url))]])form.set(module,new Blob([content],{type:'application/javascript+module'}),module);
+for(const [module,content] of [['worker.js',entry],['health-news-worker.mjs',fs.readFileSync(new URL('./health-news-worker.mjs',import.meta.url))],['health-news-daily.mjs',fs.readFileSync(new URL('../health-news-daily.mjs',import.meta.url))],['health-news-verification.mjs',fs.readFileSync(new URL('../health-news-verification.mjs',import.meta.url))]])form.set(module,new Blob([content],{type:'application/javascript+module'}),module);
 let created=false;
 try{
  created=true;await cf(name,{method:'PUT',body:form});
@@ -40,13 +40,13 @@ try{
   await new Promise(resolve=>setTimeout(resolve,1000));
  }
  const result=await response.json().catch(()=>null);
- assert.equal(response.status,200,'Generation failed: '+(result?.error||response.status));assert.equal(result?.items,5);
+ assert.equal(response.status,200,'Generation failed: '+(result?.error||response.status));assert.ok(result?.items>=1&&result.items<=5,'Expected 1–5 verified stories');assert.equal(result.digest?.policyVersion,2);assert.ok(result.digest.items.every(x=>x.dateVerified&&x.publishedAt&&x.language==='pt-BR'));assert.ok(result.digest.items.some(x=>x.region==='Internacional'),'No verified international story');
  console.log("PUBLIC_HEALTH_NEWS_EDITION="+JSON.stringify(result.digest));
  let verified=false;
  for(let n=0;n<40;n++){
   const edition=await fetch('https://lumi-develop.psanchesnle.workers.dev/health-news',{headers:{'cache-control':'no-cache'},signal:AbortSignal.timeout(15000)});
   const data=await edition.json().catch(()=>null);
-  if(edition.ok&&data?.date===result.date&&data?.items?.length===5){verified=true;break;}
+  if(edition.ok&&data?.date===result.date&&data?.policyVersion===2&&data?.items?.length===result.items){verified=true;break;}
   await new Promise(resolve=>setTimeout(resolve,2000));
  }
  assert.ok(verified,'Edition stored but serving-route propagation not verified yet');
