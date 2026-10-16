@@ -24,7 +24,7 @@ Retries and concurrent confirmations send the same deterministic Google event ID
 
 ## Validation and remaining user authorization
 
-26 focused tests cover verified sessions, origins, permissions, prepare/confirm separation, encrypted drafts, cross-user access, cancellation/expiry, duplicate and concurrent confirmation, refresh tokens, OAuth PKCE/state/replay/refusal/readonly grants, invalid dates, browser review, unchanged reading delegation and production-host delegation. Combined adapter/integration/research suite: 82 tests. Deployment workflow also runs the existing 139 medical and 18 demo tests and verifies preserved production source and sandbox bindings.
+27 focused tests cover verified sessions, origins, permissions, prepare/confirm separation, encrypted drafts, cross-user access, cancellation/expiry, duplicate and concurrent confirmation, refresh tokens, OAuth PKCE/state/replay/refusal/readonly grants, invalid dates, browser review, unchanged reading delegation and production-host delegation. Combined adapter/integration/research suite: 83 tests. Deployment workflow also runs the existing 139 medical and 18 demo tests and verifies preserved production source and sandbox bindings.
 
 Post-deployment checks exercise the actual served patched app and anonymous/foreign-origin/OAuth denials without calendar writes. Live authenticated Google account creation has not been performed automatically: it requires the account owner's Lumi session, Google consent if the existing grant is insufficient, and explicit confirmation of actual event details in the review dialog. No real event is invented for a test. A subsequent real end-to-end test should confirm one event, retry it and verify one matching entry in Google Calendar.
 
@@ -55,3 +55,8 @@ Both preparation and confirmation now query the authenticated primary calendar f
 A warning lists overlapping events and offers Escolher outro horário or Criar mesmo assim. An override needs a random server-issued token tied to the reviewed conflict snapshot, plus explicit user confirmation. Confirmation checks Google again: changed/new conflicts issue a fresh warning and require another explicit click. Failed/incomplete checks do not assert availability or create an event. The check covers the primary calendar only, matching the existing creation target; external calendars are not inspected. Google does not provide an atomic check-and-insert operation, so another app can still add an event in the brief interval after the last check.
 
 Seven new regression tests cover warnings and override tokens, changes during confirmation, all-day intervals and exclusive boundaries, free/cancelled/declined events, failures, pagination, recurrence query parameters and both browser choices. Source: https://developers.google.com/workspace/calendar/api/v3/reference/events/list . Live real-account checks remain subject to the user's authenticated Google session and event confirmation.
+
+
+## Clickable sign-in prompt
+
+Calendar preparation, reconnect and resume authentication failures now render a sign-in button that invokes Lumi's existing Sign in control. Opening the existing authentication dialog preserves the event form currently in the DOM. A regression test verifies the click handler and retained fields. Authentication still uses the existing Supabase flow; no calendar action occurs from clicking sign-in.
