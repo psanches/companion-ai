@@ -24,8 +24,15 @@ Retries and concurrent confirmations send the same deterministic Google event ID
 
 ## Validation and remaining user authorization
 
-14 focused tests cover verified sessions, origins, permissions, prepare/confirm separation, encrypted drafts, cross-user access, cancellation/expiry, duplicate and concurrent confirmation, refresh tokens, OAuth PKCE/state/replay/refusal/readonly grants, invalid dates, browser review, unchanged reading delegation and production-host delegation. Combined adapter/integration/research suite: 70 tests. Deployment workflow also runs the existing 139 medical and 18 demo tests and verifies preserved production source and sandbox bindings.
+16 focused tests cover verified sessions, origins, permissions, prepare/confirm separation, encrypted drafts, cross-user access, cancellation/expiry, duplicate and concurrent confirmation, refresh tokens, OAuth PKCE/state/replay/refusal/readonly grants, invalid dates, browser review, unchanged reading delegation and production-host delegation. Combined adapter/integration/research suite: 72 tests. Deployment workflow also runs the existing 139 medical and 18 demo tests and verifies preserved production source and sandbox bindings.
 
 Post-deployment checks exercise the actual served patched app and anonymous/foreign-origin/OAuth denials without calendar writes. Live authenticated Google account creation has not been performed automatically: it requires the account owner's Lumi session, Google consent if the existing grant is insufficient, and explicit confirmation of actual event details in the review dialog. No real event is invented for a test. A subsequent real end-to-end test should confirm one event, retry it and verify one matching entry in Google Calendar.
 
 Relevant Google documentation: https://developers.google.com/workspace/calendar/api/v3/reference/events/insert and https://developers.google.com/identity/protocols/oauth2/web-server . Google Calendar remains the final authority on access and write success.
+
+
+## OAuth return correction after user validation
+
+The first review dialog exposed a missing continuation: reconnect navigated away without preserving the form, while the callback only displayed a link back. The callback now returns a fixed same-origin 303 redirect into Lumi. When reconnect starts from a form, its values are kept in the encrypted, user-bound OAuth state and then in a ten-minute encrypted resume record. A random opaque resume ID returns the browser to that record; an authenticated endpoint prevents another account from retrieving it. Browser session storage keeps only that opaque ID, never event details. The dialog restores its values and automatically prepares the review, but never confirms creation automatically. If Lumi sign-in has expired, a visible Retomar evento action remains available after sign-in.
+
+Date-time fields explicitly accept `DD/MM/AAAA HH:MM` and display 24-hour Brasilia time, independent of browser locale. Esc preserves the form and directs the person to the explicit Cancelar button. New tests exercise redirect, ownership, expiry, browser resume, Brazilian date rendering and Esc preservation. Real Google account validation still requires the user's login/consent and explicit event confirmation.
