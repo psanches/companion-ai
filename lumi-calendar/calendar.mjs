@@ -15,7 +15,9 @@ async function key(env){if(typeof env.CALENDAR_SESSION_SECRET!=='string'||env.CA
 export async function encrypt(env,data){const iv=crypto.getRandomValues(new Uint8Array(12));return JSON.stringify({v:1,iv:b64(iv),data:b64(new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},await key(env),encoder.encode(JSON.stringify(data)))))});}
 export async function decrypt(env,data){const p=JSON.parse(data);if(p.v!==1)fail('CONNECT');return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:un64(p.iv)},await key(env),un64(p.data))));}
 export function validateEvent(body,now=Date.now()){
- if(!body||Object.keys(body).some(k=>!['title','start','end','description','location'].includes(k)))fail('INPUT');
+ if(!body||Object.keys(body).some(k=>!['title','start','end','durationMinutes','description','location'].includes(k)))fail('INPUT');
+ if(body.durationMinutes!==undefined&&(!Number.isInteger(body.durationMinutes)||body.durationMinutes<1||body.durationMinutes>10080))fail('INPUT');
+ if(body.end===undefined||body.end===''){if(typeof body.start!=='string'||!Number.isFinite(Date.parse(body.start)))fail('INPUT');body={...body,end:new Date(Date.parse(body.start)+(body.durationMinutes??30)*60000).toISOString()};}
  if(typeof body.title!=='string'||!body.title.trim()||body.title.length>200)fail('INPUT');
  const date=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/.test(v)&&Number.isFinite(Date.parse(v));
  const realDay=v=>{const [y,m,d]=v.slice(0,10).split('-').map(Number);return m>=1&&m<=12&&d>=1&&d<=new Date(Date.UTC(y,m,0)).getUTCDate();};

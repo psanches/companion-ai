@@ -24,7 +24,7 @@ Retries and concurrent confirmations send the same deterministic Google event ID
 
 ## Validation and remaining user authorization
 
-17 focused tests cover verified sessions, origins, permissions, prepare/confirm separation, encrypted drafts, cross-user access, cancellation/expiry, duplicate and concurrent confirmation, refresh tokens, OAuth PKCE/state/replay/refusal/readonly grants, invalid dates, browser review, unchanged reading delegation and production-host delegation. Combined adapter/integration/research suite: 73 tests. Deployment workflow also runs the existing 139 medical and 18 demo tests and verifies preserved production source and sandbox bindings.
+19 focused tests cover verified sessions, origins, permissions, prepare/confirm separation, encrypted drafts, cross-user access, cancellation/expiry, duplicate and concurrent confirmation, refresh tokens, OAuth PKCE/state/replay/refusal/readonly grants, invalid dates, browser review, unchanged reading delegation and production-host delegation. Combined adapter/integration/research suite: 75 tests. Deployment workflow also runs the existing 139 medical and 18 demo tests and verifies preserved production source and sandbox bindings.
 
 Post-deployment checks exercise the actual served patched app and anonymous/foreign-origin/OAuth denials without calendar writes. Live authenticated Google account creation has not been performed automatically: it requires the account owner's Lumi session, Google consent if the existing grant is insufficient, and explicit confirmation of actual event details in the review dialog. No real event is invented for a test. A subsequent real end-to-end test should confirm one event, retry it and verify one matching entry in Google Calendar.
 
@@ -41,3 +41,8 @@ Date-time fields explicitly accept `DD/MM/AAAA HH:MM` and display 24-hour Brasil
 ## Date/time picker correction
 
 The explicit Brazilian text format had removed the browser's built-in date picker. Each start/end field now includes dedicated Escolher data and Escolher horário buttons. They call the native date/time picker synchronously from the user click and synchronize its ISO value into the Brazilian text field without losing the other component. Browsers without showPicker receive visible native inputs as a fallback. A regression test verifies the picker invocation, date/time conversion, retained values and fallback. The native widget appearance follows the browser/operating system; the event form remains DD/MM/AAAA with 24-hour time.
+
+
+## User-approved duration default
+
+The user requested optional end time with a 30-minute default. The dialog now provides an editable duration in minutes, defaults it to 30, and calculates the end when omitted. An explicitly supplied end takes precedence. Server validation applies the same rule for API requests with optional durationMinutes, validates bounds and returns the calculated end for review before confirmation. New tests cover the default, changed duration, explicit end precedence and blank-end browser submission.
