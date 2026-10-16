@@ -49,5 +49,5 @@ try{
   await new Promise(resolve=>setTimeout(resolve,2000));
  }
  assert.ok(verified,'Edition stored but serving-route propagation not verified yet');
- console.log(JSON.stringify({publicNewsEditionVerified:true,date:result.date,items:result.items,cronExecution:'scheduled handler exercised in temporary runtime; production cron event remains to be observed'}));
+ console.log(JSON.stringify({publicNewsEditionVerified:true,date:result.date,items:result.items,cronExecution:'scheduled handler exercised in temporary runtime; sandbox cron invocation remains to be observed'}));
 }finally{if(created){await cf(name,{method:'DELETE'});console.log('Temporary public-news test Worker removed.');}}
