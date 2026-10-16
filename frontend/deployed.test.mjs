@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+import release from './release.generated.mjs';import {withFrontendVersion} from './version-worker.mjs';import {verifyFrontend} from './deployed-check.mjs';
+const origin='https://lumi-develop.psanchesnle.workers.dev';
+const html='<html><head></head><body>'+['/app.js','/style.css','/supabase.js','/lumi-research.js','/health-news-ui.js'].map(path=>'<script src="'+path+'"></script>').join('')+'<script>const demonstrationClock=Date.now();</script></body></html>';
+const worker=withFrontendVersion({fetch:async request=>new URL(request.url).pathname==='/sw.js'?new Response(fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8')):new Response(html,{headers:{'content-type':'text/html'}})},release);
+test('deployed verification permits local clocks while checking exact script URLs and served bytes',async()=>{const previous=globalThis.fetch;globalThis.fetch=async url=>worker.fetch(new Request(url));try{await verifyFrontend(origin,release);}finally{globalThis.fetch=previous;}});
+test('deployed verification rejects tampered fingerprinted bytes',async()=>{const previous=globalThis.fetch;globalThis.fetch=async url=>{const response=await worker.fetch(new Request(url));return new URL(url).pathname===release.routes['/app.js']?new Response('tampered',{headers:response.headers}):response;};try{await assert.rejects(()=>verifyFrontend(origin,release),/deployed byte hash/);}finally{globalThis.fetch=previous;}});
