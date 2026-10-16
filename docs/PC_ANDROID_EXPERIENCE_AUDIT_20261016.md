@@ -28,6 +28,10 @@ Scope: `lumi-develop.psanchesnle.workers.dev` only. Branch: `feature/pc-android-
 - `.github/workflows/lumi-ativa-integration.yml`: dedicated branch guard, frontend tests before publication, screenshots/JSON validation artifact.
 - `.gitignore`: generated files, test artifacts and dependencies excluded.
 
+## Agenda addition requested during validation
+
+The signed-in sidebar now includes **Agenda**. It opens the existing daily reader on today's date in Brasília time, supports changing the date and refreshing, and shows all returned events from the connected primary Google Calendar, including those created outside Lumi. It never creates an event by opening the agenda. The day reader now accepts an absent creation receipt: it does not invent an event or display a false creation confirmation. Existing post-creation confirmation behavior remains covered by its original tests. Calendar API permissions and server behavior are unchanged. New unit tests cover standalone reads/failure, and Playwright opens Agenda at all five viewport sizes.
+
 ## Cache strategy and maintenance
 
 HTML: `private, no-cache, max-age=0, must-revalidate`. Stable JS/CSS aliases: `no-cache, max-age=0, must-revalidate`. Fingerprinted JS/CSS: `public, max-age=31536000, immutable`; each hash is of the exact bytes returned. The final Calendar augmentation is included before hashing. Unknown hashes return 404, never unrelated HTML/JavaScript. Authentication and medical/API policies retain their original no-store behavior. `/sw.js` revalidates, and `/frontend-version` is no-store.
@@ -38,7 +42,7 @@ Build once with `node lumi-ativa-integration/build-assets.mjs` under the tested 
 
 ## Validation and limitations
 
-Local regression: 253 existing tests passed initially; latest total and CI results are recorded in the deployment evidence below. New tests cover immutable byte hashes, revalidation, unknown versions, original-handler boundaries, old-cache removal, offline public assets and version/rollback identity contracts.
+Local regression: 253 existing tests passed initially; final total with cache/deployment contracts and standalone Agenda coverage is 265. CI results are recorded in the deployment evidence below. New tests cover immutable byte hashes, revalidation, unknown versions, original-handler boundaries, old-cache removal, offline public assets and version/rollback identity contracts.
 
 Playwright uses Chromium and synthetic authentication/backend fixtures: 1440×900, 360×800, 393×851, 320×640, and 800×360. Tests check complete labels, click and keyboard activation, email/OAuth redirect contracts, signed-in navigation, six-message history with earlier-message loading, zero horizontal overflow, composer/send geometry, reduced-height keyboard simulation, draft-safe update notification, logout privacy and refresh. One scenario starts with malformed local state. Service workers are blocked in these routed UI fixtures. A separate real Chromium localhost test upgrades an installed legacy service worker, verifies old-cache removal, public asset access offline, uncached HTML/private requests, a subsequent deployment with retained prior assets, draft-safe updating, and rollback reload. The JavaScript harness also tests cache boundaries. These are isolated browser tests, not Android hardware tests.
 
