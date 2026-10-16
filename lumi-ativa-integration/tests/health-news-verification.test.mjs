@@ -24,3 +24,9 @@ test('model date cannot replace actual source date; missing metadata is rejected
  await assert.rejects(verifyStory({url,publishedAt:'2026-10-14'},'2026-10-16',cited,page('<meta property="article:published_time" content="2026-10-09">')),/disagrees/);
  await assert.rejects(verifyStory({url,publishedAt:'2026-10-14'},'2026-10-16',cited,page('<h1>No publication metadata</h1>')),/could not be verified/);
 });
+
+test('English publication header and journal date formats are parsed without treating prose events as publication',()=>{
+ assert.equal(publicationFromHtml('<h1>Article</h1><p class="date">October 14, 2026</p><p>Body</p>').date,'2026-10-14');
+ assert.equal(publicationFromHtml('<meta name="citation_publication_date" content="2026/10/09">').date,'2026-10-09');
+ assert.throws(()=>publicationFromHtml('<h1>Event</h1><p>Join us on October 14, 2026 for a class.</p>'));
+});

@@ -1,5 +1,5 @@
 // Public health news only. No personal health information is sent to research.
-import {verifyStory,citedSourceUrls,checkPublication} from './health-news-verification.mjs';
+import {verifyStory,citedSourceUrls,checkPublication,discoverPublisherLinks} from './health-news-verification.mjs';
 const KEY='health-news:latest',HISTORY_PREFIX='health-news:date:',MODEL='gpt-5-mini';
 export const HEALTH_NEWS_POLICY_VERSION=2;
 export const HEALTH_NEWS_CRON_UTC='0 9 * * *';
@@ -24,15 +24,16 @@ export async function generateHealthDigest(env,now=new Date(),fetcher=fetch){
  if(validEdition(existing,date)){await env.HEALTH_NEWS_KV.put(KEY,JSON.stringify(existing));return existing;}
  const windowStart=new Date(Date.parse(date+'T00:00:00Z')-7*86400000).toISOString().slice(0,10);
  const discovery=await ask(apiKey,{
-  tools:[{type:'web_search'}],tool_choice:'required',max_tool_calls:6,include:['web_search_call.action.sources'],
+  tools:[{type:'web_search',filters:{allowed_domains:['michaeljfox.org','parkinson.org','parkinsons.org.uk','nature.com','who.int','paho.org','news.harvard.edu','news.mit.edu','med.stanford.edu','gov.br','jornal.usp.br']}}],tool_choice:'required',max_tool_calls:6,include:['web_search_call.action.sources'],
   text:{format:schema({url:{type:'string'}},0,12)},
-  input:`Hoje é ${date}, em São Paulo. Faça buscas REAIS em português e inglês por notícias de Parkinson, reabilitação, prevenção de quedas, cognição e envelhecimento saudável. Intervalo preferido: ${windowStart} até ${date}; priorize últimas 24 horas. Pesquise tanto fontes internacionais quanto brasileiras: universidades, NIH, Michael J Fox Foundation (incluindo a página research-news), Parkinson's Foundation, Parkinson's UK, OMS/OPAS, Nature e BMJ. Retorne até 12 URLs de ARTIGOS originais encontrados nos resultados. Priorize fontes internacionais, mas inclua brasileiras quando houver. Não precisa extrair nem preencher datas: nosso servidor abrirá as páginas para verificar a data original. Inclua candidatas plausivelmente recentes mesmo se o resultado da busca não mostrar a data; nunca invente uma URL. Não retorne páginas de índice ou assuntos administrativos sem utilidade para pacientes. Abra as fontes quando necessário. Evite itens sabidamente antigos, mas não omita uma candidata por falta de data no trecho da busca: a verificação posterior decide sua elegibilidade.`
+  input:`Hoje é ${date}, em São Paulo. Faça buscas REAIS em português e inglês por notícias de Parkinson, reabilitação, prevenção de quedas, cognição e envelhecimento saudável. Intervalo preferido: ${windowStart} até ${date}; priorize últimas 24 horas. Pesquise tanto fontes internacionais quanto brasileiras: universidades, NIH, Michael J Fox Foundation (incluindo a página research-news), Parkinson's Foundation, Parkinson's UK, OMS/OPAS, Nature e BMJ. Retorne até 12 URLs de ARTIGOS originais encontrados nos resultados. Priorize fontes internacionais, mas inclua brasileiras quando houver. Não precisa extrair nem preencher datas: nosso servidor abrirá as páginas para verificar a data original. Inclua candidatas plausivelmente recentes mesmo se o resultado da busca não mostrar a data; nunca invente uma URL. Pesquise especificamente publicações de outubro de 2026, notícias e press releases; não artigos antigos do PubMed/PMC, páginas de referência nem revisões clínicas. Não retorne páginas de índice ou assuntos administrativos sem utilidade para pacientes. Abra as fontes quando necessário. Evite itens sabidamente antigos, mas não omita uma candidata por falta de data no trecho da busca: a verificação posterior decide sua elegibilidade.`
  },fetcher);
  if(!discovery.output?.some(i=>i.type==='web_search_call'))throw Error('Research did not perform web search');
  const candidates=JSON.parse(extractText(discovery)).items;if(!Array.isArray(candidates))throw Error('Invalid candidate list');
  const cited=citedSourceUrls(discovery),verified=[],rejected=[];
+ const publisherLinks=await discoverPublisherLinks(fetcher);for(const item of publisherLinks)cited.add(item.url);
  // Batch small groups to stay below runtime subrequest/concurrency limits.
- const unique=[...new Map(candidates.slice(0,12).map(c=>[c.url,c])).values()];
+ const unique=[...new Map([...publisherLinks,...candidates].slice(0,12).map(c=>[c.url,c])).values()];
  for(let at=0;at<unique.length;at+=3){const group=unique.slice(at,at+3);const results=await Promise.allSettled(group.map(c=>verifyStory(c,date,cited,fetcher)));results.forEach((r,i)=>{if(r.status==='fulfilled')verified.push(r.value);else rejected.push({url:group[i].url,reason:r.reason.message});});}
  verified.sort((a,b)=>a.ageDays-b.ageDays);
  const international=verified.filter(x=>x.region==='Internacional'),brasil=verified.filter(x=>x.region==='Brasil');

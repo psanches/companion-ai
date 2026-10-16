@@ -13,6 +13,9 @@ export function isoDay(value){
  if(typeof value!=='string')return null;
  const m=value.trim().match(/^(\d{4}-\d{2}-\d{2})(?:[T\s]|$)/);
  if(m){const d=new Date(m[1]+'T00:00:00Z');return Number.isFinite(+d)&&d.toISOString().slice(0,10)===m[1]?m[1]:null;}
+ const slash=value.match(/^(\d{4})\/(\d{2})\/(\d{2})/);if(slash)return isoDay(`${slash[1]}-${slash[2]}-${slash[3]}`);
+ const english=value.trim().match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})$/i);
+ if(english){const month=['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(english[1].toLowerCase())+1;return isoDay(`${english[3]}-${String(month).padStart(2,'0')}-${english[2].padStart(2,'0')}`);}
  const br=value.match(/\b(\d{2})\/(\d{2})\/(\d{4})\b/);return br?isoDay(`${br[3]}-${br[2]}-${br[1]}`):null;
 }
 export function publicationFromHtml(html){
@@ -23,6 +26,7 @@ export function publicationFromHtml(html){
  // Gov.br exposes original publication separately from its last-modified field.
  const gov=html.match(/<span\b[^>]*class=["'][^"']*documentPublished[^"']*["'][^>]*>([\s\S]{0,900})/i);
  if(gov){const day=isoDay(gov[1].replace(/<[^>]*>/g,' '));if(day)found.push({date:day,evidence:'documentPublished'});}
+ if(!found.length){const header=html.match(/<\/h1\s*>([\s\S]{0,1800})/i)?.[1]||'';const visible=header.match(/>\s*((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4})\s*</i);if(visible){const day=isoDay(visible[1]);if(day)found.push({date:day,evidence:'Dedicated publication date below article heading'});}}
  if(!found.length)throw Error('Publication date could not be verified');
  if(new Set(found.map(x=>x.date)).size!==1)throw Error('Source publication dates conflict');
  return found[0];
@@ -45,7 +49,7 @@ export async function verifyStory(candidate,today,citedUrls,fetcher=fetch){
   response=await fetcher(url.href,{redirect:'manual',signal:AbortSignal.timeout(15000),headers:{accept:'text/html'}});
   if([301,302,303,307,308].includes(response.status)){const location=response.headers.get('location');await response.body?.cancel();url=publicSourceUrl(new URL(location,url).href);response=null;continue;}break;
  }
- if(!response?.ok)throw Error('Source page unavailable');
+ if(!response?.ok)throw Error('Source page unavailable: HTTP '+(response?.status||'redirect-limit'));
  if(!response.headers.get('content-type')?.includes('text/html')){await response.body?.cancel();throw Error('Source is not an article page');}
  const html=await readHtml(response);const publication=publicationFromHtml(html);const ageDays=checkPublication(publication.date,today);
  if(candidate.publishedAt&&candidate.publishedAt!==publication.date)throw Error('Search date disagrees with original publication date');
@@ -58,4 +62,17 @@ export function citedSourceUrls(data){
  const values=[];
  for(const item of data.output||[]){for(const source of item.action?.sources||[])if(source.url)values.push(source.url);for(const part of item.content||[])for(const a of part.annotations||[])if(a.type==='url_citation'&&a.url)values.push(a.url);}
  const result=new Set();for(const value of values){try{result.add(publicSourceUrl(value).href);}catch{}}return result;
+}
+
+// Supplement search with links actually present on a primary publisher's current news index.
+export async function discoverPublisherLinks(fetcher=fetch){
+ const index='https://www.michaeljfox.org/research-news';
+ try{
+  const response=await fetcher(index,{redirect:'error',signal:AbortSignal.timeout(15000)});if(!response.ok)return [];
+  const html=await readHtml(response),urls=[];
+  for(const m of html.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi)){
+   try{const url=publicSourceUrl(new URL(m[1],index).href);if(url.hostname==='www.michaeljfox.org'&&url.pathname.startsWith('/news/')&&!urls.includes(url.href))urls.push(url.href);}catch{}
+  }
+  return urls.slice(0,6).map(url=>({url,discoveredVia:index}));
+ }catch{return [];}
 }

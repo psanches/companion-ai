@@ -59,6 +59,7 @@ test('international source is date-verified before Portuguese translation and pe
  const response=output=>Response.json({status:'completed',output});
  const message=items=>({type:'message',content:[{type:'output_text',text:JSON.stringify({items})}]});
  const fetcher=async(url,opts)=>{
+  if(url==='https://www.michaeljfox.org/research-news')return new Response('',{status:503});
   if(url===source)return new Response('<meta property="article:published_time" content="2026-10-15T10:00:00Z"><h1>Research news</h1><p>'+('Evidence and limitations of a supervised study. '.repeat(20))+'</p>',{headers:{'content-type':'text/html'}});
   const body=JSON.parse(opts.body);calls++;
   if(calls===1){assert.equal(body.max_tool_calls,6);assert.ok(body.input.includes('português e inglês'));return response([{type:'web_search_call',action:{sources:[{url:source}]}},message([{url:source,publishedAt:'2026-10-15'}])]);}
