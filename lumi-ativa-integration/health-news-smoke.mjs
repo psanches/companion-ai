@@ -22,7 +22,7 @@ const entry=`import {withHealthNews} from './health-news-worker.mjs';
 const worker=withHealthNews({fetch(){return new Response(null,{status:404});}});
 export default {async fetch(request,env,ctx){
  if(request.method!=='POST'||request.headers.get('authorization')!=='Bearer '+env.CHECK_TOKEN)return new Response(null,{status:404});
- try{const digest=await worker.scheduled({cron:'0 9 * * *',scheduledTime:Date.now()},env,ctx);return Response.json({date:digest.date,items:digest.items.length});}
+ try{const digest=await worker.scheduled({cron:'0 9 * * *',scheduledTime:Date.now()},env,ctx);return Response.json({date:digest.date,items:digest.items.length,digest});}
  catch(error){console.error('Public news generation failed:',error.message);return Response.json({error:error.message},{status:502});}
 }};`;
 const form=new FormData();
@@ -41,6 +41,7 @@ try{
  }
  const result=await response.json().catch(()=>null);
  assert.equal(response.status,200,'Generation failed: '+(result?.error||response.status));assert.equal(result?.items,5);
+ console.log("PUBLIC_HEALTH_NEWS_EDITION="+JSON.stringify(result.digest));
  let verified=false;
  for(let n=0;n<40;n++){
   const edition=await fetch('https://lumi-develop.psanchesnle.workers.dev/health-news',{headers:{'cache-control':'no-cache'},signal:AbortSignal.timeout(15000)});
