@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lumi — Mente, Corpo e Psicologia (protótipo)</title>
+<style>
+:root{font-family:system-ui,sans-serif;color-scheme:dark;background:#101827;color:#f8fafc}
+body{max-width:760px;margin:auto;padding:18px}h1{font-size:clamp(1.7rem,5vw,2.5rem)}p,li{line-height:1.6}
+button{font:inherit;min-height:52px;border-radius:12px;padding:12px 16px;border:1px solid #7dd3fc;background:#20354b;color:white;cursor:pointer}
+button:focus-visible{outline:3px solid #facc15}button:disabled{opacity:.45}
+nav,.actions,.choices{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0}
+section{background:#1e293b;border-radius:16px;padding:20px;margin:16px 0}
+[hidden]{display:none!important}.choices button{flex:1 1 125px}.status{font-weight:700;color:#a7f3d0}
+small{color:#cbd5e1}input{font:inherit;min-height:48px;width:min(100%,280px);border-radius:8px}
+ .movement-art{width:min(100%,440px);margin:18px auto;padding:12px;background:#f1f5f9;border-radius:16px;color:#172554}.movement-art img{display:block;width:100%;height:auto;border-radius:10px}.movement-art svg *{vector-effect:non-scaling-stroke}.movement-art figcaption{color:#334155;text-align:center;font-size:.95rem;margin-top:8px}</style></head><body>
+<header><h1>💙 Lumi — Mente, Corpo e Psicologia</h1><p>Protótipo educativo, inspirado em boas práticas para Parkinson. Não substitui fisioterapia ou avaliação individual.</p></header>
+<nav><button id="mindTab">🧠 Mente</button><button id="bodyTab">🚶 Corpo</button><button id="psychTab">💙 Psicologia</button></nav>
+<section id="mind"><h2>Jogo de memória e atenção</h2><p>Observe as três palavras. Depois escolha qual delas apareceu.</p><div id="study"><p id="words" style="font-size:1.5rem;font-weight:bold"></p><button id="ready">Já memorizei</button></div><div id="quiz" hidden><p>Qual palavra estava na lista?</p><div id="options" class="choices"></div></div><p id="mindFeedback" class="status" aria-live="polite"></p><button id="nextMind" hidden>Próxima rodada</button><p><small>Sem cronômetro e sem penalidade por erros.</small></p></section>
+<section id="body" hidden><h2>Movimento seguro, sentado</h2><p><strong>Antes de começar:</strong> use cadeira firme, sem rodas, pés apoiados no chão. Faça apenas movimentos confortáveis. Se houver tontura, dor, falta de ar ou instabilidade, pare.</p><div id="bodyExercise"></div><div class="actions"><button id="previousBody">Anterior</button><button id="nextBody">Próximo</button></div><p><small>Evite exercícios de equilíbrio em pé sem orientação profissional. Não há coleta de dados de saúde.</small></p></section>
+<section id="psych" hidden><h2>💙 Como você está hoje?</h2><p><small>Demonstração de conversa acolhedora. Perguntas ilustrativas, ainda não avaliadas pela equipe de Psicologia da UNESP. Você pode pular qualquer pergunta. As respostas não são salvas nem enviadas.</small></p><div id="psychConversation" aria-live="polite"></div><div id="psychChoices" class="choices"></div><div class="actions"><button id="psychSkip">Pular pergunta</button><button id="psychRestart">Recomeçar</button></div><p><small>Esta conversa não é atendimento psicológico. Se precisar de apoio, converse com um profissional de saúde ou alguém de confiança.</small></p></section>
+<footer><p id="progress" aria-live="polite"></p><small>Versão experimental — para revisão posterior pela equipe Ativa Parkinson. Sem armazenamento ou envio de respostas.</small></footer>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+function tab(name){$('mind').hidden=name!=='mind';$('body').hidden=name!=='body';$('psych').hidden=name!=='psych';}
+$('mindTab').onclick=()=>tab('mind');$('bodyTab').onclick=()=>tab('body');$('psychTab').onclick=()=>tab('psych');
+const rounds=[
+ {words:['CASA','FLOR','SOL'],answer:'FLOR',options:['FLOR','LIVRO','PONTE']},
+ {words:['GATO','LUA','MESA'],answer:'MESA',options:['BOLA','MESA','CHAVE']},
+ {words:['ÁRVORE','CAFÉ','RIO'],answer:'RIO',options:['RIO','NUVEM','SAPATO']},
+ {words:['PÃO','MAR','JANELA'],answer:'PÃO',options:['PÃO','RELÓGIO','CADERNO']}
+];let index=0,correct=0;
+function showRound(){const r=rounds[index%rounds.length];$('words').textContent=r.words.join(' · ');$('study').hidden=false;$('quiz').hidden=true;$('nextMind').hidden=true;$('mindFeedback').textContent='';$('options').replaceChildren();}
+$('ready').onclick=()=>{const r=rounds[index%rounds.length];$('study').hidden=true;$('quiz').hidden=false;for(const option of r.options){const b=document.createElement('button');b.textContent=option;b.onclick=()=>{const ok=option===r.answer;if(ok)correct++;$('mindFeedback').textContent=ok?'Muito bem!':'Tudo bem. A resposta era '+r.answer+'.';$('options').querySelectorAll('button').forEach(x=>x.disabled=true);$('nextMind').hidden=false;$('progress').textContent='Rodadas concluídas: '+(index+1)+' · Acertos: '+correct;};$('options').append(b);}};
+$('nextMind').onclick=()=>{index++;showRound();};
+const exercises=[
+ {title:'Respiração tranquila',steps:'Sentado confortavelmente, inspire de forma natural e solte o ar devagar. Repita algumas vezes sem prender a respiração.'},
+ {title:'Abrir e fechar as mãos',steps:'Com os braços apoiados, abra os dedos de maneira confortável e feche as mãos suavemente. Faça algumas repetições, sem forçar.'},
+ {title:'Movimentos dos tornozelos',steps:'Sentado e com os pés apoiados, eleve a ponta de um pé e depois relaxe. Alterne os lados lentamente.'},
+ {title:'Alongar os braços',steps:'Sentado, estenda um braço à frente dentro de uma amplitude confortável e volte. Alterne os braços. Evite se inclinar para fora da cadeira.'}
+
+];
+// Ilustrações vetoriais locais: linhas simples, sem imagens externas ou dados pessoais.
+// Figuras didáticas em estilo de cartilha: contornos arredondados, cadeira e setas.
+const illustrations=[
+ {src:'exercicio-1.webp',alt:'Pessoa sentada demonstrando respiração tranquila'},
+ {src:'exercicio-2.webp',alt:'Pessoa sentada abrindo e fechando as mãos'},
+ {src:'exercicio-3.webp',alt:'Pessoa sentada movimentando os tornozelos'},
+ {src:'exercicio-4.webp',alt:'Pessoa sentada estendendo um braço à frente'}
+];
+function movementFigure(i){const d=illustrations[i],f=document.createElement('figure');f.className='movement-art';const img=document.createElement('img');img.src=d.src;img.alt=d.alt;img.loading='lazy';const c=document.createElement('figcaption');c.textContent='Ilustração orientativa — faça apenas o movimento confortável';f.append(img,c);return f;}
+let bodyIndex=0;
+function renderBody(){const e=exercises[bodyIndex];$('bodyExercise').replaceChildren();const h=document.createElement('h3');h.textContent=(bodyIndex+1)+' de '+exercises.length+' — '+e.title;const p=document.createElement('p');p.textContent=e.steps;$('bodyExercise').append(h,movementFigure(bodyIndex),p);$('previousBody').disabled=bodyIndex===0;$('nextBody').disabled=bodyIndex===exercises.length-1;}
+$('previousBody').onclick=()=>{bodyIndex--;renderBody();};$('nextBody').onclick=()=>{bodyIndex++;renderBody();};
+
+// Diálogo local e ilustrativo, sem API, persistência ou identificação pessoal.
+const psychQuestions=[
+ {q:'Como você está se sentindo hoje?',options:['Estou bem','Mais ou menos','Hoje está difícil','Prefiro não responder']},
+ {q:'Como foi seu dia até agora?',options:['Tranquilo','Um pouco cansativo','Teve momentos difíceis','Prefiro não responder']},
+ {q:'O que poderia tornar seu dia um pouco melhor?',options:['Descansar','Conversar com alguém','Fazer algo de que gosto','Ainda não sei']}
+];
+let psychIndex=0;
+function renderPsych(){
+ const area=$('psychConversation'),choices=$('psychChoices');area.replaceChildren();choices.replaceChildren();
+ if(psychIndex>=psychQuestions.length){
+  const p=document.createElement('p');p.textContent='Obrigado por participar desta conversa ilustrativa. Se quiser, você pode recomeçar quando desejar.';area.append(p);$('psychSkip').disabled=true;return;
+ }
+ $('psychSkip').disabled=false;
+ const p=document.createElement('p');p.style.fontSize='1.2rem';p.style.fontWeight='700';p.textContent='Lumi: '+psychQuestions[psychIndex].q;area.append(p);
+ for(const answer of psychQuestions[psychIndex].options){
+  const btn=document.createElement('button');btn.type='button';btn.textContent=answer;
+  btn.onclick=()=>{
+   const reply=document.createElement('p');
+   reply.textContent=answer==='Prefiro não responder'?'Tudo bem. Você não precisa responder.':'Obrigada por compartilhar. Podemos continuar no seu ritmo.';
+   area.append(reply);choices.replaceChildren();
+   const next=document.createElement('button');next.type='button';next.textContent='Continuar';next.onclick=()=>{psychIndex++;renderPsych();};choices.append(next);
+  };
+  choices.append(btn);
+ }
+}
+$('psychSkip').onclick=()=>{psychIndex++;renderPsych();};
+$('psychRestart').onclick=()=>{psychIndex=0;renderPsych();};
+renderPsych();
+showRound();renderBody();
+</script></body></html>

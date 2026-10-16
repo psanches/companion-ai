@@ -1,0 +1,42 @@
+name: Lumi Research live smoke test (no deploy)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require dedicated server-side test secret
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Set the LUMI_RESEARCH_OPENAI_API_KEY repository Actions secret before running this live test."
+            exit 1
+          fi
+      - name: One bounded live research request (no content logged)
+        run: |
+          node --input-type=module <<'NODE'
+          import { researchNow } from './lumi-research/research.mjs';
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 45000);
+          try {
+            const result = await researchNow({
+              question: 'What is the official website of the World Health Organization?',
+              authorized: true,
+              apiKey: process.env.OPENAI_API_KEY,
+              maxOutputTokens: 250,
+              fetcher: (url, options) => fetch(url, {...options, signal: controller.signal})
+            });
+            if (result.status !== 'complete') throw new Error('Live research did not complete: ' + result.status);
+            if (!result.citations?.length) throw new Error('No web citations returned');
+            if (!result.citations.some(c => /^https:\/\//.test(c.url))) throw new Error('No valid HTTPS citation');
+            console.log('PASS: live research returned text and HTTPS source citations; content and credentials omitted.');
+          } finally { clearTimeout(timeout); }
+          NODE

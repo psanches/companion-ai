@@ -1,0 +1,92 @@
+name: Validate Lumi home restoration (no deploy)
+on:
+  push:
+    branches: [feature/restore-lumi-home-20261014]
+  workflow_dispatch:
+    inputs:
+      live_research:
+        description: 'Run one live OpenAI research request (uses dedicated secret, no deploy)'
+        type: boolean
+        required: false
+        default: false
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated demo test dependencies
+        working-directory: ativa-demo
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build exact deployment package fixtures
+        run: node lumi-ativa-integration/build-assets.mjs
+      - name: Test restored routing and synthetic demo
+        run: node --test lumi-ativa-integration/tests/*.test.mjs lumi-ativa-integration/research-hook.test.mjs
+      - name: Test Lumi research adapter (mock API, no deploy)
+        run: node --test lumi-research/*.test.mjs
+      - name: Live research smoke test (manual opt-in only; no deploy)
+        if: (github.event_name == 'workflow_dispatch' && inputs.live_research == true) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[lumi-live-smoke-once]'))
+        env:
+          OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Missing LUMI_RESEARCH_OPENAI_API_KEY secret"
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import { researchNow } from './lumi-research/research.mjs';
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 45000);
+          try {
+            const result = await researchNow({
+              question: 'According to the World Health Organization website, what is the latest published global malaria cases estimate? Search the web and cite the WHO page.',
+              authorized: true,
+              apiKey: process.env.OPENAI_API_KEY,
+              maxOutputTokens: 250,
+              fetcher: (url, opts) => fetch(url, {...opts, signal: controller.signal})
+            });
+            if (result.status !== 'complete') throw new Error('Live research status: '+result.status);
+            if (!result.citations?.some(c => /^https:\/\//.test(c.url))) throw new Error('No HTTPS citations returned; research text alone is not sufficient');
+            console.log('PASS: Live research returned an answer and HTTPS citations. No answer or credentials logged.');
+          } finally { clearTimeout(timer); }
+          NODE
+      - name: Package both frontends without deploying
+        run: node lumi-ativa-integration/build-assets.mjs
+      - name: Verify original frontend is packaged
+        run: |
+          node --input-type=module -e "import a from './lumi-ativa-integration/assets.generated.mjs'; for (const p of ['/lumi-original/index.html','/lumi-original/app.js','/lumi-original/style.css','/ativa-ui/index.html']) if (!a[p]) throw Error('Missing '+p);"
+      - name: Validate in-Lumi Ativa care panel and original chat preservation
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          import assets from './lumi-ativa-integration/assets.generated.mjs';
+          const original=fs.readFileSync('index.html','utf8');
+          const embedded=assets['/lumi-original/index.html'].content;
+          assert.doesNotMatch(embedded,/id="lumiCareDialog"/);
+          assert.match(embedded,/id="profileDialog"/);
+          assert.match(embedded,/id="healthDialog"/);
+          assert.match(embedded,/getElementById\("healthDialog"\)\.showModal\(\)/);
+          assert.match(embedded,/id="profileConditions"/);
+          assert.match(embedded,/id="profileMedications"/);
+          assert.match(embedded,/id="profileAllergies"/);
+          assert.match(embedded,/id="profileDoctors"/);
+          assert.doesNotMatch(embedded,/EXEMPLO FICTÍCIO: hipertensão/,'Health fields must start blank');
+          assert.match(embedded,/document\.getElementById\(id\)\.value = ""/,'Health inputs cleared on opening');
+          assert.match(embedded,/id="fictionalReportBtn"/,'Local report generation preserved');
+          assert.ok(embedded.indexOf('id="profileConditions"')>embedded.indexOf('id="healthDialog"'),"Medical fields must belong to Health dialog");
+          assert.ok(embedded.indexOf('id="profileConditions"')<embedded.indexOf('</dialog>',embedded.indexOf('id="healthDialog"')),"Medical fields must not belong to Personal Profile");
+          assert.match(embedded,/id="healthDemoBtn"/);
+          assert.match(embedded,/onclick="document\.getElementById\('profileDialog'\)\.showModal\(\)"/);
+          assert.doesNotMatch(original,/id="lumiCareDialog"/,'Original repo UI must remain unchanged');
+          for(const marker of ['id="chatForm"','id="messages"','id="authBox"','id="memoryBtn"','id="soundButton"']) {
+            assert.ok(original.includes(marker)&&embedded.includes(marker),'Original Lumi UI element lost: '+marker);
+          }
+          assert.equal(assets['/lumi-original/app.js'].content,fs.readFileSync('app.js','utf8'),'Original personality and authentication script changed');
+          assert.ok(assets['/ativa-medical/index.html'],'Fictional medical documents missing');
+          console.log('PASS: original Lumi health form restored; fictional-only fields; chat and medical boundaries preserved');
+          NODE
