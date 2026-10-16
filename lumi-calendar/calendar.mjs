@@ -30,7 +30,7 @@ async function bodyJson(request){if(!request.headers.get('content-type')?.includ
 function configured(env){if(!env.Memory||!env.GOOGLE_CLIENT_ID||!env.GOOGLE_CLIENT_SECRET||!env.CALENDAR_SESSION_SECRET)fail('CONFIG');}
 const writable=scope=>String(scope||'').split(/\s+/).some(s=>[SCOPE,'https://www.googleapis.com/auth/calendar','https://www.googleapis.com/auth/calendar.events.owned'].includes(s));
 export function createCalendarHandler({fetcher=fetch,verify=createCalendarVerifier({fetcher}),now=()=>Date.now()}={}){
- async function google(url,options={}){try{return await fetcher(url,{...options,redirect:'error',signal:AbortSignal.timeout(15000)});}catch{fail('GOOGLE');}}
+ async function google(url,options={}){try{const response=await fetcher(url,{...options,redirect:'manual',signal:AbortSignal.timeout(15000)});if(response.status>=300&&response.status<400){await response.body?.cancel();fail('GOOGLE');}return response;}catch{fail('GOOGLE');}}
  async function access(env,userId,write=true){
   const stored=await env.Memory.get('google:tokens:user:'+userId);if(!stored)fail('CONNECT');let tokens;try{tokens=await decrypt(env,stored);}catch{fail('CONNECT');}
   if(!tokens.access_token||tokens.expires_at<=now()+60000){

@@ -12,7 +12,7 @@ export function createCalendarVerifier({fetcher=fetch}={}){
  return async(token,env)=>{
   if(typeof token!=='string'||token.length<10||token.length>8192)return null;
   const {url,key,keyKind}=calendarAuthConfig(env);let response;
-  try{response=await fetcher(url+'/auth/v1/user',{method:'GET',headers:{apikey:key,authorization:'Bearer '+token},redirect:'error',signal:AbortSignal.timeout(7000)});}catch{reject('AUTH_SERVICE','CONNECTION');}
+  try{response=await fetcher(url+'/auth/v1/user',{method:'GET',headers:{apikey:key,authorization:'Bearer '+token},redirect:'manual',signal:AbortSignal.timeout(7000)});}catch{reject('AUTH_SERVICE','CONNECTION');}
   if(!response.ok){let data={};try{data=await response.json();}catch{}
    // Do not return upstream messages, tokens, e-mail addresses or key values.
    if(/invalid api key|no api key|api key.*(?:invalid|revoked|missing)/i.test(String(data.message||data.msg||data.error_description||'')))reject('AUTH_CONFIG','PUBLIC_KEY_REJECTED');
