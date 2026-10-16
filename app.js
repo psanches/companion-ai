@@ -279,7 +279,6 @@ supabaseClient.auth.onAuthStateChange(event => {
   // Run session reads outside Supabase's auth callback lock.
   setTimeout(async () => {
     await updateAuthUI();
-    if (event === "SIGNED_IN") await loadSharedHistory();
   }, 0);
 });
 
@@ -492,9 +491,13 @@ requestAnimationFrame(() => {
    SHARED HISTORY
    ========================================================= */
 let fullHistory = [];
+let historyEpoch = 0;
 async function loadSharedHistory() {
+  const epoch = historyEpoch;
   const token =
     await getAccessToken();
+
+  if (epoch !== historyEpoch) return;
 
   /*
    Do not repeatedly call the Worker before
@@ -515,6 +518,7 @@ async function loadSharedHistory() {
 
     const data =
       await response.json();
+    if (epoch !== historyEpoch) return;
 
     if (!response.ok) {
       throw new Error(
@@ -927,6 +931,7 @@ return {
 
 form.onsubmit = async e => {
   e.preventDefault();
+  if (chatBusy || form.dataset.sending === "true") return;
 
   const text =
     input.value.trim();
@@ -936,6 +941,7 @@ form.onsubmit = async e => {
   }
 
   form.dataset.sending = "true";
+  setConversationActionsDisabled();
   input.value = "";
 
   add(
@@ -1002,6 +1008,7 @@ form.onsubmit = async e => {
     );
   } finally {
     delete form.dataset.sending;
+    setConversationActionsDisabled();
   }
 };
 
@@ -1424,136 +1431,175 @@ inviteBtn?.addEventListener("click", async () => {
    NEW CHAT AND CHAT HISTORY
    ========================================================= */
 
-const newChatBtn =
-  document.getElementById("newChatBtn");
-
-const chatHistoryBtn =
-  document.getElementById("chatHistoryBtn");
-
-let chatBusy = false;
-
-newChatBtn?.addEventListener("click", async () => {
-  if (chatBusy) return;
-
-  chatBusy = true;
-  newChatBtn.disabled = true;
-
-  try {
-    const response = await authFetch(
-      `${WORKER_URL}history/archive`,
-      { method: "POST" }
-    );
-
-    if (!response.ok) {
-      throw new Error("Não foi possível salvar a conversa.");
-    }
-
-    fullHistory = [];
-    state.messages = [];
-    loadEarlierBtn.hidden = true;
-
-    save();
-    render();
-    input.value = "";
-    input.focus();
-    refreshConversationList();
-
-  } catch (error) {
-    alert(error.message);
-  } finally {
-    chatBusy = false;
-    newChatBtn.disabled = false;
-  }
-});
-
-/* Sidebar: archived conversations, newest first. */
+const newChatBtn = document.getElementById("newChatBtn");
+const chatHistoryBtn = document.getElementById("chatHistoryBtn");
 const sidebar = document.getElementById("conversationSidebar");
 const sidebarBackdrop = document.getElementById("sidebarBackdrop");
 const sidebarList = document.getElementById("conversationList");
 const sidebarStatus = document.getElementById("sidebarStatus");
 const closeSidebarBtn = document.getElementById("closeSidebarBtn");
 const sidebarNewChatBtn = document.getElementById("sidebarNewChatBtn");
+let chatBusy = false;
 let sidebarLoading = false;
+let sidebarRefreshAgain = false;
+let sidebarRefreshPromise = null;
+let sidebarEpoch = 0;
+let sidebarOwner = null;
+let conversationArchives = [];
+const pendingArchives = new Map();
 
+function setConversationActionsDisabled() {
+  const busy = chatBusy || form.dataset.sending === "true";
+  for (const button of [newChatBtn, sidebarNewChatBtn]) if (button) button.disabled = busy;
+}
+function archiveTimestamp(chat) {
+  const numeric = Number(chat?.timestamp);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  const iso = Date.parse(chat?.createdAt || "");
+  return Number.isFinite(iso) ? iso : Number(chat?.id) || 0;
+}
+function latestFive(items) {
+  const unique = new Map();
+  for (const item of items) if (item && typeof item.id === "string" && item.id) unique.set(item.id,item);
+  return [...unique.values()].sort((a,b) => archiveTimestamp(b)-archiveTimestamp(a)).slice(0,5);
+}
+function rememberArchive(archive) {
+  if (!archive?.id) return;
+  pendingArchives.set(archive.id,archive);
+  conversationArchives = latestFive([...conversationArchives,archive]);
+  for (const id of pendingArchives.keys()) if (!conversationArchives.some(item => item.id === id)) pendingArchives.delete(id);
+  renderConversationList();
+}
+function renderConversationList() {
+  sidebarList.replaceChildren();
+  sidebarStatus.textContent = conversationArchives.length ? "" : "Nenhuma conversa arquivada ainda.";
+  for (const chat of conversationArchives) {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "conversation-item";
+    item.dataset.conversationId = chat.id;
+    item.textContent = (typeof chat.title === "string" ? chat.title : "Conversa sem título").trim().slice(0,100);
+    item.title = item.textContent;
+    item.addEventListener("click", () => restoreConversation(chat.id));
+    sidebarList.append(item);
+  }
+}
 function setSidebarOpen(open) {
-  sidebar?.classList.toggle("open", open);
-  sidebarBackdrop?.classList.toggle("open", open);
-  sidebar?.setAttribute("aria-hidden", String(!open));
-  sidebarBackdrop?.setAttribute("aria-hidden", String(!open));
+  sidebar?.classList.toggle("open",open);
+  sidebarBackdrop?.classList.toggle("open",open);
+  sidebar?.setAttribute("aria-hidden",String(!open));
+  sidebarBackdrop?.setAttribute("aria-hidden",String(!open));
   if (window.innerWidth <= 900) {
     if (open) closeSidebarBtn?.focus();
     else chatHistoryBtn?.focus();
   }
 }
-
 async function refreshConversationList() {
-  if (sidebarLoading) return;
+  if (sidebarLoading) { sidebarRefreshAgain = true; return sidebarRefreshPromise; }
   sidebarLoading = true;
-  sidebarList.replaceChildren();
-  sidebarStatus.textContent = "Carregando conversas...";
+  sidebarRefreshPromise = (async () => {
+    do {
+      sidebarRefreshAgain = false;
+      const epoch = sidebarEpoch;
+      if (!conversationArchives.length) sidebarStatus.textContent = "Carregando conversas...";
+      try {
+        const response = await authFetch(`${WORKER_URL}history/archives`);
+        if (!response.ok) throw new Error("Não foi possível carregar as conversas.");
+        const data = await response.json();
+        if (epoch !== sidebarEpoch) continue;
+        const archives = Array.isArray(data.archives) ? data.archives : [];
+        for (const item of archives) pendingArchives.delete(item.id);
+        conversationArchives = latestFive([...archives,...pendingArchives.values()]);
+        renderConversationList();
+      } catch (error) {
+        if (epoch === sidebarEpoch) sidebarStatus.textContent = error.message;
+      }
+    } while (sidebarRefreshAgain);
+  })();
+  try { await sidebarRefreshPromise; }
+  finally { sidebarLoading = false; sidebarRefreshPromise = null; }
+}
+async function startNewConversation() {
+  if (chatBusy || form.dataset.sending === "true") return;
+  chatBusy = true;
+  const epoch = sidebarEpoch;
+  setConversationActionsDisabled();
   try {
-    const response = await authFetch(`${WORKER_URL}history/archives`);
-    if (!response.ok) throw new Error("Não foi possível carregar as conversas.");
+    const response = await authFetch(`${WORKER_URL}history/archive`,{method:"POST"});
     const data = await response.json();
-    const archives = Array.isArray(data.archives) ? data.archives : [];
-    archives.sort((a,b) => Number(b.timestamp || b.createdAt || 0) - Number(a.timestamp || a.createdAt || 0));
-    sidebarStatus.textContent = archives.length ? "" : "Nenhuma conversa arquivada ainda.";
-    for (const chat of archives) {
-      if (!chat?.id) continue;
-      const item = document.createElement("button");
-      item.type = "button";
-      item.className = "conversation-item";
-      item.textContent = (chat.title || "Conversa sem título").trim().slice(0,100);
-      item.title = chat.title || "Conversa sem título";
-      item.addEventListener("click", async () => {
-        if (sidebarLoading || chatBusy) return;
-        chatBusy = true;
-        item.disabled = true;
-        sidebarStatus.textContent = "Abrindo conversa...";
-        try {
-          const restore = await authFetch(`${WORKER_URL}history/restore`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: chat.id })
-          });
-          if (!restore.ok) throw new Error("Não foi possível abrir a conversa.");
-          await loadSharedHistory();
-          if (window.innerWidth <= 900) setSidebarOpen(false);
-          else refreshConversationList();
-        } catch (error) {
-          sidebarStatus.textContent = error.message;
-          item.disabled = false;
-        } finally {
-          chatBusy = false;
-        }
-      });
-      sidebarList.appendChild(item);
-    }
+    if (!response.ok || data.ok !== true) throw new Error(data.error || "Não foi possível salvar a conversa.");
+    if (epoch !== sidebarEpoch) return;
+    historyEpoch++;
+    rememberArchive(data.archived);
+    fullHistory = [];
+    state.messages = [];
+    loadEarlierBtn.hidden = true;
+    save();
+    render();
+    input.value = "";
+    if (window.innerWidth <= 900) setSidebarOpen(false);
+    input.focus();
+    await refreshConversationList();
   } catch (error) {
     sidebarStatus.textContent = error.message;
   } finally {
-    sidebarLoading = false;
+    chatBusy = false;
+    setConversationActionsDisabled();
   }
 }
-
-chatHistoryBtn?.addEventListener("click", () => {
+async function restoreConversation(id) {
+  if (chatBusy || form.dataset.sending === "true") return;
+  chatBusy = true;
+  const epoch = sidebarEpoch;
+  setConversationActionsDisabled();
+  sidebarStatus.textContent = "Abrindo conversa...";
+  try {
+    const response = await authFetch(`${WORKER_URL}history/restore`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id})});
+    const data = await response.json();
+    if (!response.ok || data.ok !== true) throw new Error(data.error || "Não foi possível abrir a conversa.");
+    if (epoch !== sidebarEpoch) return;
+    historyEpoch++;
+    rememberArchive(data.archived);
+    if (Array.isArray(data.history)) {
+      fullHistory = data.history.filter(item => item && typeof item.content === "string" && ["user","assistant"].includes(item.role));
+      state.messages = fullHistory.slice(-6);
+      loadEarlierBtn.hidden = fullHistory.length <= 6;
+      save();
+      render();
+    } else await loadSharedHistory();
+    if (window.innerWidth <= 900) setSidebarOpen(false);
+    await refreshConversationList();
+  } catch (error) {
+    sidebarStatus.textContent = error.message;
+  } finally {
+    chatBusy = false;
+    setConversationActionsDisabled();
+  }
+}
+newChatBtn?.addEventListener("click",startNewConversation);
+sidebarNewChatBtn?.addEventListener("click",startNewConversation);
+chatHistoryBtn?.addEventListener("click",() => {
   const opening = !sidebar?.classList.contains("open");
   setSidebarOpen(opening);
-  if (opening) refreshConversationList();
+  if (opening) void refreshConversationList();
 });
-closeSidebarBtn?.addEventListener("click", () => setSidebarOpen(false));
-sidebarBackdrop?.addEventListener("click", () => setSidebarOpen(false));
-document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && sidebar?.classList.contains("open")) setSidebarOpen(false);
-});
-sidebarNewChatBtn?.addEventListener("click", async () => {
-  if (chatBusy) return;
-  newChatBtn?.click();
-  if (window.innerWidth <= 900) setSidebarOpen(false);
-});
-
-/* Load the sidebar automatically on desktop and whenever sign-in changes. */
-refreshConversationList();
-supabaseClient.auth.onAuthStateChange(() => {
-  setTimeout(() => refreshConversationList(), 0);
+closeSidebarBtn?.addEventListener("click",() => setSidebarOpen(false));
+sidebarBackdrop?.addEventListener("click",() => setSidebarOpen(false));
+document.addEventListener("keydown",event => { if (event.key === "Escape" && sidebar?.classList.contains("open")) setSidebarOpen(false); });
+void refreshConversationList();
+supabaseClient.auth.onAuthStateChange((event,session) => {
+  setTimeout(() => {
+    const owner = session?.user?.id || null;
+    if (event === "SIGNED_OUT" || (event === "SIGNED_IN" && (!owner || owner !== sidebarOwner))) {
+      sidebarEpoch++;
+      historyEpoch++;
+      conversationArchives = [];
+      pendingArchives.clear();
+      sidebarList.replaceChildren();
+    }
+    if (owner) sidebarOwner = owner;
+    else if (event === "SIGNED_OUT") sidebarOwner = null;
+    if (event === "SIGNED_IN") void loadSharedHistory();
+    void refreshConversationList();
+  },0);
 });

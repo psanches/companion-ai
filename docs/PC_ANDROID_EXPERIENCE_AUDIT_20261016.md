@@ -21,13 +21,14 @@ Scope: `lumi-develop.psanchesnle.workers.dev` only. Branch: `feature/pc-android-
 - `app.js`: robust saved-state parsing, post-login history load, in-flight chat flag; remove unsafe service-worker reload handler. Personality, message-history window and API protocol remain intact.
 - `index.html`: keyboard resize hint, stable script tags, locally packaged authentication dependency.
 - `sw.js`: public fingerprint assets only; migrate old Lumi caches; never cache HTML, sessions or API data. Cache bounded to 100 files.
-- `frontend/build-release.mjs`, `version-worker.mjs`: deterministic SHA-256 asset names; final Calendar-patched app bytes; release/commit endpoint; HTML references; cache headers; previous release fallback.
+- `frontend/build-release.mjs`, `version-worker.mjs`, `wait-for-release.mjs`: deterministic SHA-256 asset names; final Calendar-patched app bytes; release/commit endpoint; HTML references; cache headers; previous release fallback.
 - `frontend/experience.css`, `experience.js`: viewport layout, touch sizes, focus, sidebar accessibility, safe update notification.
+- `lumi-calendar/calendar-week-frontend.mjs`, `calendar-frontend.mjs`, `calendar.mjs`, `deployed-check.mjs`: current-week reader, authenticated weekly read API, existing Google connection/return flow and deployed security checks.
 - `frontend/vendor/*`: pinned existing Supabase browser SDK and MIT license/provenance.
 - `frontend/package*.json`, `*.test.mjs`, `browser-test.mjs`, `deployed-check.mjs`: cache/service-worker/regression contracts, simulated desktop/mobile browser flows and deployed-byte verification.
 - `lumi-ativa-integration/build-assets.mjs`, `package-worker.mjs`, `worker-entry.mjs`, `deploy.mjs`: reproducible release packaging, preserve active modules/bindings, commit verification, baseline/asset drift guards and existing automatic rollback.
 - `.github/workflows/lumi-ativa-integration.yml`: dedicated branch guard, frontend tests before publication, screenshots/JSON validation artifact.
-- `.gitignore`: generated files, test artifacts and dependencies excluded.
+- `.gitignore`, `.gitattributes`: generated files, test artifacts and dependencies excluded; vendor bytes kept unchanged.
 
 ## Agenda addition requested during validation
 
@@ -55,33 +56,41 @@ No actual Android device, Gboard, installed-PWA upgrade, Samsung browser, assist
 
 The news validation for this frontend mission is read-only: it checks the existing five-story edition and page, without invoking the generation job or creating a temporary Worker. The cron and bindings are compared during deployment.
 
-Final publication completed on 16 October 2026 at approximately 15:35 Brasília time.
+Final publication completed on 16 October 2026 at approximately 15:49 Brasília time.
 
 | Evidence | Verified result |
 |---|---|
-| Deployed source commit | `9bd8880d0708199d58ecd02144e9cbd660f1f3d7` |
-| Cloudflare version | `b29cb4c2-c156-4c8f-ab63-13319fc02682` |
-| Release manifest | `115a1cc403689e8ec6b9c78e2e12cd40a35c4b58d43332aaf62a2dbdabdb4776` |
-| Workflow | [Successful run 38948393174](https://github.com/psanches/companion-ai/actions/runs/38948393174) |
-| Automated tests | 268 passed: medical 139, synthetic demo 18, integration/Calendar 81, Research 17, frontend contracts 13 |
-| Browser scenarios | Five viewport scenarios passed; standalone Agenda opened and read the synthetic daily events in every scenario |
+| Deployed source commit | `c4596d80f6c2cdd74280317cc3ff4bb241c042b1` |
+| Cloudflare version | `11af8e6c-70a5-4e40-8dfc-043b8d244a91` |
+| Release manifest | `2082798a09ab974aee7950c29d1901a4c268301c819ea428c5d8c6d7b627affd` |
+| Workflow | [Successful run 38950122403](https://github.com/psanches/companion-ai/actions/runs/38950122403) |
+| Automated tests | 272 passed: medical 139, synthetic demo 18, integration/Calendar 85, Research 17, frontend contracts 13 |
+| Browser scenarios | Five viewport scenarios passed; current-week Agenda opened and read the synthetic events in every scenario; Google sign-in choice was visible before text-keyboard focus |
 | Service worker | Actual Chromium localhost upgrade/offline/next-release/rollback lifecycle passed |
 | Deployed asset bytes | All nine immutable JS/CSS assets matched SHA-256 paths; independently rechecked after the workflow |
 | Calendar security | Anonymous event/day writes denied; foreign origin denied; invalid OAuth callback denied; invalid session reached authentication and returned 401 |
 | Medical restrictions | Real medical routes still 403; original baseline hash and modules verified |
-| Existing features | Original backend route status/content-type boundaries preserved; synthetic medical live AI passed; original conversation/history/personality code retained |
+| Existing features | Original backend route status/content-type boundaries preserved; new weekly route is read-only and authenticated; synthetic medical live AI passed; original conversation/history/personality code retained |
 | News | Existing 16/10/2026 edition: five verified stories, with international coverage; read-only check passed |
 | Schedule and bindings | Existing bindings preserved; `0 9 * * *` trigger retained and compared |
 | Production | Source/module hash unchanged before and after development deployment; no production deployment |
 
-Screenshots and browser results are downloadable from the workflow's `frontend-validation-9bd8880d0708199d58ecd02144e9cbd660f1f3d7` artifact. A report-only follow-up commit does not change the deployed runtime identity.
+Screenshots and browser results are downloadable from the workflow's `frontend-validation-c4596d80f6c2cdd74280317cc3ff4bb241c042b1` artifact. A report-only follow-up commit does not change the deployed runtime identity.
 
-Additional live signed-out Chromium checks through the environment's HTTPS proxy verified the real vendored SDK, the sign-in dialog and refresh on desktop and a mobile viewport without JavaScript exceptions. The proxy required ignoring its browser certificate trust error; these checks are not evidence of certificate validation or service-worker registration through that proxy. Normal HTTPS public probes independently verified the release and asset bytes. No real user login, private data or Calendar write was performed.
+Additional live signed-out Chromium checks of the preceding cache-fix release (`9bd8880d0708199d58ecd02144e9cbd660f1f3d7`) through the environment's HTTPS proxy verified the real vendored SDK, the sign-in dialog and refresh on desktop and a mobile viewport without JavaScript exceptions. The proxy required ignoring its browser certificate trust error; these checks are not evidence of certificate validation or service-worker registration through that proxy. Normal HTTPS public probes independently verified the release and asset bytes. No real user login, private data or Calendar write was performed.
 
 Two automatic restores were observed during rollout: one for an overly broad new clock assertion (then fixed and regression-tested), and one when the first version probe still identified the previous release (then fixed with bounded commit-plus-manifest convergence polling). The separate branch-specific legacy news smoke check also rejected the new branch; this mission now uses a read-only news check. These intermediate failures are not counted as successful releases. The final linked run passed every step.
 
 ## Final production-readiness assessment
 
-Ready for continued development acceptance on PC and Android. **Not yet approved for production promotion**: real Android Chrome/Gboard and installed-PWA acceptance, real authenticated Google Calendar reading/creation/return, and accessibility with actual zoom/assistive technology remain unverified. The production environment's deployment configuration and host guards require an explicit promotion review; do not use the root production-named Wrangler configuration to deploy this development package.
+Ready for continued development acceptance on PC and Android. **Not yet approved for production promotion**: real Android Chrome/Gboard and installed-PWA acceptance, real authenticated Google Calendar reading/creation/return (including the user-reported Android Google choice), and accessibility with actual zoom/assistive technology remain unverified. The production environment's deployment configuration and host guards require an explicit promotion review; do not use the root production-named Wrangler configuration to deploy this development package.
 
-Rollback uses the inspected prior Cloudflare version and original module snapshot. The deployment restores the snapshot, schedules and active version allocation automatically if its protected checks fail. Historical public assets are bounded to 100 cached/retained files; indefinite support for very old open tabs and offline private access are intentionally not provided. Account authentication and API operations need a network connection.
+The inspected prior Cloudflare version before the final weekly publication was `b29cb4c2-c156-4c8f-ab63-13319fc02682` (cache-fix release `9bd8880d0708199d58ecd02144e9cbd660f1f3d7`). Rollback uses that prior development version and original module snapshot. The deployment restores the snapshot, schedules and active version allocation automatically if its protected checks fail. Historical public assets are bounded to 100 cached/retained files; indefinite support for very old open tabs and offline private access are intentionally not provided. Account authentication and API operations need a network connection.
+
+## Follow-up: five recent conversations
+
+The user requested that New Conversation archive the active conversation and show only the five most recent archives below the navigation. Older archives remain in KV without deletion. Confirmed frontend defects included sorting ISO dates with Number (NaN), dropping overlapping list refreshes, and no five-item bound. The server list now returns the newest five; successful archive/restore responses include metadata captured after the existing authenticated KV write completes. The original authentication, archive keys, saved content and restore behavior remain authoritative. A development-host-only wrapper binds native KV methods correctly and does not modify production behavior.
+
+The frontend immediately merges successful archive metadata, tolerates temporarily older list responses, queues overlapping refreshes, prevents concurrent send/archive/restore, and rejects stale responses after account changes. Restore uses the returned saved history and preserves the existing six-message display with earlier-message loading. Failed archiving leaves the current conversation visible. Logout removes sidebar metadata. Files: app.js, index.html, frontend/experience.css, frontend/conversation-worker.mjs and its tests, frontend/browser-test.mjs, worker-entry.mjs and package-worker.mjs.
+
+Local validation after this addition: 278 Node tests passed (six new archive-boundary tests), all five browser viewport scenarios passed with archive/new/restore and a deliberately stale list, and the separate real Chromium service-worker lifecycle passed. These fixtures use synthetic conversations; no private account archives were inspected. Publication evidence for this follow-up will be appended after deployment succeeds.

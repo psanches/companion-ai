@@ -2,6 +2,7 @@ import fs from 'node:fs';
 const files = {
   'worker.js': './worker-entry.mjs',
   'frontend-version.mjs': '../frontend/version-worker.mjs',
+  'conversation-worker.mjs': '../frontend/conversation-worker.mjs',
   'frontend-release.mjs': '../frontend/release.generated.mjs',
   'frontend-previous.mjs': '../frontend/previous.generated.mjs',
   'calendar.mjs': '../lumi-calendar/calendar.mjs',
