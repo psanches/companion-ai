@@ -2,6 +2,7 @@ import fs from 'node:fs';
 const files = {
   'worker.js': './worker-entry.mjs',
   'calendar.mjs': '../lumi-calendar/calendar.mjs',
+  'calendar-conflicts.mjs': '../lumi-calendar/calendar-conflicts.mjs',
   'calendar-worker.mjs': '../lumi-calendar/calendar-worker.mjs',
   'calendar-frontend.mjs': '../lumi-calendar/calendar-frontend.mjs',
   'ativa-factory.mjs': './factory.mjs',
