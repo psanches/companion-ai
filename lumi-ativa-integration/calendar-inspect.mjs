@@ -15,3 +15,6 @@ for(const [name,file] of await (await get('/content/v2')).formData()){
 
 const app=await fetch('https://lumi-develop.psanchesnle.workers.dev/app.js?_calendar='+Date.now(),{cache:'no-store'});const appText=await app.text();
 for(const term of ['async function getReply','calendar/events','CONFIRMAR EVENTO']){for(const m of appText.matchAll(new RegExp(term,'g')))console.log('CALENDAR_FRONTEND='+JSON.stringify({term,code:appText.slice(Math.max(0,m.index-400),m.index+5000)}));}
+const envUrl=settings.bindings.find(b=>b.name==='SUPABASE_URL')?.text;
+const frontUrl=appText.match(/const SUPABASE_URL\s*=\s*["']([^"']+)/)?.[1];
+console.log('CALENDAR_AUTH_CONFIG='+JSON.stringify({serverUrlPresent:typeof envUrl==='string',serverUrlStrictlyAccepted:typeof envUrl==='string'&&/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(envUrl),serverUrlAfterTrimAccepted:typeof envUrl==='string'&&/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(envUrl.trim().replace(/\/+$/,'')),serverMatchesFrontend:typeof envUrl==='string'&&envUrl.trim().replace(/\/+$/,'')===frontUrl,frontendPublishableFormat:/const SUPABASE_PUBLISHABLE_KEY\s*=\s*["']sb_publishable_/.test(appText)}));
