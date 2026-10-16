@@ -61,7 +61,7 @@ export async function generateHealthDigest(env,now=new Date(),fetcher=fetch){
  const items=selected.map((story,id)=>{
   const text=summaries.find(x=>x.id===id);if(!text||!text.title?.trim()||!text.summary?.trim())throw Error('Missing Portuguese summary');
   // Publication date is system-rendered; prose cannot invent a competing date.
-  if(/\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}|\b(?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|ontem|hoje|amanhã|semana passada|última semana|últimos dias)\b/i.test(text.title+' '+text.summary))throw Error('Unverified date claim in translated text');
+  if(/\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}|\b\d{1,2} de (?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b|\b(?:ontem|hoje|amanhã|semana passada|última semana|últimos dias)\b/i.test(text.title+' '+text.summary))throw Error('Unverified date claim in translated text');
   const {sourceText,...evidence}=story;return {...evidence,title:text.title.trim().slice(0,180),summary:text.summary.trim().slice(0,900),language:'pt-BR',dateVerified:true};
  });
  const digest={policyVersion:HEALTH_NEWS_POLICY_VERSION,date,title:'Notícias de Saúde',items,generatedAt:new Date().toISOString(),verification:{candidates:unique.length,accepted:items.length,sourceRequests,apiRequests,news:items.filter(x=>x.kind==='noticia').length,context:items.filter(x=>x.kind==='contexto').length,international:items.filter(x=>x.region==='Internacional').length,rejected}};

@@ -7,7 +7,7 @@ function setup(html=NEWS_HTML){const dom=new JSDOM(html,{url:'https://lumi-devel
 test('homepage button has a visible label, links to reader and is not duplicated',()=>{
  const dom=setup('<html class="lumi-authenticated"><body><main class="app"><button id="lumiExerciseBtn">Mente e Corpo</button></main></body></html>');
  dom.window.eval(NEWS_SCRIPT);dom.window.eval(NEWS_SCRIPT);
- const button=dom.window.document.getElementById('lumiHealthNewsBtn');assert.equal(button.textContent,'📰 Notícias de Saúde');assert.equal(button.getAttribute('href'),'/noticias');assert.equal(button.nextElementSibling.id,'lumiExerciseBtn');assert.equal(dom.window.document.querySelectorAll('#lumiHealthNewsBtn').length,1);dom.window.close();
+ const button=dom.window.document.getElementById('lumiHealthNewsBtn');assert.equal(button.textContent,'📰 Notícias de Saúde');assert.equal(button.getAttribute('href'),'/noticias');assert.equal(button.previousElementSibling.id,'lumiExerciseBtn');assert.equal(dom.window.document.querySelectorAll('#lumiHealthNewsBtn').length,1);dom.window.close();
 });
 test('reader renders Portuguese cards, original date and safe source links as text',async()=>{
  const dom=setup(),w=dom.window;

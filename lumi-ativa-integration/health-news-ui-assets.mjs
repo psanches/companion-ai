@@ -1,7 +1,7 @@
 export const NEWS_CSS = String.raw`
 :root{color-scheme:dark;--news-bg:#0d1422;--news-panel:#162235;--news-line:#30445d;--news-text:#f1f5f9;--news-muted:#b8c9dc;--news-accent:#a8dcf2}
 html:not(.lumi-authenticated) #lumiHealthNewsBtn{display:none!important}
-#lumiHealthNewsBtn{display:block;width:calc(100% - 28px);box-sizing:border-box;margin:0 14px 12px;padding:12px 16px;border:1px solid #7cc5d9;border-radius:12px;background:#203b4b;color:#f3fbff;font:600 16px/1.4 system-ui;text-align:left;text-decoration:none;cursor:pointer}
+#lumiHealthNewsBtn{display:block;width:calc(100% - 28px);box-sizing:border-box;margin:0 14px 12px;padding:12px;border:1px solid #9bd6f5;border-radius:12px;background:#25344a;color:#fff;font:400 17px/normal Arial,sans-serif;text-align:left;text-decoration:none;cursor:pointer}
 #lumiHealthNewsBtn:hover{background:#2b4e61}#lumiHealthNewsBtn:focus-visible,.news-page a:focus-visible,.news-page button:focus-visible{outline:3px solid #a8dcf2;outline-offset:4px}
 .news-page{margin:0;background:var(--news-bg);color:var(--news-text);font:17px/1.65 system-ui,-apple-system,sans-serif;min-height:100vh}.news-page *{box-sizing:border-box}.news-page a{color:var(--news-accent)}
 .news-shell{max-width:880px;margin:auto;padding:28px 24px 64px}.news-nav{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:26px;border-bottom:1px solid var(--news-line)}.news-brand{font-weight:750;letter-spacing:.03em;color:var(--news-text)}.news-back{text-decoration:none;border:1px solid var(--news-line);padding:8px 14px;border-radius:12px;font-size:15px;min-height:44px}
@@ -17,8 +17,8 @@ function el(tag,cls,text){const node=document.createElement(tag);if(cls)node.cla
 if(!document.querySelector('.news-page')){
  if(document.getElementById('lumiHealthNewsBtn'))return;
  const button=el('a','','📰 Notícias de Saúde');button.id='lumiHealthNewsBtn';button.href='/noticias';
- const anchor=document.getElementById('lumiMindBodyMobile')||document.getElementById('lumiExerciseBtn');
- if(anchor)anchor.before(button);else{const host=document.querySelector('.app');if(host)host.append(button);}
+ const anchor=document.getElementById('lumiExerciseBtn')||document.getElementById('lumiMindBodyMobile');
+ if(anchor)anchor.after(button);else{const host=document.querySelector('.app');if(host)host.append(button);}
  return;
 }
 const box=document.getElementById('newsItems'),edition=document.getElementById('newsEdition'),reload=document.getElementById('newsReload');
