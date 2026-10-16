@@ -5,7 +5,7 @@ const request=JSON.parse(fs.readFileSync(new URL('./request.json',import.meta.ur
 assert.equal(request.target,'lumi-develop');assert.equal(request.mode,'deploy');
 assert.equal(process.env.GITHUB_REF,'refs/heads/feature/restore-lumi-home-20261014');
 assert.equal(process.env.LUMI_DEPLOY_CONFIRM,'DEPLOY_LUMI_DEVELOP_ONLY');
-const originalHash='4aa869208a980a8c5a0cd9c29458d782373492cbc7cb1f955d44f49b1f60fde4';
+const originalHash='e0631cc2dc97dba8527d684c28ea990141be7180ce49875536f7cc4aaa67066c';
 const researchKey=process.env.LUMI_RESEARCH_OPENAI_API_KEY;if(!researchKey)throw Error('Missing dedicated Lumi Research API key; refusing deploy');
 const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API_TOKEN;if(!account||!token)throw Error('Missing Cloudflare deployment access');
 const base=`https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/lumi-develop`;
@@ -26,6 +26,11 @@ async function http(path,options={}){return fetch(sandbox+path,{...options,redir
 const before={};for(const path of ['/health','/memory','/calendar/events']){const r=await http(path);before[path]={status:r.status,type:r.headers.get('content-type')};await r.arrayBuffer();}
 function form(modules,addDemo=false){const fd=new FormData();const metadata={main_module:'worker.js',keep_bindings:[...new Set((settingsBefore.bindings||[]).map(b=>b.type))].filter(type=>type!=='service'),bindings:(settingsBefore.bindings||[]).filter(b=>b.type==='service'&&(!addDemo||b.name!=='LUMI_ATIVA_DEMO'))};for(const key of ['compatibility_date','compatibility_flags','logpush','tail_consumers','observability','placement','limits','tags'])if(settingsBefore[key]!==undefined)metadata[key]=settingsBefore[key];if(addDemo){metadata.bindings.push({type:'service',name:'LUMI_ATIVA_DEMO',service:'lumi-ativa-medical-demo'});metadata.bindings.push({type:'secret_text',name:'LUMI_RESEARCH_OPENAI_API_KEY',text:researchKey});metadata.bindings.push({type:'ratelimit',name:'LUMI_RESEARCH_RATE_LIMIT',namespace_id:'1001',simple:{limit:5,period:60}});}fd.set('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));for(const m of modules)fd.set(m.name,new Blob([m.bytes],{type:m.type}),m.name);return fd;}
 const modules=packageWorker(original);
+// Preserve the inspected live frontend, including editor changes made after the last Git deploy.
+const liveAssets=originals.find(m=>m.name==='ativa-assets.mjs');
+assert.ok(liveAssets,'Current frontend assets missing');
+assert.equal(sha(liveAssets.bytes),'8b23b20e2576b9d4137f2dbb0981d7506aa5d50b59b09d0ddcf1f5c4b94349e1','Live frontend changed since inspection; review required');
+modules[modules.findIndex(m=>m.name==='ativa-assets.mjs')]=liveAssets;
 // Refuse to silently discard modules added through another deployment path.
 const knownNames=new Set(modules.map(m=>m.name));
 assert.ok(originals.every(m=>knownNames.has(m.name)), 'Unknown deployed modules require review before replacement');
@@ -36,6 +41,7 @@ let changed=false;
 try{
  changed=true;const uploaded=await (await cf(base,{method:'PUT',body:form(modules,true)})).json();
  let uploadedVersion=uploaded?.result?.version_id||uploaded?.result?.version?.id||null;for(let attempt=0;attempt<12;attempt++){const items=(await (await cf(base+'/versions')).json()).result.items||[];const newer=items.find(v=>!versionBefore.some(previous=>previous.id===v.id));if(newer?.id){uploadedVersion=newer.id;break;}if(uploadedVersion)break;await new Promise(resolve=>setTimeout(resolve,1000));}assert.ok(uploadedVersion&&!versionBefore.some(v=>v.id===uploadedVersion),'Cannot identify uploaded sandbox version after polling; rollback required');
+ const versionDetails=(await (await cf(base+'/versions/'+uploadedVersion)).json()).result;assert.ok(versionDetails.resources?.script?.handlers?.includes('scheduled'),'Cloudflare did not register scheduled handler');
  await cf(base+'/deployments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({strategy:'percentage',versions:[{version_id:uploadedVersion,percentage:100}],annotations:{'workers/message':'Authorized synthetic Lumi Ativa sandbox integration'}})});
  const expectedCrons=[...new Set([...schedulesBefore.map(s=>s.cron),HEALTH_NEWS_CRON_UTC])];
  await cf(base+'/schedules',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(expectedCrons.map(cron=>({cron})))});

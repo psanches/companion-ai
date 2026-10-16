@@ -67,3 +67,9 @@ jobs:
           DEMO_ACCESS_CODE: ${{ secrets.ATIVA_DEMO_ACCESS_CODE }}
           LUMI_RESEARCH_OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
         run: node lumi-ativa-integration/deploy.mjs
+      - name: Verify first public health-news edition (existing dedicated key)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
+          LUMI_RESEARCH_OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
+        run: node lumi-ativa-integration/health-news-smoke.mjs
