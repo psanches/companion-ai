@@ -27,7 +27,7 @@ export default {async fetch(request,env,ctx){
 }};`;
 const form=new FormData();
 form.set('metadata',new Blob([JSON.stringify({main_module:'worker.js',compatibility_date:settings.compatibility_date,bindings:[binding,{type:'secret_text',name:'OPENAI_API_KEY',text:key},{type:'secret_text',name:'CHECK_TOKEN',text:checkToken}]})],{type:'application/json'}));
-for(const [module,content] of [['worker.js',entry],['health-news-worker.mjs',fs.readFileSync(new URL('./health-news-worker.mjs',import.meta.url))],['health-news-daily.mjs',fs.readFileSync(new URL('../health-news-daily.mjs',import.meta.url))],['health-news-verification.mjs',fs.readFileSync(new URL('../health-news-verification.mjs',import.meta.url))]])form.set(module,new Blob([content],{type:'application/javascript+module'}),module);
+for(const [module,content] of [['worker.js',entry],['health-news-ui-assets.mjs',fs.readFileSync(new URL('./health-news-ui-assets.mjs',import.meta.url))],['health-news-worker.mjs',fs.readFileSync(new URL('./health-news-worker.mjs',import.meta.url))],['health-news-daily.mjs',fs.readFileSync(new URL('../health-news-daily.mjs',import.meta.url))],['health-news-verification.mjs',fs.readFileSync(new URL('../health-news-verification.mjs',import.meta.url))]])form.set(module,new Blob([content],{type:'application/javascript+module'}),module);
 let created=false;
 try{
  created=true;await cf(name,{method:'PUT',body:form});

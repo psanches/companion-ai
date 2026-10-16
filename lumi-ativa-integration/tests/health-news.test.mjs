@@ -6,7 +6,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {packageWorker} from '../package-worker.mjs';
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'lumi-health-'));
-for(const name of ['health-news-worker.mjs']) fs.copyFileSync(new URL('../'+name,import.meta.url),path.join(dir,name));
+for(const name of ['health-news-worker.mjs','health-news-ui-assets.mjs']) fs.copyFileSync(new URL('../'+name,import.meta.url),path.join(dir,name));
 for(const name of ['health-news-daily.mjs','health-news-verification.mjs'])fs.copyFileSync(new URL('../../'+name,import.meta.url),path.join(dir,name));
 const {withHealthNews}=await import(pathToFileURL(path.join(dir,'health-news-worker.mjs')));
 test.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
@@ -75,4 +75,12 @@ test('incomplete discovery fails without overwriting storage',async()=>{
  const {generateHealthDigest}=await import('../../health-news-daily.mjs');let writes=0;
  const env={OPENAI_API_KEY:'test',HEALTH_NEWS_KV:{get:async()=>null,put:async()=>writes++}};
  await assert.rejects(generateHealthDigest(env,new Date(),async()=>Response.json({status:'incomplete',incomplete_details:{reason:'max_output_tokens'}})),/incomplete/);assert.equal(writes,0);
+});
+test('sandbox homepage receives reader assets while production HTML remains untouched',async()=>{
+ const original={fetch(){return new Response('<html><body><main>Original Lumi</main></body></html>',{headers:{'content-type':'text/html','etag':'old','content-length':'60'}});}};
+ const worker=withHealthNews(original);
+ const home=await worker.fetch(new Request('https://lumi-develop.psanchesnle.workers.dev/'));
+ const html=await home.text();assert.match(html,/Original Lumi/);assert.match(html,/health-news-ui.js/);assert.equal(home.headers.has('content-length'),false);assert.equal(home.headers.has('etag'),false);
+ const prod=await worker.fetch(new Request('https://mylumicompanion.com/'));assert.doesNotMatch(await prod.text(),/health-news-ui/);
+ const reader=await worker.fetch(new Request('https://lumi-develop.psanchesnle.workers.dev/noticias'));assert.match(await reader.text(),/Notícias de Saúde/);
 });

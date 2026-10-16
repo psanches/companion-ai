@@ -8,6 +8,7 @@ const files = {
   'research.mjs': '../lumi-research/research.mjs',
   'supabase-auth.mjs': '../lumi-research/supabase-auth.mjs',
   'health-news-worker.mjs': './health-news-worker.mjs',
+  'health-news-ui-assets.mjs': './health-news-ui-assets.mjs',
   'health-news-daily.mjs': '../health-news-daily.mjs',
   'health-news-verification.mjs': '../health-news-verification.mjs'
 };
