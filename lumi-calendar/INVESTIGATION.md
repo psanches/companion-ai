@@ -24,7 +24,7 @@ Retries and concurrent confirmations send the same deterministic Google event ID
 
 ## Validation and remaining user authorization
 
-27 focused tests cover verified sessions, origins, permissions, prepare/confirm separation, encrypted drafts, cross-user access, cancellation/expiry, duplicate and concurrent confirmation, refresh tokens, OAuth PKCE/state/replay/refusal/readonly grants, invalid dates, browser review, unchanged reading delegation and production-host delegation. Combined adapter/integration/research suite: 83 tests. Deployment workflow also runs the existing 139 medical and 18 demo tests and verifies preserved production source and sandbox bindings.
+30 focused tests cover verified sessions, origins, permissions, prepare/confirm separation, encrypted drafts, cross-user access, cancellation/expiry, duplicate and concurrent confirmation, refresh tokens, OAuth PKCE/state/replay/refusal/readonly grants, invalid dates, browser review, unchanged reading delegation and production-host delegation. Combined adapter/integration/research suite: 86 tests. Deployment workflow also runs the existing 139 medical and 18 demo tests and verifies preserved production source and sandbox bindings.
 
 Post-deployment checks exercise the actual served patched app and anonymous/foreign-origin/OAuth denials without calendar writes. Live authenticated Google account creation has not been performed automatically: it requires the account owner's Lumi session, Google consent if the existing grant is insufficient, and explicit confirmation of actual event details in the review dialog. No real event is invented for a test. A subsequent real end-to-end test should confirm one event, retry it and verify one matching entry in Google Calendar.
 
@@ -60,3 +60,10 @@ Seven new regression tests cover warnings and override tokens, changes during co
 ## Clickable sign-in prompt
 
 Calendar preparation, reconnect and resume authentication failures now render a sign-in button that invokes Lumi's existing Sign in control. Opening the existing authentication dialog preserves the event form currently in the DOM. A regression test verifies the click handler and retained fields. Authentication still uses the existing Supabase flow; no calendar action occurs from clicking sign-in.
+
+
+## Return to Lumi and display the calendar after confirmation
+
+Once Google confirms creation, the event dialog closes and Lumi automatically displays a daily primary-calendar panel in the existing conversation. It highlights the confirmed event, uses Brasilia dates/times, supports another selected date and provides Refresh/Close actions. An authenticated read-only day endpoint uses expanded recurring events and complete pagination; it does not require write scope when the existing Google grant is read-only. Existing reading endpoints remain delegated unchanged.
+
+If loading the day fails after creation, the UI retains Google's actual creation receipt and offers retry without reporting creation failure or repeating the write. New tests cover authenticated daily reading and boundaries, the complete close-and-display browser flow and read failure after a successful creation. Actual real-account creation remains subject to the user's explicit confirmation.
