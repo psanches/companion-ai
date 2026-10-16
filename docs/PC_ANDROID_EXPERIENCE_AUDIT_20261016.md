@@ -107,3 +107,7 @@ Local validation after this addition: 278 Node tests passed (six new archive-bou
 | Rollback target | Prior development version `11af8e6c-70a5-4e40-8dfc-043b8d244a91` (commit `c4596d80f6c2cdd74280317cc3ff4bb241c042b1`) |
 
 Browser evidence artifact: `frontend-validation-581c8e31ef6217904be5645a7dc6fc7bb9ae6765`. This is the latest runtime, superseding the weekly-publication evidence above. The same real-device and authenticated-Google limitations still apply. A report-only follow-up does not redeploy the runtime.
+
+## Android navigation follow-up
+
+The user confirmed both Google and email authentication choices are visible, but reported Mente e Corpo above the chat instead of in the left menu. Confirmed cause: build-assets injected a separate mobile-only link and experience.css explicitly displayed it below 900px. This was responsive duplication, not evidence of stale assets. Removed that injected element and its CSS. All navigation now uses the existing shared sidebar, accessible through ☰ on mobile. No authentication or backend behavior changed. Browser tests assert the duplicate is absent and Agenda, Mente e Corpo and Notícias de Saúde remain in the same sidebar order at all five viewports. Local frontend contracts (19), five browser scenarios and the real Chromium localhost service-worker lifecycle passed. Real Android acceptance remains pending.

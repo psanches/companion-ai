@@ -103,9 +103,8 @@ html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-o
 </script>`;
   content=content.replace('</body>',authObserver+'<script src="/lumi-research.js" defer></script></body>');
 
-  // Development-only signed-in actions: make profile and fictional health visible
-  // even when a previously installed frontend or mobile viewport has stale layout.
-  content=content.replace('<main class="app">','<main class="app"><a id="lumiMindBodyMobile" href="/lumi-mind-body.html">🧠🚶 Mente, Corpo e Psicologia</a>');
+  // Shared sidebar is the sole navigation on desktop and mobile.
+  // Keep profile and fictional health actions visible when signed in.
   const headerEnd='<div class="header-actions">';
   if(!content.includes(headerEnd))throw Error('Lumi header missing');
   content=content.replace(headerEnd,headerEnd+`<style>
