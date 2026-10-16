@@ -61,7 +61,7 @@ test('international source is date-verified before Portuguese translation and pe
  const response=output=>Response.json({status:'completed',output});
  const message=items=>({type:'message',content:[{type:'output_text',text:JSON.stringify({items})}]});
  const fetcher=async(url,opts)=>{
-  if(url==='https://www.michaeljfox.org/research-news')return new Response('',{status:503});
+  if(['https://www.michaeljfox.org/research-news','https://agencia.fapesp.br/','https://www.gov.br/saude/pt-br/assuntos/noticias-ms'].includes(url))return new Response('',{status:503});
   if(url.startsWith(source))return new Response('<meta property="article:published_time" content="2026-10-15T10:00:00Z"><h1>Research news</h1><p>'+('Evidence and limitations of a supervised study. '.repeat(20))+'</p>',{headers:{'content-type':'text/html'}});
   const body=JSON.parse(opts.body);calls++;
   if(calls===1){assert.equal(body.max_tool_calls,6);assert.ok(body.input.includes('português e inglês'));return response([{type:'web_search_call',action:{sources:Array.from({length:5},(_,i)=>({url:source+i}))}},message(Array.from({length:5},(_,i)=>({url:source+i,publishedAt:'2026-10-15'})))]);}
@@ -91,7 +91,7 @@ test('supplementary research completes exactly five daily readings and never pub
  let calls=0,writes=0;
  const env={OPENAI_API_KEY:'test',HEALTH_NEWS_KV:{get:async()=>null,put:async()=>writes++}};
  const fetcher=async(url,options)=>{
-  if(url==='https://www.michaeljfox.org/research-news')return new Response('',{status:503});
+  if(['https://www.michaeljfox.org/research-news','https://agencia.fapesp.br/','https://www.gov.br/saude/pt-br/assuntos/noticias-ms'].includes(url))return new Response('',{status:503});
   if(url.startsWith(base))return new Response('<meta property="article:published_time" content="2026-10-15"><h1>Health discovery</h1><p>'+('New prevention research with limitations. '.repeat(20))+'</p>',{headers:{'content-type':'text/html'}});
   calls++;if(calls===1)return api([0,1,2].map(i=>({url:base+i})));
   if(calls===2){assert.equal(JSON.parse(options.body).max_tool_calls,4);return api([2,3,4].map(i=>({url:base+i})));}
@@ -100,7 +100,7 @@ test('supplementary research completes exactly five daily readings and never pub
  const digest=await generateHealthDigest(env,new Date('2026-10-16T09:00:00Z'),fetcher);assert.equal(calls,3);assert.equal(digest.items.length,5);assert.equal(new Set(digest.items.map(x=>x.url)).size,5);assert.equal(writes,3);
  calls=0;writes=0;
  await assert.rejects(generateHealthDigest(env,new Date('2026-10-16T09:00:00Z'),async(url,options)=>{
-  if(url==='https://www.michaeljfox.org/research-news')return new Response('',{status:503});
+  if(['https://www.michaeljfox.org/research-news','https://agencia.fapesp.br/','https://www.gov.br/saude/pt-br/assuntos/noticias-ms'].includes(url))return new Response('',{status:503});
   if(url.startsWith(base))return fetcher(url,options);
   return api([{url:base+1}]);
  }),/complete five/);assert.equal(writes,0);

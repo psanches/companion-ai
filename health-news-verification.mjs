@@ -16,6 +16,7 @@ export function isoDay(value){
  const slash=value.match(/^(\d{4})\/(\d{2})\/(\d{2})/);if(slash)return isoDay(`${slash[1]}-${slash[2]}-${slash[3]}`);
  const english=value.trim().match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})$/i);
  if(english){const month=['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(english[1].toLowerCase())+1;return isoDay(`${english[3]}-${String(month).padStart(2,'0')}-${english[2].padStart(2,'0')}`);}
+ const pt=value.trim().match(/^(\d{1,2}) de (janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) de (\d{4})$/i);if(pt){const month=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'].indexOf(pt[2].toLowerCase())+1;return isoDay(`${pt[3]}-${String(month).padStart(2,'0')}-${pt[1].padStart(2,'0')}`);}
  const br=value.match(/\b(\d{2})\/(\d{2})\/(\d{4})\b/);return br?isoDay(`${br[3]}-${br[2]}-${br[1]}`):null;
 }
 export function publicationFromHtml(html){
@@ -26,7 +27,7 @@ export function publicationFromHtml(html){
  // Gov.br exposes original publication separately from its last-modified field.
  const gov=html.match(/<span\b[^>]*class=["'][^"']*documentPublished[^"']*["'][^>]*>([\s\S]{0,900})/i);
  if(gov){const day=isoDay(gov[1].replace(/<[^>]*>/g,' '));if(day)found.push({date:day,evidence:'documentPublished'});}
- if(!found.length){const header=html.match(/<\/h1\s*>([\s\S]{0,1800})/i)?.[1]||'';const visible=header.match(/>\s*((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4})\s*</i);if(visible){const day=isoDay(visible[1]);if(day)found.push({date:day,evidence:'Dedicated publication date below article heading'});}}
+ if(!found.length){const header=html.match(/<\/h1\s*>([\s\S]{0,3000})/i)?.[1]||'';const visible=header.match(/>\s*((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}|\d{1,2} de (?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) de \d{4})\s*</i);if(visible){const day=isoDay(visible[1]);if(day)found.push({date:day,evidence:'Dedicated publication date below article heading'});}}
  if(!found.length)throw Error('Publication date could not be verified');
  if(new Set(found.map(x=>x.date)).size!==1)throw Error('Source publication dates conflict');
  return found[0];
@@ -66,20 +67,23 @@ export function citedSourceUrls(data){
 
 // Supplement search with links actually present on a primary publisher's current news index.
 export async function discoverPublisherLinks(fetcher=fetch){
- const index='https://www.michaeljfox.org/research-news';let diagnostic={index};
- function empty(error){const result=[];result.diagnostic={...diagnostic,error};return result;}
- try{
-  let url=publicSourceUrl(index),response;
+ const health=/saude|health|cancer|melanoma|imun|vaccin|vacina|malaria|sono|sleep|aliment|exerc|fisic|nutri|envelhe|parkinson|cogni|cardi|diabet|asma|respir|obes|muscul|radioterap|tomograf|atendimento|sus/;
+ const sources=[
+  {url:'https://www.michaeljfox.org/research-news',limit:3,match:u=>u.pathname.startsWith('/news/')},
+  {url:'https://agencia.fapesp.br/',limit:4,match:u=>/\/[^/]+\/\d+$/.test(u.pathname)&&health.test(u.pathname)},
+  {url:'https://www.gov.br/saude/pt-br/assuntos/noticias-ms',limit:4,match:u=>/\/noticias-ms\/\d{4}\/[^/]+\/[^/]+/.test(u.pathname)}
+ ];
+ const results=await Promise.allSettled(sources.map(async source=>{
+  let url=publicSourceUrl(source.url),response;
   for(let n=0;n<4;n++){response=await fetcher(url.href,{redirect:'manual',signal:AbortSignal.timeout(20000)});if([301,302,303,307,308].includes(response.status)){const next=response.headers.get('location');await response.body?.cancel();url=publicSourceUrl(new URL(next,url).href);response=null;continue;}break;}
-  diagnostic={...diagnostic,status:response?.status,finalUrl:url.href};if(!response?.ok)return empty('Index unavailable');
-  const html=await readHtml(response),urls=[];diagnostic.bytes=html.length;
-  const main=html.slice(Math.max(0,html.search(/<h1\b/i)));
+  if(!response?.ok)return [];
+  const html=await readHtml(response),main=html.slice(Math.max(0,html.search(/<h1\b/i))),urls=[];
   for(const m of main.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi)){
-   try{const candidate=publicSourceUrl(new URL(m[1],url).href);if(['www.michaeljfox.org','michaeljfox.org'].includes(candidate.hostname)&&candidate.pathname.startsWith('/news/')&&!urls.includes(candidate.href))urls.push(candidate.href);}catch{}
+   try{const candidate=publicSourceUrl(new URL(m[1],url).href);if(candidate.hostname.replace(/^www\./,'')!==url.hostname.replace(/^www\./,''))continue;if(!source.match(candidate)||/school|conference|fundrais|grant-application|estudantes-de-medicina|curso-gratuito/.test(candidate.pathname))continue;if(!urls.includes(candidate.href))urls.push(candidate.href);}catch{}
   }
-  diagnostic.linkCount=urls.length;diagnostic.dateSamples=html.match(/(?:October|September)\s+\d{1,2},?\s+2026/g)?.slice(0,5)||[];
-  const result=urls.slice(0,6).map(url=>({url,discoveredVia:index}));result.diagnostic=diagnostic;return result;
- }catch(error){return empty(error.message);}
+  return urls.slice(0,source.limit).map(url=>({url,discoveredVia:source.url}));
+ }));
+ return results.flatMap(r=>r.status==='fulfilled'?r.value:[]);
 }
 
 export function classifyStory(text){
