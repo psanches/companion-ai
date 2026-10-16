@@ -3,7 +3,7 @@ import {packageWorker} from './package-worker.mjs';
 import fs from 'node:fs';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
 const request=JSON.parse(fs.readFileSync(new URL('./request.json',import.meta.url)));
 assert.equal(request.target,'lumi-develop');assert.equal(request.mode,'deploy');
-assert.equal(process.env.GITHUB_REF,'refs/heads/feature/restore-lumi-home-20261014');
+assert.equal(process.env.GITHUB_REF,'refs/heads/feature/pc-android-permanent-fix-20261016');
 assert.equal(process.env.LUMI_DEPLOY_CONFIRM,'DEPLOY_LUMI_DEVELOP_ONLY');
 const originalHash='e0631cc2dc97dba8527d684c28ea990141be7180ce49875536f7cc4aaa67066c';
 const researchKey=process.env.LUMI_RESEARCH_OPENAI_API_KEY;if(!researchKey)throw Error('Missing dedicated Lumi Research API key; refusing deploy');
@@ -26,11 +26,19 @@ async function http(path,options={}){return fetch(sandbox+path,{...options,cache
 const before={};for(const path of ['/health','/memory','/calendar/events']){const r=await http(path);before[path]={status:r.status,type:r.headers.get('content-type')};await r.arrayBuffer();}
 function form(modules,addDemo=false){const fd=new FormData();const metadata={main_module:'worker.js',keep_bindings:[...new Set((settingsBefore.bindings||[]).map(b=>b.type))].filter(type=>type!=='service'),bindings:(settingsBefore.bindings||[]).filter(b=>b.type==='service'&&(!addDemo||b.name!=='LUMI_ATIVA_DEMO'))};for(const key of ['compatibility_date','compatibility_flags','logpush','tail_consumers','observability','placement','limits','tags'])if(settingsBefore[key]!==undefined)metadata[key]=settingsBefore[key];if(addDemo){metadata.bindings.push({type:'service',name:'LUMI_ATIVA_DEMO',service:'lumi-ativa-medical-demo'});metadata.bindings.push({type:'secret_text',name:'LUMI_RESEARCH_OPENAI_API_KEY',text:researchKey});metadata.bindings.push({type:'ratelimit',name:'LUMI_RESEARCH_RATE_LIMIT',namespace_id:'1001',simple:{limit:5,period:60}});}fd.set('metadata',new Blob([JSON.stringify(metadata)],{type:'application/json'}));for(const m of modules)fd.set(m.name,new Blob([m.bytes],{type:m.type}),m.name);return fd;}
 const modules=packageWorker(original);
-// Preserve the inspected live frontend, including editor changes made after the last Git deploy.
+// Keep the immediately previous immutable assets available for tabs opened before deployment.
+const decodeSnapshot=name=>{const module=originals.find(m=>m.name===name);if(!module)return {};const text=module.bytes.toString('utf8');assert.ok(text.startsWith('export default '),'Unexpected release snapshot format');return JSON.parse(text.slice(15).replace(/;\s*$/,''));};
+const previousRelease=decodeSnapshot('frontend-release.mjs');
+const previousAssets=decodeSnapshot('frontend-previous.mjs');
+const retained=Object.fromEntries(Object.entries({...previousAssets,...(previousRelease.immutable||{})}).slice(-100));
+modules.find(m=>m.name==='frontend-previous.mjs').bytes=Buffer.from('export default '+JSON.stringify(retained)+';\n');
+// Verify the deployed frontend has not drifted outside its recorded release.
 const liveAssets=originals.find(m=>m.name==='ativa-assets.mjs');
 assert.ok(liveAssets,'Current frontend assets missing');
-assert.equal(sha(liveAssets.bytes),'8b23b20e2576b9d4137f2dbb0981d7506aa5d50b59b09d0ddcf1f5c4b94349e1','Live frontend changed since inspection; review required');
-modules[modules.findIndex(m=>m.name==='ativa-assets.mjs')]=liveAssets;
+assert.equal(sha(liveAssets.bytes),previousRelease.assetsSha256||'8b23b20e2576b9d4137f2dbb0981d7506aa5d50b59b09d0ddcf1f5c4b94349e1','Live frontend changed since inspection; review required');
+// Publish the reproducible Git package, never substitute the deployed asset bundle.
+const release=(await import('../frontend/release.generated.mjs')).default;
+assert.equal(release.commit,process.env.GITHUB_SHA,'Release must match tested checkout');
 // Refuse to silently discard modules added through another deployment path.
 const knownNames=new Set(modules.map(m=>m.name));
 assert.ok(originals.every(m=>knownNames.has(m.name)), 'Unknown deployed modules require review before replacement');
@@ -42,12 +50,13 @@ try{
  changed=true;const uploaded=await (await cf(base,{method:'PUT',body:form(modules,true)})).json();
  let uploadedVersion=uploaded?.result?.version_id||uploaded?.result?.version?.id||null;for(let attempt=0;attempt<12;attempt++){const items=(await (await cf(base+'/versions')).json()).result.items||[];const newer=items.find(v=>!versionBefore.some(previous=>previous.id===v.id));if(newer?.id){uploadedVersion=newer.id;break;}if(uploadedVersion)break;await new Promise(resolve=>setTimeout(resolve,1000));}assert.ok(uploadedVersion&&!versionBefore.some(v=>v.id===uploadedVersion),'Cannot identify uploaded sandbox version after polling; rollback required');
  const versionDetails=(await (await cf(base+'/versions/'+uploadedVersion)).json()).result;assert.ok(versionDetails.resources?.script?.handlers?.includes('scheduled'),'Cloudflare did not register scheduled handler');
- await cf(base+'/deployments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({strategy:'percentage',versions:[{version_id:uploadedVersion,percentage:100}],annotations:{'workers/message':'Authorized synthetic Lumi Ativa sandbox integration'}})});
+ await cf(base+'/deployments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({strategy:'percentage',versions:[{version_id:uploadedVersion,percentage:100}],annotations:{'workers/message':'PC/Android verified commit '+process.env.GITHUB_SHA}})});
  const expectedCrons=[...new Set([...schedulesBefore.map(s=>s.cron),HEALTH_NEWS_CRON_UTC])];
  await cf(base+'/schedules',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(expectedCrons.map(cron=>({cron})))});
  const schedulesAfter=(await (await cf(base+'/schedules')).json()).result.schedules;assert.deepEqual(schedulesAfter.map(s=>s.cron).sort(),expectedCrons.sort(),'Cron configuration mismatch');
  console.log(JSON.stringify({stage:'sandbox-version-activated',version:uploadedVersion,commit:process.env.GITHUB_SHA,crons:expectedCrons}));
  let propagated=false;for(let attempt=0;attempt<30;attempt++){const nonce=encodeURIComponent(process.env.GITHUB_RUN_ID+'-'+attempt);const probe=await http('/?_verify='+nonce,{headers:{'cache-control':'no-cache'}});const html=await probe.text();if(probe.status===200&&/Companion AI|lumi-build/i.test(html)&&html.includes('health-news-ui.js')&&probe.headers.get('x-lumi-news-ui')==='1'){const status=await http('/ativa-status?_verify='+nonce);const data=await status.json().catch(()=>null);if(status.status===200&&data?.syntheticServiceBound===true){propagated=true;break;}}await new Promise(r=>setTimeout(r,1000));}assert.ok(propagated,'Original Lumi homepage and demo binding did not both propagate; rollback required');
+ const versionProbe=await http('/frontend-version');assert.equal((await versionProbe.json()).commit,process.env.GITHUB_SHA,'Published frontend does not match tested commit');
  const settingsAfter=(await (await cf(base+'/settings')).json()).result;
  const config=s=>JSON.stringify({date:s.compatibility_date,flags:s.compatibility_flags||[],bindings:[...(s.bindings||[])].filter(b=>!['LUMI_ATIVA_DEMO','LUMI_RESEARCH_OPENAI_API_KEY','LUMI_RESEARCH_RATE_LIMIT'].includes(b.name)).sort((a,b)=>a.name.localeCompare(b.name)),assets:s.assets});assert.ok(config(settingsAfter)===config(settingsBefore),'Existing development configuration changed unexpectedly');
  const service=settingsAfter.bindings.find(b=>b.name==='LUMI_ATIVA_DEMO');assert.equal(service?.type,'service');assert.equal(service?.service,'lumi-ativa-medical-demo');
@@ -63,5 +72,6 @@ try{
  assert.equal(await contentHash(productionUrl),productionHash,'Production source hash changed');
  const code=process.env.DEMO_ACCESS_CODE;assert.ok(code);const login=await http('/demo-api/session',{method:'POST',headers:{origin:sandbox,'content-type':'application/json'},body:JSON.stringify({code})});if(login.status!==200){const diagnostic=await login.json().catch(()=>({}));console.log(JSON.stringify({stage:'integrated-session',status:login.status,diagnostic:diagnostic.diagnostic||null}));}assert.equal(login.status,200,'Integrated demo login failed');const cookie=login.headers.get('set-cookie')?.split(';')[0];assert.ok(cookie);
  const ai=await http('/demo-api/explain',{method:'POST',headers:{origin:sandbox,cookie,'content-type':'application/json'},body:JSON.stringify({recordId:'laboratorio',questionId:'explicar'})});assert.equal(ai.status,200,'Integrated synthetic AI check failed');const answer=await ai.json();assert.equal(answer.fictional,true);assert.ok(answer.reply?.length);
- const result={url:sandbox+'/',medicalUrl:sandbox+'/ativa-medical/',fictional:true,baselineSha256:originalHash,productionSourceUnchanged:true,bindingsPreserved:true,syntheticServiceBinding:true,liveAI:true};console.log(JSON.stringify(result,null,2));if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'## Lumi + Ativa deployed in authorized development sandbox\n\n```json\n'+JSON.stringify(result,null,2)+'\n```\nReal medical routes remain blocked; original code and bindings preserved. No private source/secret values exported.\n');
+ await (await import('../frontend/deployed-check.mjs')).verifyFrontend(sandbox,release);
+ const result={commit:process.env.GITHUB_SHA,cloudflareVersion:uploadedVersion,release:release.release,url:sandbox+'/',medicalUrl:sandbox+'/ativa-medical/',fictional:true,baselineSha256:originalHash,productionSourceUnchanged:true,bindingsPreserved:true,syntheticServiceBinding:true,liveAI:true};console.log(JSON.stringify(result,null,2));if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'## Lumi + Ativa deployed in authorized development sandbox\n\n```json\n'+JSON.stringify(result,null,2)+'\n```\nReal medical routes remain blocked; original code and bindings preserved. No private source/secret values exported.\n');
 }catch(error){if(changed){try{await cf(base,{method:'PUT',body:form(originals)});await cf(base+'/schedules',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(schedulesBefore.map(({cron})=>({cron})))});await cf(base+'/deployments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({strategy:'percentage',versions:rollbackVersions.map(({version_id,percentage})=>({version_id,percentage}))})});console.error('Integration check failed; exact prior development code restored.');}catch{console.error('Automatic restoration failed; development Worker needs immediate review. Production was not deployed.');}}throw error;}

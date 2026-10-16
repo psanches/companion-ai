@@ -1,0 +1,49 @@
+# Lumi PC and Android experience audit — 16 October 2026
+
+Scope: `lumi-develop.psanchesnle.workers.dev` only. Branch: `feature/pc-android-permanent-fix-20261016`, based on `093001b0f9c08b6dee2e07add988657225795840`, preserving the latest Calendar runtime correction. Production must not be deployed.
+
+## Findings and root causes
+
+| Symptom | Evidence and classification | Change |
+|---|---|---|
+| UI changes disappear after a Git deployment | Confirmed: `deploy.mjs` replaces the generated `ativa-assets.mjs` with the currently deployed module. Live homepage also has a mobile Mente e Corpo link absent from Git's generated homepage. | Reconcile that link into the builder; publish the tested Git assets; verify previous source snapshot hash before replacing it. |
+| Different interfaces depending on deployment path | Confirmed: `main` uses `worker.js` and root static assets; the active development branch uses a multipart Worker preserving a baseline plus integrations. `wrangler.jsonc` at root targets `companion-ai`, not the development Worker. | Dedicated branch and guarded existing development pipeline; do not run root Wrangler deploy. Keep every packaged module and current bindings. |
+| Unreliable asset identity | Confirmed: HTML loads `app.js?v=` plus `Date.now()`; local assets lack fingerprints; development asset responses use `no-store`; service-worker development cache name is fixed. Live homepage was already `no-store`, so current stale HTML was not established by the HTTP probe. | Content hashes, explicit HTML revalidation, immutable asset URLs, version endpoint and retained previous assets. |
+| Update interrupts work | Confirmed by source: service-worker `controllerchange` immediately reloads the page, irrespective of drafts and dialogs. | No reload on controller change. Show update notice; reload automatically only after inactivity when drafts, focused composer, chat/research requests and open dialogs are absent. No draft persistence is added. |
+| Login occasionally unresponsive | Confirmed failure paths: all app initialization depends on a floating external Supabase script; malformed locally saved JSON throws before login listeners are installed. This does not establish the cause of every historical incident. | Vendor the exact SDK version resolved during audit (2.118.0), fingerprint its bytes, and tolerate invalid local JSON. Login history now loads on SIGNED_IN rather than only initial page load. |
+| Truncated buttons, missing navigation, overflow | Confirmed layout risks: mobile fixed button sizes and nonshrinking header action group compete for narrow width; the sidebar's fixed controls and flex conversation list can exceed short screens. | Wrapping header, intrinsic auth label width, minimum touch sizes, scrollable sidebar, inert hidden mobile sidebar, preserved Mente e Corpo and Notícias links. Verified viewport behavior in browser tests; historical screenshots alone do not establish a current reproduction. |
+| Composer obscured by Android keyboard | Confirmed missing handling: `100dvh` shell has no visual viewport controller or interactive-widget declaration. A hardware reproduction was not available. | Android viewport resize policy plus visualViewport height at scale 1; composer does not shrink; only message list scrolls. Pinch zoom stays enabled. |
+| “This site can't be reached” | Not reproduced in HTTPS development probes. No DNS/Cloudflare-zone configuration evidence establishes a cause. | No unsupported claim of a DNS fix. |
+
+## Changed files
+
+- `app.js`: robust saved-state parsing, post-login history load, in-flight chat flag; remove unsafe service-worker reload handler. Personality, message-history window and API protocol remain intact.
+- `index.html`: keyboard resize hint, stable script tags, locally packaged authentication dependency.
+- `sw.js`: public fingerprint assets only; migrate old Lumi caches; never cache HTML, sessions or API data. Cache bounded to 100 files.
+- `frontend/build-release.mjs`, `version-worker.mjs`: deterministic SHA-256 asset names; final Calendar-patched app bytes; release/commit endpoint; HTML references; cache headers; previous release fallback.
+- `frontend/experience.css`, `experience.js`: viewport layout, touch sizes, focus, sidebar accessibility, safe update notification.
+- `frontend/vendor/*`: pinned existing Supabase browser SDK and MIT license/provenance.
+- `frontend/package*.json`, `*.test.mjs`, `browser-test.mjs`, `deployed-check.mjs`: cache/service-worker/regression contracts, simulated desktop/mobile browser flows and deployed-byte verification.
+- `lumi-ativa-integration/build-assets.mjs`, `package-worker.mjs`, `worker-entry.mjs`, `deploy.mjs`: reproducible release packaging, preserve active modules/bindings, commit verification, baseline/asset drift guards and existing automatic rollback.
+- `.github/workflows/lumi-ativa-integration.yml`: dedicated branch guard, frontend tests before publication, screenshots/JSON validation artifact.
+- `.gitignore`: generated files, test artifacts and dependencies excluded.
+
+## Cache strategy and maintenance
+
+HTML: `private, no-cache, max-age=0, must-revalidate`. Stable JS/CSS aliases: `no-cache, max-age=0, must-revalidate`. Fingerprinted JS/CSS: `public, max-age=31536000, immutable`; each hash is of the exact bytes returned. The final Calendar augmentation is included before hashing. Unknown hashes return 404, never unrelated HTML/JavaScript. Authentication and medical/API policies retain their original no-store behavior. `/sw.js` revalidates, and `/frontend-version` is no-store.
+
+The service worker caches only same-origin `/_assets/<sha256>/...` resources, never private content. It removes legacy Lumi caches, leaves unrelated caches alone, and does not force a page reload. It intentionally does not provide an offline authenticated app. Previously downloaded public assets can be read offline; HTML and APIs still need a connection. The deployment carries the previous immutable asset collection (bounded to 100 entries) for open tabs. Very old tabs outside that retention must refresh online; indefinite historical asset hosting is not claimed.
+
+Build once with `node lumi-ativa-integration/build-assets.mjs` under the tested `GITHUB_SHA`. Do not edit generated modules in Cloudflare. If an existing deployed snapshot differs from its recorded hash, the pipeline stops for review. The original Worker baseline remains an explicitly hash-verified deployed dependency, not a claim that all historical backend code has been reconstructed from Git.
+
+## Validation and limitations
+
+Local regression: 253 existing tests passed initially; latest total and CI results are recorded in the deployment evidence below. New tests cover immutable byte hashes, revalidation, unknown versions, original-handler boundaries, old-cache removal, offline public assets and version/rollback identity contracts.
+
+Playwright uses Chromium and synthetic authentication/backend fixtures: 1440×900, 360×800, 393×851, 320×640, and 800×360. Tests check complete labels, click and keyboard activation, email/OAuth redirect contracts, signed-in navigation, six-message history with earlier-message loading, zero horizontal overflow, composer/send geometry, reduced-height keyboard simulation, draft-safe update notification, logout privacy and refresh. One scenario starts with malformed local state. Service workers are blocked in these routed UI fixtures; their lifecycle and cache behavior are tested separately in a JavaScript harness. That harness is not an actual browser service-worker upgrade or offline hardware test.
+
+No actual Android device, Gboard, installed-PWA upgrade, Samsung browser, assistive-technology or real Google consent was exercised. Real account sessions, private history and calendar events are not created or inspected by these fixtures. Existing Calendar integration tests exercise synthetic events; deployed checks verify anonymous writes, foreign-origin requests and invalid callbacks are denied. A deliberate live Cloudflare rollback is not performed; the existing restore path and prior version IDs are preserved. No claim of a fully verified production promotion is made until real Android/PWA and authenticated Google Calendar smoke tests are complete.
+
+## Deployment evidence
+
+Pending guarded CI and development deployment. Do not interpret local tests as proof of publication. Exact commit, Cloudflare version, workflow, hash verification and final assessment will be appended after the run.

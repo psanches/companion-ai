@@ -51,12 +51,11 @@ const defaults = {
   messages: []
 };
 
-let state = {
-  ...defaults,
-  ...JSON.parse(
-    localStorage.getItem(STORAGE) || "{}"
-  )
-};
+function readLocalState() {
+  try { const value=JSON.parse(localStorage.getItem(STORAGE)||"{}"); return value && typeof value==="object" && !Array.isArray(value) ? value : {}; }
+  catch { return {}; }
+}
+let state = {...defaults,...readLocalState()};
 
 
 /* =========================================================
@@ -239,7 +238,7 @@ async function updateAuthUI() {
   if (!signedIn) {
     state.messages = [];
     fullHistory = [];
-    const stored = JSON.parse(localStorage.getItem(STORAGE) || "{}");
+    const stored = readLocalState();
     delete stored.messages;
     localStorage.setItem(STORAGE, JSON.stringify(stored));
     if (messagesEl) messagesEl.replaceChildren();
@@ -272,9 +271,12 @@ signOutBtn?.addEventListener("click", async () => {
   }
 });
 
-supabaseClient.auth.onAuthStateChange(() => {
-  // Avoid awaiting another auth API call synchronously inside the callback.
-  setTimeout(() => { updateAuthUI(); }, 0);
+supabaseClient.auth.onAuthStateChange(event => {
+  // Run session reads outside Supabase's auth callback lock.
+  setTimeout(async () => {
+    await updateAuthUI();
+    if (event === "SIGNED_IN") await loadSharedHistory();
+  }, 0);
 });
 
 updateAuthUI();
@@ -929,6 +931,7 @@ form.onsubmit = async e => {
     return;
   }
 
+  form.dataset.sending = "true";
   input.value = "";
 
   add(
@@ -993,6 +996,8 @@ form.onsubmit = async e => {
       "system",
       err.message
     );
+  } finally {
+    delete form.dataset.sending;
   }
 };
 
@@ -1150,36 +1155,7 @@ $("#deleteMemoryBtn").onclick =
    SERVICE WORKER
    ========================================================= */
 
-if ("serviceWorker" in navigator) {
-  let refreshing = false;
-
-  navigator.serviceWorker.addEventListener(
-    "controllerchange",
-    () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    }
-  );
-
-  window.addEventListener("load", async () => {
-    try {
-      const registration =
-        await navigator.serviceWorker.register(
-          "./sw.js",
-          { updateViaCache: "none" }
-        );
-
-      await registration.update();
-    } catch (error) {
-      console.error(
-        "Lumi update check failed:",
-        error
-      );
-    }
-  });
-}
-
+// Service-worker lifecycle and safe update checks live in frontend/experience.js.
 
 /* =========================================================
    VOICE INPUT

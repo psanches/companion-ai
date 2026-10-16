@@ -6,4 +6,7 @@ import {createLumiResearchHandler} from './lumi-research-handler.mjs';
 export * from './ativa-baseline-preserved.mjs';
 import {withHealthNews} from './health-news-worker.mjs';
 import {withCalendar} from './calendar-worker.mjs';
-export default withCalendar(withHealthNews(createLumiAtivaIntegration(baseline,assets,fetch,createLumiResearchHandler())));
+import {withFrontendVersion} from './frontend-version.mjs';
+import release from './frontend-release.mjs';
+import previous from './frontend-previous.mjs';
+export default withFrontendVersion(withCalendar(withHealthNews(createLumiAtivaIntegration(baseline,assets,fetch,createLumiResearchHandler()))),release,previous);

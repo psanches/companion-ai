@@ -3,7 +3,7 @@ name: Lumi development Ativa integration
 # Retry after verified CI, version discovery and asset propagation fixes.
 on:
   push:
-    branches: [feature/restore-lumi-home-20261014]
+    branches: [feature/pc-android-permanent-fix-20261016]
   workflow_dispatch:
     inputs:
       inspect_only:
@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   inspect:
-    if: github.ref == 'refs/heads/feature/restore-lumi-home-20261014' && inputs.inspect_only == true
+    if: github.ref == 'refs/heads/feature/pc-android-permanent-fix-20261016' && inputs.inspect_only == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
         run: node lumi-ativa-integration/inspect.mjs
   integrate:
-    if: github.ref == 'refs/heads/feature/restore-lumi-home-20261014' && ((github.event_name == 'workflow_dispatch' && inputs.confirm == 'DEPLOY_LUMI_DEVELOP_ONLY' && inputs.inspect_only != true) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[health-news-develop-deploy]') || contains(github.event.head_commit.message, '[calendar-develop-deploy]'))))
+    if: github.ref == 'refs/heads/feature/pc-android-permanent-fix-20261016' && ((github.event_name == 'workflow_dispatch' && inputs.confirm == 'DEPLOY_LUMI_DEVELOP_ONLY' && inputs.inspect_only != true) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[pc-android-develop-deploy]') || contains(github.event.head_commit.message, '[calendar-develop-deploy]'))))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -52,6 +52,19 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund && npm test && node --test ../lumi-ativa-integration/tests/*.test.mjs
       - name: Research and authenticated route tests (no deploy)
         run: node --test lumi-research/*.test.mjs lumi-ativa-integration/research-hook.test.mjs
+      - name: Frontend cache contracts and desktop/Android viewport simulations
+        run: |
+          npm ci --prefix frontend --ignore-scripts --no-audit --no-fund
+          npm test --prefix frontend
+          node frontend/node_modules/playwright/cli.js install --with-deps chromium
+          mkdir -p frontend/test-results
+          npm run test:browser --prefix frontend
+      - name: Preserve frontend validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-validation-${{ github.sha }}
+          path: frontend/test-results/
       - name: Read-only preflight deployment history
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
@@ -76,7 +89,7 @@ jobs:
           LUMI_RESEARCH_OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
         run: node lumi-ativa-integration/health-news-smoke.mjs
   health_news_check:
-    if: github.ref == 'refs/heads/feature/restore-lumi-home-20261014' && github.event_name == 'push' && contains(github.event.head_commit.message, '[health-news-runtime-check]')
+    if: github.ref == 'refs/heads/feature/pc-android-permanent-fix-20261016' && github.event_name == 'push' && contains(github.event.head_commit.message, '[health-news-runtime-check]')
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -92,7 +105,7 @@ jobs:
         run: node lumi-ativa-integration/health-news-smoke.mjs
 
   calendar_inspect:
-    if: github.ref == 'refs/heads/feature/restore-lumi-home-20261014' && github.event_name == 'push' && contains(github.event.head_commit.message, '[calendar-inspect]')
+    if: github.ref == 'refs/heads/feature/pc-android-permanent-fix-20261016' && github.event_name == 'push' && contains(github.event.head_commit.message, '[calendar-inspect]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,7 +119,7 @@ jobs:
         run: node lumi-ativa-integration/calendar-inspect.mjs
 
   calendar_auth_runtime:
-    if: github.ref == 'refs/heads/feature/restore-lumi-home-20261014' && github.event_name == 'push' && contains(github.event.head_commit.message, '[calendar-auth-runtime-check]')
+    if: github.ref == 'refs/heads/feature/pc-android-permanent-fix-20261016' && github.event_name == 'push' && contains(github.event.head_commit.message, '[calendar-auth-runtime-check]')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -1,0 +1,4 @@
+node_modules/
+**/assets.generated.mjs
+frontend/*.generated.mjs
+frontend/test-results/

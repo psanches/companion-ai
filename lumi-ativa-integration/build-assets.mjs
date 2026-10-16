@@ -105,14 +105,13 @@ html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-o
 
   // Development-only signed-in actions: make profile and fictional health visible
   // even when a previously installed frontend or mobile viewport has stale layout.
+  content=content.replace('<main class="app">','<main class="app"><a id="lumiMindBodyMobile" href="/lumi-mind-body.html">🧠🚶 Mente, Corpo e Psicologia</a>');
   const headerEnd='<div class="header-actions">';
   if(!content.includes(headerEnd))throw Error('Lumi header missing');
   content=content.replace(headerEnd,headerEnd+`<style>
 html.lumi-authenticated .header-actions{flex-wrap:wrap;justify-content:flex-end}
 html.lumi-authenticated #profileBtn,html.lumi-authenticated #healthDemoBtn{display:grid!important;opacity:1!important;visibility:visible!important;flex:0 0 42px!important}
-#lumiMindBodyIcon{display:none!important}
-html.lumi-authenticated #lumiMindBodyIcon{display:grid!important;place-items:center!important;flex:0 0 35px!important;width:35px!important;height:35px!important;min-width:35px!important;padding:0!important;border:1px solid #7dd3fc;border-radius:10px;background:#20354b;color:white;text-decoration:none;font-size:19px}
-</style><a id="lumiMindBodyIcon" href="/lumi-mind-body.html" title="Mente, Corpo e Psicologia" aria-label="Abrir Mente, Corpo e Psicologia">🧠</a>`);
+</style>`);
   // The original beta dashboard listener expects a trigger that is absent from the
   // original HTML. Add it only to this development copy, avoiding a null listener.
   const betaAnchor='<button id="lumiExerciseBtn"';
@@ -196,3 +195,6 @@ html.lumi-authenticated #lumiMindBodyIcon{display:grid!important;place-items:cen
  assets['/lumi-original/'+name]={type,encoding:ext==='.png'?'base64':'utf8',content};
 }
 fs.writeFileSync(new URL('./assets.generated.mjs',import.meta.url),'export default '+JSON.stringify(assets)+';\n');console.log('Synthetic Lumi public assets packaged; no credentials or runtime source included.');
+const {buildRelease}=await import('../frontend/build-release.mjs');
+const release=buildRelease(assets);
+console.log(JSON.stringify({release:release.release,commit:release.commit,immutableAssets:Object.keys(release.immutable).length}));

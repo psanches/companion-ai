@@ -1,0 +1,2 @@
+# Keep upstream browser bundles byte-identical, including upstream whitespace.
+frontend/vendor/*.js -whitespace

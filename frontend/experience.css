@@ -1,0 +1,31 @@
+/* Shared layout rules for the development package; loaded after legacy styles. */
+html,body{max-width:100%;overscroll-behavior:none}
+.app{height:var(--lumi-viewport-height,100dvh);min-height:0;min-width:0}
+.app-header{flex:0 0 auto;flex-wrap:wrap;min-width:0;gap:8px}
+.header-actions{min-width:0;max-width:100%;flex-wrap:wrap;flex-shrink:1;justify-content:flex-end}
+.header-actions button,#closeSidebarBtn{min-height:44px;min-width:44px;height:44px}
+.header-actions .auth-button{width:auto;min-width:max-content;flex:0 0 auto;padding:0 14px;font-size:14px;white-space:nowrap}
+.auth-box{flex:0 0 auto}
+.composer{flex:0 0 auto;padding-bottom:max(12px,env(safe-area-inset-bottom));min-width:0}
+.composer-box{min-width:0}
+.composer textarea{font-size:16px;max-height:min(160px,25dvh)}
+.messages{min-height:0;min-width:0;overscroll-behavior:contain;overflow-wrap:anywhere}
+#conversationSidebar{overflow-y:auto;overscroll-behavior:contain;height:var(--lumi-viewport-height,100dvh)}
+#conversationSidebar>button,#conversationSidebar>a,.sidebar-top,.sidebar-label{flex-shrink:0;min-height:44px}
+#conversationList{flex:1 0 80px}
+button:focus-visible,a:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid #a8dcf2;outline-offset:3px}
+dialog{max-width:calc(100vw - 24px);max-height:calc(var(--lumi-viewport-height,100dvh) - 24px);overflow:auto}
+#lumiUpdateNotice{position:fixed;bottom:12px;left:12px;right:12px;z-index:100;background:#20354b;color:#fff;border:1px solid #a8dcf2;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font:16px system-ui}
+#lumiUpdateNotice button{min-height:44px;padding:8px 16px}
+#lumiMindBodyMobile{display:none}
+@media(max-width:900px){
+ .app-header{padding:8px 12px}.header-actions{justify-content:flex-start;gap:6px}
+ html.lumi-authenticated .header-actions{width:100%}
+ html.lumi-authenticated #lumiMindBodyMobile{display:block;flex:0 0 auto;margin:4px 12px;padding:10px 12px;min-height:44px;border:1px solid #7dd3fc;border-radius:12px;background:#20354b;color:#fff;text-decoration:none;text-align:center}
+ #conversationSidebar[aria-hidden=true]{visibility:hidden}
+}
+@media(max-height:500px){#lumiMindBodyMobile{display:none!important}.companion-profile{display:none}.app-header{min-height:0;padding:4px 8px}.messages{padding:8px}.composer{padding:4px 8px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+.voice-button{flex:0 0 44px;min-width:44px;min-height:44px;border:0;border-radius:50%;background:var(--surface-2);color:var(--text)}
+#loadEarlierBtn{flex:0 0 auto;min-height:44px;background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+#lumiResearchBtn{min-height:44px}
