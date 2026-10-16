@@ -1,0 +1,28 @@
+# Lumi Health News persistence investigation — 2026-10-16
+
+Scope: `lumi-develop` only. Never use root `wrangler.jsonc` to deploy this fix: that configuration targets `companion-ai`, the production Worker.
+
+## Confirmed repository evidence
+
+- `9b901695d1fb84917aadaa2ef32105608b9365ac` added `health-news-daily.mjs` on October 15 at 19:52 UTC. It is present in Git, not lost.
+- Before this fix, `lumi-ativa-integration/deploy.mjs` generated `worker.js` from an inline string and uploaded a fixed list of eight modules. That list omitted `health-news-daily.mjs`; its entry did not attach a scheduled handler. Uploading this package replaces editor-only code.
+- The root Wrangler configuration also points to a different entry (`worker.js`) and Worker (`companion-ai`). It does not describe the integration deployment. The sandbox's intended deployment path is `.github/workflows/lumi-ativa-integration.yml` and its guarded API uploader.
+- Run 38797385503 for the news commit passed **Validate Lumi home restoration (no deploy)**. Green CI did not publish the new module or test its scheduling.
+- The most recent deploy workflow available in the inspected GitHub history was run 38720085300, October 15 at 10:24 UTC, commit `ec9424b3`. Its job log records version `95ceafb1-b64d-4069-b7b8-c4d15456ad03`, predating the news module. It does not identify the reported active `e8d6e35d` version. Thus GitHub history alone does not establish who activated that later version or exactly which operation removed either editor copy.
+- The reported error `Handler does not export a scheduled() function` means execution did not reach news generation. A missing KV binding would instead fail inside the generator; no evidence establishes KV as the cause of the missing export.
+
+## Permanent code changes
+
+A tracked entry and package manifest now include the news module and scheduled wrapper in every sandbox upload. Regression tests import the actual packaged `worker.js` and verify that its default export has `scheduled()`.
+
+The wrapper delegates existing routes unchanged, preserves existing handler methods and their receiver, and forwards other schedules to the baseline. The 09:00 UTC schedule (06:00 São Paulo) generates the public digest; GET `/health-news` reads the stored edition without triggering API spend. Existing generator logic, model and credentials are unchanged.
+
+Deployment checks required existing KV/key bindings before mutation; preserves unknown integrations by refusing to discard unreviewed modules; checks uploaded module hashes; preserves existing cron triggers while adding the intended schedule; and rolls back to the **active deployment**, rather than the newest uploaded but possibly inactive version. Previous schedules are restored on rollback. Production is never a mutation target.
+
+The workflow supports read-only inspection. A push containing the explicit `[health-news-develop-deploy]` marker on the existing sandbox branch runs the guarded deployment for this authorized repair; ordinary pushes do not deploy. Manual deployment remains available.
+
+## Validation and remaining evidence
+
+Local validation: 43 integration/research tests, 139 medical security tests and 18 synthetic demo tests passed (200 total). Tests include executable packaging, cron dispatch, existing-route preservation, daily cache reuse and retaining the last good edition on API failure. No live OpenAI request was used in these tests.
+
+The Cloudflare browser initially required sign-in; no Cloudflare credentials were available locally. The workflow's read-only preflight records active deployment history, versions, module hashes, binding names/types and schedules using the already-configured deployment access. Inspect its output to correlate `e8d6e35d` before claiming an exact historical deletion event. Live cron invocation and a valid stored edition must still be verified after deployment. A healthy HTTP route alone is not proof that cron executed.
