@@ -48,7 +48,7 @@ export async function verifyStory(candidate,today,citedUrls,fetcher=fetch){
  if(!response?.ok)throw Error('Source page unavailable');
  if(!response.headers.get('content-type')?.includes('text/html')){await response.body?.cancel();throw Error('Source is not an article page');}
  const html=await readHtml(response);const publication=publicationFromHtml(html);const ageDays=checkPublication(publication.date,today);
- if(candidate.publishedAt!==publication.date)throw Error('Search date disagrees with original publication date');
+ if(candidate.publishedAt&&candidate.publishedAt!==publication.date)throw Error('Search date disagrees with original publication date');
  let body=html.replace(/<(script|style|nav|header|footer)\b[^>]*>[\s\S]*?<\/\1>/gi,' ');
  body=body.slice(Math.max(0,body.search(/<h1\b/i))).replace(/<[^>]*>/g,' ').replace(/&(?:nbsp|amp|quot|lt|gt);/g,' ').replace(/\s+/g,' ').trim().slice(0,14000);
  if(body.length<250)throw Error('Insufficient source text');

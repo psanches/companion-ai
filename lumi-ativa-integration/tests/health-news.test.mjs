@@ -61,7 +61,7 @@ test('international source is date-verified before Portuguese translation and pe
  const fetcher=async(url,opts)=>{
   if(url===source)return new Response('<meta property="article:published_time" content="2026-10-15T10:00:00Z"><h1>Research news</h1><p>'+('Evidence and limitations of a supervised study. '.repeat(20))+'</p>',{headers:{'content-type':'text/html'}});
   const body=JSON.parse(opts.body);calls++;
-  if(calls===1){assert.equal(body.max_tool_calls,6);assert.ok(body.input.includes('português E inglês'));return response([{type:'web_search_call',action:{sources:[{url:source}]}},message([{url:source,publishedAt:'2026-10-15'}])]);}
+  if(calls===1){assert.equal(body.max_tool_calls,6);assert.ok(body.input.includes('português e inglês'));return response([{type:'web_search_call',action:{sources:[{url:source}]}},message([{url:source,publishedAt:'2026-10-15'}])]);}
   assert.equal(body.tools,undefined);assert.match(body.input[0].content,/português do Brasil/);
   return response([message([{id:0,title:'Estudo sobre mobilidade',summary:'Uma pesquisa avaliou a mobilidade. Os resultados ainda são preliminares.'}])]);
  };
