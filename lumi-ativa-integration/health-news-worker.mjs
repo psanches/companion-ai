@@ -13,9 +13,10 @@ export function withHealthNews(original, generate = generateHealthDigest, latest
       if(url.pathname!=='/health-news'){
         const response=await original.fetch.call(original,request,env,ctx);
         if(request.method==='GET'&&['/','/index.html'].includes(url.pathname)&&response.ok&&response.headers.get('content-type')?.includes('text/html')){
-          const html=await response.text();const h=new Headers(response.headers);for(const key of ['content-length','content-encoding','etag'])h.delete(key);h.set('cache-control','no-store');
+          const html=await response.text();const h=new Headers(response.headers);for(const key of ['content-length','content-encoding','etag'])h.delete(key);h.set('cache-control','no-store');h.set('x-lumi-news-ui','1');
           const addition='<link rel="stylesheet" href="/health-news-ui.css?v=1"><script src="/health-news-ui.js?v=1" defer></script>';
-          return new Response(html.replace('</body>',addition+'</body>'),{status:response.status,headers:h});
+          const body=/<\/body\s*>/i.test(html)?html.replace(/<\/body\s*>/i,addition+'</body>'):html+addition;
+          return new Response(body,{status:response.status,headers:h});
         }
         return response;
       }

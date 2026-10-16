@@ -17,7 +17,7 @@ function el(tag,cls,text){const node=document.createElement(tag);if(cls)node.cla
 if(!document.querySelector('.news-page')){
  if(document.getElementById('lumiHealthNewsBtn'))return;
  const button=el('a','','📰 Notícias de Saúde');button.id='lumiHealthNewsBtn';button.href='/noticias';
- const anchor=document.getElementById('lumiExerciseBtn');
+ const anchor=document.getElementById('lumiMindBodyMobile')||document.getElementById('lumiExerciseBtn');
  if(anchor)anchor.before(button);else{const host=document.querySelector('.app');if(host)host.append(button);}
  return;
 }
