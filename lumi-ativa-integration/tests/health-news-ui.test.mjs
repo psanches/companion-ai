@@ -11,7 +11,7 @@ test('homepage button has a visible label, links to reader and is not duplicated
 });
 test('reader renders Portuguese cards, original date and safe source links as text',async()=>{
  const dom=setup(),w=dom.window;
- w.fetch=async()=>Response.json({policyVersion:2,date:'2026-10-16',items:[{title:'<img src=x onerror=alert(1)> Estudo',summary:'Resumo em português.',publishedAt:'2026-10-14',region:'Internacional',source:'www.michaeljfox.org',url:'https://www.michaeljfox.org/news/test',dateVerified:true},{title:'Unsafe',summary:'Unsafe',publishedAt:'2026-10-14',url:'javascript:alert(1)',dateVerified:true}]});
+ w.fetch=async()=>Response.json({policyVersion:3,date:'2026-10-16',items:[{title:'<img src=x onerror=alert(1)> Estudo',summary:'Resumo em português.',publishedAt:'2026-10-14',region:'Internacional',source:'www.michaeljfox.org',url:'https://www.michaeljfox.org/news/test',dateVerified:true},{title:'Unsafe',summary:'Unsafe',publishedAt:'2026-10-14',url:'javascript:alert(1)',dateVerified:true}]});
  w.eval(NEWS_SCRIPT);await tick();
  assert.equal(w.document.querySelectorAll('.news-card').length,1);assert.equal(w.document.querySelector('.news-card img'),null);assert.match(w.document.querySelector('h2').textContent,/<img/);
  assert.match(w.document.querySelector('time').textContent,/14\/10\/2026/);assert.equal(w.document.querySelector('time').dateTime,'2026-10-14');assert.equal(w.document.querySelector('.news-source a').rel,'noopener noreferrer');assert.match(w.document.getElementById('newsEdition').textContent,/1 notícia verificada/);w.close();

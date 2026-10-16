@@ -44,13 +44,13 @@ test('deployment package includes executable default scheduled handler and all i
 });
 test('verified edition is reused; legacy cache is hidden and does not prevent regeneration',async()=>{
  const {generateHealthDigest,getLatestHealthDigest,validEdition}=await import('../../health-news-daily.mjs');
- const cached={policyVersion:2,date:'2026-10-16',items:[{url:'https://www.nia.nih.gov/news/test',publishedAt:'2026-10-15',dateVerified:true,language:'pt-BR',summary:'Texto'}]};
+ const cached={policyVersion:3,date:'2026-10-16',items:Array.from({length:5},(_,i)=>({url:'https://www.nia.nih.gov/news/test'+i,publishedAt:'2026-10-15',kind:'noticia',dateVerified:true,language:'pt-BR',summary:'Texto'}))};
  let writes=[];const env={OPENAI_API_KEY:'test',HEALTH_NEWS_KV:{get:async()=>cached,put:async(...a)=>writes.push(a)}};
  assert.equal(await generateHealthDigest(env,new Date('2026-10-16T09:00:00Z')),cached);assert.equal(writes.length,1);
  assert.equal(validEdition({...cached,policyVersion:1},'2026-10-16'),false);
  env.HEALTH_NEWS_KV.get=async()=>({date:'2026-10-16',items:['legacy']});
  assert.equal(await getLatestHealthDigest(env),null);
- env.HEALTH_NEWS_KV.get=async()=>({...cached,items:[{...cached.items[0],publishedAt:'2026-10-17'}]});assert.equal(await getLatestHealthDigest(env,new Date('2026-10-16T09:00:00Z')),null);
+ env.HEALTH_NEWS_KV.get=async()=>({...cached,items:cached.items.map((x,i)=>i?x:{...x,publishedAt:'2026-10-17'})});assert.equal(await getLatestHealthDigest(env,new Date('2026-10-16T09:00:00Z')),null);
  env.HEALTH_NEWS_KV.get=async()=>({date:'2026-10-16',items:['legacy']});
  await assert.rejects(generateHealthDigest(env,new Date('2026-10-16T09:00:00Z'),async()=>new Response('',{status:503})),/503/);assert.equal(writes.length,1);
 });
@@ -62,14 +62,14 @@ test('international source is date-verified before Portuguese translation and pe
  const message=items=>({type:'message',content:[{type:'output_text',text:JSON.stringify({items})}]});
  const fetcher=async(url,opts)=>{
   if(url==='https://www.michaeljfox.org/research-news')return new Response('',{status:503});
-  if(url===source)return new Response('<meta property="article:published_time" content="2026-10-15T10:00:00Z"><h1>Research news</h1><p>'+('Evidence and limitations of a supervised study. '.repeat(20))+'</p>',{headers:{'content-type':'text/html'}});
+  if(url.startsWith(source))return new Response('<meta property="article:published_time" content="2026-10-15T10:00:00Z"><h1>Research news</h1><p>'+('Evidence and limitations of a supervised study. '.repeat(20))+'</p>',{headers:{'content-type':'text/html'}});
   const body=JSON.parse(opts.body);calls++;
-  if(calls===1){assert.equal(body.max_tool_calls,6);assert.ok(body.input.includes('português e inglês'));return response([{type:'web_search_call',action:{sources:[{url:source}]}},message([{url:source,publishedAt:'2026-10-15'}])]);}
+  if(calls===1){assert.equal(body.max_tool_calls,6);assert.ok(body.input.includes('português e inglês'));return response([{type:'web_search_call',action:{sources:Array.from({length:5},(_,i)=>({url:source+i}))}},message(Array.from({length:5},(_,i)=>({url:source+i,publishedAt:'2026-10-15'})))]);}
   assert.equal(body.tools,undefined);assert.match(body.input[0].content,/português do Brasil/);
-  return response([message([{id:0,title:'Estudo sobre mobilidade',summary:'Uma pesquisa avaliou a mobilidade. Os resultados ainda são preliminares.'}])]);
+  return response([message(Array.from({length:5},(_,id)=>({id,title:'Estudo sobre saúde '+id,summary:'Uma pesquisa avaliou a saúde. Os resultados ainda são preliminares.'})))]);
  };
  const digest=await generateHealthDigest(env,new Date('2026-10-16T09:00:00Z'),fetcher);
- assert.equal(calls,2);assert.equal(writes.length,2);assert.equal(digest.items.length,1);assert.equal(digest.items[0].region,'Internacional');assert.equal(digest.items[0].publishedAt,'2026-10-15');assert.equal(digest.items[0].dateVerified,true);assert.equal(digest.items[0].sourceText,undefined);
+ assert.equal(calls,2);assert.equal(writes.length,3);assert.equal(digest.items.length,5);assert.equal(digest.items[0].region,'Internacional');assert.equal(digest.items[0].publishedAt,'2026-10-15');assert.equal(digest.items[0].dateVerified,true);assert.equal(digest.items[0].sourceText,undefined);
 });
 test('incomplete discovery fails without overwriting storage',async()=>{
  const {generateHealthDigest}=await import('../../health-news-daily.mjs');let writes=0;
@@ -83,4 +83,25 @@ test('sandbox homepage receives reader assets while production HTML remains unto
  const html=await home.text();assert.match(html,/Original Lumi/);assert.match(html,/health-news-ui.js/);assert.equal(home.headers.has('content-length'),false);assert.equal(home.headers.has('etag'),false);
  const prod=await worker.fetch(new Request('https://mylumicompanion.com/'));assert.doesNotMatch(await prod.text(),/health-news-ui/);
  const reader=await worker.fetch(new Request('https://lumi-develop.psanchesnle.workers.dev/noticias'));assert.match(await reader.text(),/Notícias de Saúde/);
+});
+test('supplementary research completes exactly five daily readings and never publishes a partial edition',async()=>{
+ const {generateHealthDigest}=await import('../../health-news-daily.mjs');
+ const base='https://www.nia.nih.gov/news/health-',message=items=>({type:'message',content:[{type:'output_text',text:JSON.stringify({items})}]});
+ const api=items=>Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:items.map(x=>({url:x.url}))}},message(items)]});
+ let calls=0,writes=0;
+ const env={OPENAI_API_KEY:'test',HEALTH_NEWS_KV:{get:async()=>null,put:async()=>writes++}};
+ const fetcher=async(url,options)=>{
+  if(url==='https://www.michaeljfox.org/research-news')return new Response('',{status:503});
+  if(url.startsWith(base))return new Response('<meta property="article:published_time" content="2026-10-15"><h1>Health discovery</h1><p>'+('New prevention research with limitations. '.repeat(20))+'</p>',{headers:{'content-type':'text/html'}});
+  calls++;if(calls===1)return api([0,1,2].map(i=>({url:base+i})));
+  if(calls===2){assert.equal(JSON.parse(options.body).max_tool_calls,4);return api([2,3,4].map(i=>({url:base+i})));}
+  return Response.json({status:'completed',output:[message(Array.from({length:5},(_,id)=>({id,title:'Saúde '+id,summary:'Estudo sobre prevenção. Os achados têm limitações.'})))]});
+ };
+ const digest=await generateHealthDigest(env,new Date('2026-10-16T09:00:00Z'),fetcher);assert.equal(calls,3);assert.equal(digest.items.length,5);assert.equal(new Set(digest.items.map(x=>x.url)).size,5);assert.equal(writes,3);
+ calls=0;writes=0;
+ await assert.rejects(generateHealthDigest(env,new Date('2026-10-16T09:00:00Z'),async(url,options)=>{
+  if(url==='https://www.michaeljfox.org/research-news')return new Response('',{status:503});
+  if(url.startsWith(base))return fetcher(url,options);
+  return api([{url:base+1}]);
+ }),/complete five/);assert.equal(writes,0);
 });
