@@ -1,3 +1,4 @@
+import {waitForRelease} from '../frontend/wait-for-release.mjs';
 import {HEALTH_NEWS_CRON_UTC} from '../health-news-daily.mjs';
 import {packageWorker} from './package-worker.mjs';
 import fs from 'node:fs';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
@@ -55,8 +56,12 @@ try{
  await cf(base+'/schedules',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(expectedCrons.map(cron=>({cron})))});
  const schedulesAfter=(await (await cf(base+'/schedules')).json()).result.schedules;assert.deepEqual(schedulesAfter.map(s=>s.cron).sort(),expectedCrons.sort(),'Cron configuration mismatch');
  console.log(JSON.stringify({stage:'sandbox-version-activated',version:uploadedVersion,commit:process.env.GITHUB_SHA,crons:expectedCrons}));
- let propagated=false;for(let attempt=0;attempt<30;attempt++){const nonce=encodeURIComponent(process.env.GITHUB_RUN_ID+'-'+attempt);const probe=await http('/?_verify='+nonce,{headers:{'cache-control':'no-cache'}});const html=await probe.text();if(probe.status===200&&/Companion AI|lumi-build/i.test(html)&&html.includes('health-news-ui.js')&&probe.headers.get('x-lumi-news-ui')==='1'){const status=await http('/ativa-status?_verify='+nonce);const data=await status.json().catch(()=>null);if(status.status===200&&data?.syntheticServiceBound===true){propagated=true;break;}}await new Promise(r=>setTimeout(r,1000));}assert.ok(propagated,'Original Lumi homepage and demo binding did not both propagate; rollback required');
- const versionProbe=await http('/frontend-version');assert.equal((await versionProbe.json()).commit,process.env.GITHUB_SHA,'Published frontend does not match tested commit');
+ await waitForRelease(async()=>{
+  const home=await http('/');const html=await home.text();
+  const versionResponse=await http('/frontend-version');const version=await versionResponse.json().catch(()=>null);
+  return {ok:home.ok&&html.includes('health-news-ui.js')&&home.headers.get('x-lumi-news-ui')==='1'&&versionResponse.ok,commit:version?.commit,release:version?.release,homeCommit:home.headers.get('x-lumi-commit'),homeRelease:home.headers.get('x-lumi-release')};
+ },{commit:process.env.GITHUB_SHA,release:release.release});
+ const integrationStatus=await http('/ativa-status');assert.equal((await integrationStatus.json()).syntheticServiceBound,true,'Synthetic demo binding unavailable');
  const settingsAfter=(await (await cf(base+'/settings')).json()).result;
  const config=s=>JSON.stringify({date:s.compatibility_date,flags:s.compatibility_flags||[],bindings:[...(s.bindings||[])].filter(b=>!['LUMI_ATIVA_DEMO','LUMI_RESEARCH_OPENAI_API_KEY','LUMI_RESEARCH_RATE_LIMIT'].includes(b.name)).sort((a,b)=>a.name.localeCompare(b.name)),assets:s.assets});assert.ok(config(settingsAfter)===config(settingsBefore),'Existing development configuration changed unexpectedly');
  const service=settingsAfter.bindings.find(b=>b.name==='LUMI_ATIVA_DEMO');assert.equal(service?.type,'service');assert.equal(service?.service,'lumi-ativa-medical-demo');

@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {waitForRelease} from './wait-for-release.mjs';
+const wanted={ok:true,commit:'new',release:'new-hash',homeCommit:'new',homeRelease:'new-hash'},options={commit:'new',release:'new-hash',attempts:3,pause:async()=>{}};
+test('deployment waits through an older runtime and mixed-version responses',async()=>{let calls=0;const observations=[{...wanted,commit:'old'}, {...wanted,homeCommit:'old'},wanted];assert.deepEqual(await waitForRelease(async()=>observations[calls++],options),wanted);assert.equal(calls,3);});
+test('same commit with the wrong asset manifest cannot be promoted',async()=>{await assert.rejects(()=>waitForRelease(async()=>({...wanted,release:'wrong-hash'}),options),/rollback required/);});
+test('transient probe failures do not bypass identity verification',async()=>{let calls=0;assert.deepEqual(await waitForRelease(async()=>{if(!calls++)throw Error('transient');return wanted;},options),wanted);assert.equal(calls,2);});

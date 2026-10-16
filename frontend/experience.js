@@ -16,8 +16,8 @@
  function notice(){
   if(document.getElementById('lumiUpdateNotice'))return;
   const box=document.createElement('aside'),text=document.createElement('span'),button=document.createElement('button');
-  box.id='lumiUpdateNotice';box.setAttribute('role','status');text.textContent='Uma nova versão da Lumi está disponível. Conclua sua mensagem ou janela antes de atualizar.';
-  button.textContent='Atualizar';button.type='button';button.onclick=apply;box.append(text,button);document.body.append(box);
+  box.id='lumiUpdateNotice';box.setAttribute('role','status');text.textContent='Nova versão disponível. Atualize após concluir sua mensagem ou janela.';
+  button.textContent='Atualizar';button.type='button';button.onclick=apply;box.append(text,button);const header=document.querySelector('.app-header');if(header)header.after(box);else document.body.prepend(box);
  }
  async function check(){
   if(!current||checking||document.hidden||!navigator.onLine)return;
