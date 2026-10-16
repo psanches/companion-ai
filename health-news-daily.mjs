@@ -36,7 +36,7 @@ export async function generateHealthDigest(env,now=new Date(),fetcher=fetch){
  verified.sort((a,b)=>a.ageDays-b.ageDays);
  const international=verified.filter(x=>x.region==='Internacional'),brasil=verified.filter(x=>x.region==='Brasil');
  const selected=[...international.slice(0,3),...brasil.slice(0,2)];for(const item of verified)if(selected.length<5&&!selected.includes(item))selected.push(item);
- if(!selected.length)throw Error('No recent stories passed original-page/date verification');
+ if(!selected.length)throw Error('No verified stories: '+JSON.stringify({candidates:unique.length,citations:cited.size,rejected}));
  const translated=await ask(apiKey,{
   max_output_tokens:4000,
   text:{format:schema({id:{type:'integer'},title:{type:'string'},summary:{type:'string'}},selected.length,selected.length)},
