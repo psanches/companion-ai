@@ -31,7 +31,9 @@ Scope: `lumi-develop.psanchesnle.workers.dev` only. Branch: `feature/pc-android-
 
 ## Agenda addition requested during validation
 
-The signed-in sidebar now includes **Agenda**. It opens the existing daily reader on today's date in Brasília time, supports changing the date and refreshing, and shows all returned events from the connected primary Google Calendar, including those created outside Lumi. It never creates an event by opening the agenda. The day reader now accepts an absent creation receipt: it does not invent an event or display a false creation confirmation. Existing post-creation confirmation behavior remains covered by its original tests. Calendar API permissions and server behavior are unchanged. New unit tests cover standalone reads/failure, and Playwright opens Agenda at all five viewport sizes.
+The signed-in sidebar includes **Agenda**. Following the user's Android acceptance request, every click opens the current Monday–Sunday week in Brasília time, with seven day groups, previous/next week, current week, date selection and refresh. It lists the connected primary Google Calendar, including events created outside Lumi. Opening it never creates an event. A new authenticated read-only weekly route queries Google once for the seven-day interval and preserves the existing read-only grant support. Post-creation event receipts still use the existing daily view. Missing Calendar consent now offers **Conectar Google Calendar** using the existing OAuth route, with a Google-origin URL check; the ordinary Google connection returns to the weekly agenda without affecting interrupted event creation.
+
+The user reported that the Android screen showed only email sign-in, then clarified that the Google option was absent rather than describing a failed OAuth response. The canonical development link was supplied again. A confirmed source-level mobile risk was then addressed: opening Sign in forcibly focused the email field, which can raise the Android keyboard and scroll the Google choice above the visible area. The dialog now starts at its heading with both choices visible and does not request a text keyboard until the user selects email. Mobile browser tests assert the Google choice is visible before email focus. The current source and automated mobile flow contain **Continuar com Google**; the old shortcut/browser destination was not available for inspection, so its cause is not asserted or reported as fixed on hardware.
 
 ## Cache strategy and maintenance
 
@@ -43,7 +45,7 @@ Build once with `node lumi-ativa-integration/build-assets.mjs` under the tested 
 
 ## Validation and limitations
 
-Local regression: 253 existing tests passed initially; final total with cache/deployment contracts, rollout convergence and standalone Agenda coverage is 268. CI results are recorded in the deployment evidence below. New tests cover immutable byte hashes, revalidation, unknown versions, original-handler boundaries, old-cache removal, offline public assets and version/rollback identity contracts.
+Local regression: 253 existing tests passed initially; final total with cache/deployment contracts, rollout convergence, standalone and weekly Agenda coverage is 272. CI results are recorded in the deployment evidence below. New tests cover immutable byte hashes, revalidation, unknown versions, original-handler boundaries, old-cache removal, offline public assets and version/rollback identity contracts.
 
 Playwright uses Chromium and synthetic authentication/backend fixtures: 1440×900, 360×800, 393×851, 320×640, and 800×360. Tests check complete labels, click and keyboard activation, email/OAuth redirect contracts, signed-in navigation, six-message history with earlier-message loading, zero horizontal overflow, composer/send geometry, reduced-height keyboard simulation, draft-safe update notification, logout privacy and refresh. One scenario starts with malformed local state. Service workers are blocked in these routed UI fixtures. A separate real Chromium localhost test upgrades an installed legacy service worker, verifies old-cache removal, public asset access offline, uncached HTML/private requests, a subsequent deployment with retained prior assets, draft-safe updating, and rollback reload. The JavaScript harness also tests cache boundaries. These are isolated browser tests, not Android hardware tests.
 
@@ -53,4 +55,33 @@ No actual Android device, Gboard, installed-PWA upgrade, Samsung browser, assist
 
 The news validation for this frontend mission is read-only: it checks the existing five-story edition and page, without invoking the generation job or creating a temporary Worker. The cron and bindings are compared during deployment.
 
-Pending guarded CI and development deployment. Do not interpret local tests as proof of publication. Exact commit, Cloudflare version, workflow, hash verification and final assessment will be appended after the run.
+Final publication completed on 16 October 2026 at approximately 15:35 Brasília time.
+
+| Evidence | Verified result |
+|---|---|
+| Deployed source commit | `9bd8880d0708199d58ecd02144e9cbd660f1f3d7` |
+| Cloudflare version | `b29cb4c2-c156-4c8f-ab63-13319fc02682` |
+| Release manifest | `115a1cc403689e8ec6b9c78e2e12cd40a35c4b58d43332aaf62a2dbdabdb4776` |
+| Workflow | [Successful run 38948393174](https://github.com/psanches/companion-ai/actions/runs/38948393174) |
+| Automated tests | 268 passed: medical 139, synthetic demo 18, integration/Calendar 81, Research 17, frontend contracts 13 |
+| Browser scenarios | Five viewport scenarios passed; standalone Agenda opened and read the synthetic daily events in every scenario |
+| Service worker | Actual Chromium localhost upgrade/offline/next-release/rollback lifecycle passed |
+| Deployed asset bytes | All nine immutable JS/CSS assets matched SHA-256 paths; independently rechecked after the workflow |
+| Calendar security | Anonymous event/day writes denied; foreign origin denied; invalid OAuth callback denied; invalid session reached authentication and returned 401 |
+| Medical restrictions | Real medical routes still 403; original baseline hash and modules verified |
+| Existing features | Original backend route status/content-type boundaries preserved; synthetic medical live AI passed; original conversation/history/personality code retained |
+| News | Existing 16/10/2026 edition: five verified stories, with international coverage; read-only check passed |
+| Schedule and bindings | Existing bindings preserved; `0 9 * * *` trigger retained and compared |
+| Production | Source/module hash unchanged before and after development deployment; no production deployment |
+
+Screenshots and browser results are downloadable from the workflow's `frontend-validation-9bd8880d0708199d58ecd02144e9cbd660f1f3d7` artifact. A report-only follow-up commit does not change the deployed runtime identity.
+
+Additional live signed-out Chromium checks through the environment's HTTPS proxy verified the real vendored SDK, the sign-in dialog and refresh on desktop and a mobile viewport without JavaScript exceptions. The proxy required ignoring its browser certificate trust error; these checks are not evidence of certificate validation or service-worker registration through that proxy. Normal HTTPS public probes independently verified the release and asset bytes. No real user login, private data or Calendar write was performed.
+
+Two automatic restores were observed during rollout: one for an overly broad new clock assertion (then fixed and regression-tested), and one when the first version probe still identified the previous release (then fixed with bounded commit-plus-manifest convergence polling). The separate branch-specific legacy news smoke check also rejected the new branch; this mission now uses a read-only news check. These intermediate failures are not counted as successful releases. The final linked run passed every step.
+
+## Final production-readiness assessment
+
+Ready for continued development acceptance on PC and Android. **Not yet approved for production promotion**: real Android Chrome/Gboard and installed-PWA acceptance, real authenticated Google Calendar reading/creation/return, and accessibility with actual zoom/assistive technology remain unverified. The production environment's deployment configuration and host guards require an explicit promotion review; do not use the root production-named Wrangler configuration to deploy this development package.
+
+Rollback uses the inspected prior Cloudflare version and original module snapshot. The deployment restores the snapshot, schedules and active version allocation automatically if its protected checks fail. Historical public assets are bounded to 100 cached/retained files; indefinite support for very old open tabs and offline private access are intentionally not provided. Account authentication and API operations need a network connection.

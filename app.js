@@ -117,9 +117,10 @@ function ensureAuthDialog() {
     "color:#f8fafc;box-shadow:0 20px 70px #0008;";
   const heading = document.createElement("h2");
   heading.textContent = "Entrar na Lumi";
+  heading.tabIndex = -1;
   heading.style.marginTop = "0";
   const help = document.createElement("p");
-  help.textContent = "Digite seu e-mail. Enviaremos um link para entrar sem senha.";
+  help.textContent = "Entre com sua conta Google ou receba um link por e-mail.";
   const form = document.createElement("form");
   form.noValidate = true;
   const label = document.createElement("label");
@@ -147,6 +148,7 @@ function ensureAuthDialog() {
   rememberLabel.append(remember,document.createTextNode("Lembrar de mim neste dispositivo"));
   const googleButton = document.createElement("button");
   googleButton.type = "button";
+  googleButton.id = "lumiGoogleSignIn";
   googleButton.textContent = "Continuar com Google";
   googleButton.style.cssText =
     "width:100%;margin:0 0 12px;padding:12px;border-radius:8px;" +
@@ -252,7 +254,9 @@ signInBtn?.addEventListener("click", () => {
   const dialog = ensureAuthDialog();
   dialog.querySelector("#lumiAuthStatus").textContent = "";
   dialog.showModal();
-  dialog.querySelector("#lumiSignInEmail").focus();
+  // Show both sign-in choices before a mobile keyboard can obscure them.
+  dialog.scrollTop = 0;
+  dialog.querySelector("h2").focus({ preventScroll: true });
 });
 
 signOutBtn?.addEventListener("click", async () => {

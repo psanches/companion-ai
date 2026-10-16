@@ -30,5 +30,5 @@ dialog{max-width:calc(100vw - 24px);max-height:calc(var(--lumi-viewport-height,1
 #loadEarlierBtn{flex:0 0 auto;min-height:44px;background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
 #lumiResearchBtn{min-height:44px}
 #lumiAgendaBtn{margin:0 14px 12px;padding:12px;border:1px solid #9bd6f5;border-radius:12px;background:#25344a;color:#fff;font:17px system-ui;text-align:left}
-#lumiCalendarDay{max-width:100%;min-width:0;overflow-wrap:anywhere}
-#lumiCalendarDay input,#lumiCalendarDay button{max-width:100%;min-height:44px}
+#lumiCalendarDay,#lumiCalendarWeek{max-width:100%;min-width:0;overflow-wrap:anywhere}
+#lumiCalendarDay input,#lumiCalendarDay button,#lumiCalendarWeek input,#lumiCalendarWeek button{max-width:100%;min-height:44px}

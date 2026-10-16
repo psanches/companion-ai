@@ -47,7 +47,7 @@ export function createCalendarHandler({fetcher=fetch,verify=createCalendarVerifi
  }
  return async function handle(request,env){
   const url=new URL(request.url),path=url.pathname.replace(/^\/api(?=\/)/,'');if(url.hostname!==HOST)return null;
-  const eventPath=path==='/calendar/events',draftPath=/^\/calendar\/events\/(prepare|confirm|cancel|resume|day)$/.test(path),oauth=['/auth/google/start','/auth/google/callback'].includes(path);
+  const eventPath=path==='/calendar/events',draftPath=/^\/calendar\/events\/(prepare|confirm|cancel|resume|day|week)$/.test(path),oauth=['/auth/google/start','/auth/google/callback'].includes(path);
   // Preserve GET event listing byte-for-byte through the original integration.
   if(!(eventPath&&request.method!=='GET'&&request.method!=='HEAD')&&!draftPath&&!oauth){
    // Do not let legacy chat confirmations write through the older helper.
@@ -62,14 +62,14 @@ export function createCalendarHandler({fetcher=fetch,verify=createCalendarVerifi
    if(path==='/auth/google/start'){if(!['GET','POST'].includes(request.method))return json({error:'Method not allowed'},405);return await start(request,env,user);}
    if(request.method!=='POST')return json({error:'Method not allowed'},405);
    const body=await bodyJson(request);
-   if(path.endsWith('/day')){try{
+   if(path.endsWith('/day')||path.endsWith('/week')){try{
     if(Object.keys(body).some(k=>k!=='date')||typeof body.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(body.date)||!Number.isFinite(Date.parse(body.date+'T00:00:00Z'))||new Date(body.date+'T00:00:00Z').toISOString().slice(0,10)!==body.date)fail('INPUT');
-    const next=new Date(Date.parse(body.date+'T12:00:00Z')+86400000).toISOString().slice(0,10),accessToken=await access(env,user.id,false),items=new Map();let pageToken;
+    const weekly=path.endsWith('/week'),selected=new Date(body.date+'T12:00:00Z'),offset=weekly?(selected.getUTCDay()+6)%7:0,date=new Date(selected.getTime()-offset*86400000).toISOString().slice(0,10),next=new Date(Date.parse(date+'T12:00:00Z')+(weekly?7:1)*86400000).toISOString().slice(0,10),accessToken=await access(env,user.id,false),items=new Map();let pageToken;
     for(let page=0;page<5;page++){
-     const params=new URLSearchParams({timeMin:new Date(calendarMidnight(body.date,'America/Sao_Paulo')).toISOString(),timeMax:new Date(calendarMidnight(next,'America/Sao_Paulo')).toISOString(),singleEvents:'true',showDeleted:'false',orderBy:'startTime',maxResults:'1000',fields:'items(id,summary,start,end,status),nextPageToken'});if(pageToken)params.set('pageToken',pageToken);
+     const params=new URLSearchParams({timeMin:new Date(calendarMidnight(date,'America/Sao_Paulo')).toISOString(),timeMax:new Date(calendarMidnight(next,'America/Sao_Paulo')).toISOString(),singleEvents:'true',showDeleted:'false',orderBy:'startTime',maxResults:'1000',fields:'items(id,summary,start,end,status),nextPageToken'});if(pageToken)params.set('pageToken',pageToken);
      const r=await google(api+'?'+params,{headers:{authorization:'Bearer '+accessToken}});if([401,403].includes(r.status))fail('CONNECT');if(!r.ok)fail('CHECK');const data=await r.json();if(!Array.isArray(data.items))fail('CHECK');
      for(const item of data.items){if(item.status==='cancelled')continue;if(typeof item.id!=='string'||!(item.start?.dateTime||item.start?.date)||!(item.end?.dateTime||item.end?.date))fail('CHECK');items.set(item.id,{id:item.id,title:String(item.summary||'').slice(0,200),start:item.start.dateTime||item.start.date,end:item.end.dateTime||item.end.date,allDay:!!item.start.date});}
-     pageToken=data.nextPageToken;if(!pageToken)return json({date:body.date,calendar:'primary',timeZone:'America/Sao_Paulo',events:[...items.values()].slice(0,100),count:items.size,truncated:items.size>100});
+     pageToken=data.nextPageToken;if(!pageToken)return json({date,...(weekly?{weekStart:date,weekEndExclusive:next}:{}),calendar:'primary',timeZone:'America/Sao_Paulo',events:[...items.values()].slice(0,100),count:items.size,truncated:items.size>100});
     }
     fail('DAY');
    }catch(error){if(error instanceof Failure&&['INPUT','CONNECT','CONFIG'].includes(error.code))throw error;fail('DAY');}}

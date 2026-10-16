@@ -9,6 +9,7 @@ const files = {
   'calendar-conflicts.mjs': '../lumi-calendar/calendar-conflicts.mjs',
   'calendar-worker.mjs': '../lumi-calendar/calendar-worker.mjs',
   'calendar-frontend.mjs': '../lumi-calendar/calendar-frontend.mjs',
+  'calendar-week-frontend.mjs': '../lumi-calendar/calendar-week-frontend.mjs',
   'ativa-factory.mjs': './factory.mjs',
   'ativa-assets.mjs': './assets.generated.mjs',
   'lumi-research-handler.mjs': '../lumi-research/handler.mjs',
