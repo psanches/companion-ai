@@ -50,6 +50,8 @@ test('verified edition is reused; legacy cache is hidden and does not prevent re
  assert.equal(validEdition({...cached,policyVersion:1},'2026-10-16'),false);
  env.HEALTH_NEWS_KV.get=async()=>({date:'2026-10-16',items:['legacy']});
  assert.equal(await getLatestHealthDigest(env),null);
+ env.HEALTH_NEWS_KV.get=async()=>({...cached,items:[{...cached.items[0],publishedAt:'2026-10-17'}]});assert.equal(await getLatestHealthDigest(env,new Date('2026-10-16T09:00:00Z')),null);
+ env.HEALTH_NEWS_KV.get=async()=>({date:'2026-10-16',items:['legacy']});
  await assert.rejects(generateHealthDigest(env,new Date('2026-10-16T09:00:00Z'),async()=>new Response('',{status:503})),/503/);assert.equal(writes.length,1);
 });
 test('international source is date-verified before Portuguese translation and persistence',async()=>{

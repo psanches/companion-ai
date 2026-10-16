@@ -66,13 +66,17 @@ export function citedSourceUrls(data){
 
 // Supplement search with links actually present on a primary publisher's current news index.
 export async function discoverPublisherLinks(fetcher=fetch){
- const index='https://www.michaeljfox.org/research-news';
+ const index='https://www.michaeljfox.org/research-news';let diagnostic={index};
+ function empty(error){const result=[];result.diagnostic={...diagnostic,error};return result;}
  try{
-  const response=await fetcher(index,{redirect:'error',signal:AbortSignal.timeout(15000)});if(!response.ok)return [];
-  const html=await readHtml(response),urls=[];
+  let url=publicSourceUrl(index),response;
+  for(let n=0;n<4;n++){response=await fetcher(url.href,{redirect:'manual',signal:AbortSignal.timeout(20000)});if([301,302,303,307,308].includes(response.status)){const next=response.headers.get('location');await response.body?.cancel();url=publicSourceUrl(new URL(next,url).href);response=null;continue;}break;}
+  diagnostic={...diagnostic,status:response?.status,finalUrl:url.href};if(!response?.ok)return empty('Index unavailable');
+  const html=await readHtml(response),urls=[];diagnostic.bytes=html.length;
   for(const m of html.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi)){
-   try{const url=publicSourceUrl(new URL(m[1],index).href);if(url.hostname==='www.michaeljfox.org'&&url.pathname.startsWith('/news/')&&!urls.includes(url.href))urls.push(url.href);}catch{}
+   try{const candidate=publicSourceUrl(new URL(m[1],url).href);if(['www.michaeljfox.org','michaeljfox.org'].includes(candidate.hostname)&&candidate.pathname.startsWith('/news/')&&!urls.includes(candidate.href))urls.push(candidate.href);}catch{}
   }
-  return urls.slice(0,6).map(url=>({url,discoveredVia:index}));
- }catch{return [];}
+  diagnostic.linkCount=urls.length;diagnostic.dateSamples=html.match(/(?:October|September)\s+\d{1,2},?\s+2026/g)?.slice(0,5)||[];
+  const result=urls.slice(0,6).map(url=>({url,discoveredVia:index}));result.diagnostic=diagnostic;return result;
+ }catch(error){return empty(error.message);}
 }
