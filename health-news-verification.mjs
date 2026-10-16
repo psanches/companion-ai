@@ -56,8 +56,9 @@ export async function verifyStory(candidate,today,citedUrls,fetcher=fetch){
  if(candidate.publishedAt&&candidate.publishedAt!==publication.date)throw Error('Search date disagrees with original publication date');
  let body=html.replace(/<(script|style|nav|header|footer)\b[^>]*>[\s\S]*?<\/\1>/gi,' ');
  body=body.slice(Math.max(0,body.search(/<h1\b/i))).replace(/<[^>]*>/g,' ').replace(/&(?:nbsp|amp|quot|lt|gt);/g,' ').replace(/\s+/g,' ').trim().slice(0,14000);
+ if(ageDays>30&&/dia[- ]d|neste sabado|neste domingo|inscri[çc][õo]es|campanha de multivacina/i.test(body.slice(0,500)))throw Error('Expired event is not an evergreen context reading');
  if(body.length<250)throw Error('Insufficient source text');
- return {url:url.href,publishedAt:publication.date,dateEvidence:publication.evidence,ageDays,region:url.hostname.endsWith('.br')?'Brasil':'Internacional',source:url.hostname,kind:ageDays<=30?'noticia':'contexto',category:classifyStory(body),sourceText:body};
+ return {url:url.href,publishedAt:publication.date,dateEvidence:publication.evidence,ageDays,region:url.hostname.endsWith('.br')?'Brasil':'Internacional',source:url.hostname,kind:ageDays<=30?'noticia':'contexto',category:classifyStory(body.slice(0,500)),sourceText:body};
 }
 export function citedSourceUrls(data){
  const values=[];
@@ -88,7 +89,7 @@ export async function discoverPublisherLinks(fetcher=fetch){
 
 export function classifyStory(text){
  const value=String(text).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().slice(0,6000);
- if(/\b(exercise|exercicios?|walking|caminhada|strength training|physical activity|atividade fisica|alongamento|treino|physiotherap|fisioterap|rehabilit)/.test(value))return 'exercicios';
+ if(/\b(exercise|exercicios?\b|walking|caminhada|strength training|physical activity|atividade fisica|alongamento|treino|physiotherap|fisioterap|rehabilit)/.test(value))return 'exercicios';
  if(/\b(sleep|sono|nutrition|nutricao|alimentacao|diet|mental health|saude mental|wellbeing|bem.estar|stress|estresse)/.test(value))return 'qualidade-de-vida';
  if(/parkinson|envelhecimento|healthy ag[ei]ng|older adults?|idosos?|dementia|demencia/.test(value))return 'parkinson-envelhecimento';
  return 'saude-geral';

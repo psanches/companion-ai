@@ -14,12 +14,13 @@ async function ask(apiKey,body,fetcher){
 }
 export function validEdition(digest,today){
  if(digest?.policyVersion!==HEALTH_NEWS_POLICY_VERSION||digest.date!==today||!Array.isArray(digest.items)||!digest.items.length||digest.items.length!==5)return false;
- return digest.items.every(item=>{try{const age=checkPublication(item.publishedAt,today);if(item.kind!==(age<=30?'noticia':'contexto'))return false;return item.dateVerified===true&&item.language==='pt-BR'&&!!item.url&&!!item.summary;}catch{return false;}});
+ return digest.items.every(item=>{try{const age=checkPublication(item.publishedAt,today);if(item.kind!==(age<=30?'noticia':'contexto'))return false;if(age>30&&/dia[- ]d|neste sabado|neste domingo|campanha de multivacina/i.test(item.title))return false;return item.dateVerified===true&&item.language==='pt-BR'&&!!item.url&&!!item.summary;}catch{return false;}});
 }
 /** Two bounded API calls: discover public sources, then translate/summarize verified page text. */
 export async function generateHealthDigest(env,now=new Date(),fetcher=fetch){
  const apiKey=env?.LUMI_RESEARCH_OPENAI_API_KEY||env?.OPENAI_API_KEY;
  if(!apiKey||!env?.HEALTH_NEWS_KV)throw Error('HEALTH_NEWS_KV and existing OpenAI key are required');
+ const transport=fetcher;let sourceRequests=0,apiRequests=0;fetcher=(url,options)=>{if(url==='https://api.openai.com/v1/responses'){if(++apiRequests>3)throw Error('Research API request budget exhausted');}else if(++sourceRequests>36)throw Error('Public-source request budget exhausted');return transport(url,options);};
  const date=dayInBrazil(now);const existing=await env.HEALTH_NEWS_KV.get(HISTORY_PREFIX+date,'json');
  if(validEdition(existing,date)){await env.HEALTH_NEWS_KV.put(KEY,JSON.stringify(existing));return existing;}
  const windowStart=new Date(Date.parse(date+'T00:00:00Z')-90*86400000).toISOString().slice(0,10);
@@ -63,7 +64,7 @@ export async function generateHealthDigest(env,now=new Date(),fetcher=fetch){
   if(/\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}|\b(?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|ontem|hoje|amanhã|semana passada|última semana|últimos dias)\b/i.test(text.title+' '+text.summary))throw Error('Unverified date claim in translated text');
   const {sourceText,...evidence}=story;return {...evidence,title:text.title.trim().slice(0,180),summary:text.summary.trim().slice(0,900),language:'pt-BR',dateVerified:true};
  });
- const digest={policyVersion:HEALTH_NEWS_POLICY_VERSION,date,title:'Notícias de Saúde',items,generatedAt:new Date().toISOString(),verification:{candidates:unique.length,accepted:items.length,news:items.filter(x=>x.kind==='noticia').length,context:items.filter(x=>x.kind==='contexto').length,international:items.filter(x=>x.region==='Internacional').length,rejected}};
+ const digest={policyVersion:HEALTH_NEWS_POLICY_VERSION,date,title:'Notícias de Saúde',items,generatedAt:new Date().toISOString(),verification:{candidates:unique.length,accepted:items.length,sourceRequests,apiRequests,news:items.filter(x=>x.kind==='noticia').length,context:items.filter(x=>x.kind==='contexto').length,international:items.filter(x=>x.region==='Internacional').length,rejected}};
  await env.HEALTH_NEWS_KV.put(HISTORY_PREFIX+date,JSON.stringify(digest),{expirationTtl:60*60*24*45});await env.HEALTH_NEWS_KV.put(KEY,JSON.stringify(digest));await env.HEALTH_NEWS_KV.put(RECENT_KEY,JSON.stringify([...recent,...items.map(x=>({url:x.url,date}))]),{expirationTtl:60*60*24*30});return digest;
 }
 export async function getLatestHealthDigest(env,now=new Date()){
