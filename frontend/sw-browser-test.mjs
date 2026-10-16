@@ -28,7 +28,7 @@ try{
  await context.setOffline(true);assert.equal(await page.evaluate(path=>fetch(path).then(r=>r.text()),oldPath),'old-public-bytes');
  assert.equal(await page.evaluate(()=>fetch('/history').then(()=>false,()=>true)),true);
  assert.equal(await page.evaluate(()=>fetch('/').then(()=>false,()=>true)),true);
- await context.setOffline(false);phase='b';await page.evaluate(()=>window.dispatchEvent(new Event('online')));await page.locator('#lumiUpdateNotice').waitFor();await page.getByRole('button',{name:'Atualizar',exact:true}).click();assert.equal(await page.locator('#messageInput').inputValue(),'Draft survives service-worker activation');
+ phase='b';await context.setOffline(false);await page.evaluate(()=>window.dispatchEvent(new Event('online')));await page.locator('#lumiUpdateNotice').waitFor();await page.getByRole('button',{name:'Atualizar',exact:true}).click();assert.equal(await page.locator('#messageInput').inputValue(),'Draft survives service-worker activation');
  await page.locator('#messageInput').fill('');await page.locator('#messageInput').blur();await page.getByRole('button',{name:'Atualizar',exact:true}).click();await page.waitForFunction(()=>document.querySelector('meta[name=lumi-release]')?.content==='release-b');
  assert.equal(await page.evaluate(path=>fetch(path).then(r=>r.text()),newPath),'new-public-bytes');assert.equal(await page.evaluate(path=>fetch(path).then(r=>r.text()),oldPath),'old-public-bytes');
  phase='a';await page.evaluate(()=>window.dispatchEvent(new Event('online')));await page.locator('#lumiUpdateNotice').waitFor();await page.getByRole('button',{name:'Atualizar',exact:true}).click();await page.waitForFunction(()=>document.querySelector('meta[name=lumi-release]')?.content==='release-a');
