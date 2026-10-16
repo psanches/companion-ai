@@ -93,4 +93,17 @@ The user requested that New Conversation archive the active conversation and sho
 
 The frontend immediately merges successful archive metadata, tolerates temporarily older list responses, queues overlapping refreshes, prevents concurrent send/archive/restore, and rejects stale responses after account changes. Restore uses the returned saved history and preserves the existing six-message display with earlier-message loading. Failed archiving leaves the current conversation visible. Logout removes sidebar metadata. Files: app.js, index.html, frontend/experience.css, frontend/conversation-worker.mjs and its tests, frontend/browser-test.mjs, worker-entry.mjs and package-worker.mjs.
 
-Local validation after this addition: 278 Node tests passed (six new archive-boundary tests), all five browser viewport scenarios passed with archive/new/restore and a deliberately stale list, and the separate real Chromium service-worker lifecycle passed. These fixtures use synthetic conversations; no private account archives were inspected. Publication evidence for this follow-up will be appended after deployment succeeds.
+Local validation after this addition: 278 Node tests passed (six new archive-boundary tests), all five browser viewport scenarios passed with archive/new/restore and a deliberately stale list, and the separate real Chromium service-worker lifecycle passed. These fixtures use synthetic conversations; no private account archives were inspected. Follow-up publication succeeded at 16:05 Brasília time on 16 October 2026:
+
+| Evidence | Result |
+|---|---|
+| Deployed commit | `581c8e31ef6217904be5645a7dc6fc7bb9ae6765` |
+| Cloudflare version | `350b7769-93af-47d0-a20e-279e47b9adbc` |
+| Release | `9595768ed84014d056317270276e86b4a441bec7e5a70af2ebdd2da35c595607` |
+| Successful workflow | [38952163289](https://github.com/psanches/companion-ai/actions/runs/38952163289) |
+| CI tests | 278 passed: medical 139, synthetic 18, integration/Calendar 85, Research 17, frontend 19; five browser scenarios and separate real Chromium service-worker lifecycle passed |
+| Independent public probe | Nine fingerprinted assets matched SHA-256 bytes and tested commit/release after workflow completion |
+| Preserved features | Calendar security checks passed without writes; existing five-story news edition verified read-only; bindings and cron preserved; production source unchanged |
+| Rollback target | Prior development version `11af8e6c-70a5-4e40-8dfc-043b8d244a91` (commit `c4596d80f6c2cdd74280317cc3ff4bb241c042b1`) |
+
+Browser evidence artifact: `frontend-validation-581c8e31ef6217904be5645a7dc6fc7bb9ae6765`. This is the latest runtime, superseding the weekly-publication evidence above. The same real-device and authenticated-Google limitations still apply. A report-only follow-up does not redeploy the runtime.
