@@ -1,1 +1,1 @@
-{"name": "lumi-frontend-validation", "private": true, "type": "module", "scripts": {"test": "node --test *.test.mjs", "test:browser": "node browser-test.mjs"}, "devDependencies": {"playwright": "1.58.2"}}
+{"name": "lumi-frontend-validation", "private": true, "type": "module", "scripts": {"test": "node --test *.test.mjs", "test:browser": "node browser-test.mjs && node sw-browser-test.mjs"}, "devDependencies": {"playwright": "1.58.2"}}
