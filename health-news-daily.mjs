@@ -1,7 +1,5 @@
 // Lumi Develop — boletim diário de saúde (dados públicos, sem dados pessoais).
-// Integração pendente: importar generateHealthDigest no Worker e configurar
-// cron "0 9 * * *" (06:00 America/Sao_Paulo, UTC-03) e KV HEALTH_NEWS_KV.
-// Não habilitar o cron antes de configurar o binding e validar o Worker.
+// Packaged by lumi-ativa-integration/package-worker.mjs; cron is managed by its guarded deployer.
 const KEY = "health-news:latest";
 const HISTORY_PREFIX = "health-news:date:";
 const MODEL = "gpt-5-mini";
@@ -49,19 +47,33 @@ function normalizeDigest(text, date) {
 
 /** Generate once per Brazilian calendar day; retain last good edition on failure. */
 export async function generateHealthDigest(env, now = new Date()) {
-  if (!env?.HEALTH_NEWS_KV || !env?.OPENAI_API_KEY)
+  const apiKey = env?.LUMI_RESEARCH_OPENAI_API_KEY || env?.OPENAI_API_KEY;
+  if (!env?.HEALTH_NEWS_KV || !apiKey)
     throw new Error("HEALTH_NEWS_KV and OPENAI_API_KEY are required");
   const date = dayInBrazil(now);
   const existing = await env.HEALTH_NEWS_KV.get(HISTORY_PREFIX + date, "json");
-  if (existing) return existing;
+  if (existing) {
+    // Repair latest if an earlier invocation wrote history but failed on the latest pointer.
+    await env.HEALTH_NEWS_KV.put(KEY, JSON.stringify(existing));
+    return existing;
+  }
 
   const response = await fetch("https://api.openai.com/v1/responses", {
-    method:"POST",
-    headers:{"Authorization": "Bearer " + env.OPENAI_API_KEY,
+    method:"POST", signal:AbortSignal.timeout(120000),
+    headers:{"Authorization": "Bearer " + apiKey,
       "Content-Type":"application/json"},
     body:JSON.stringify({
       model:MODEL, tools:[{type:"web_search"}],
-      max_output_tokens:2500,
+      max_output_tokens:6000, reasoning:{effort:"low"}, store:false,
+      tool_choice:"required", max_tool_calls:3,
+      text:{format:{type:"json_schema",name:"health_news",strict:true,schema:{
+        type:"object",additionalProperties:false,required:["items"],properties:{items:{
+          type:"array",minItems:5,maxItems:5,items:{type:"object",additionalProperties:false,
+            required:["title","summary","source","url"],properties:{
+              title:{type:"string"},summary:{type:"string"},source:{type:"string"},url:{type:"string"}
+            }}
+        }}
+      }}},
       input:"Pesquise notícias verificáveis de saúde publicadas preferencialmente nas últimas 24 horas, até " +
         date + " (horário de Brasília). Se não houver cinco notícias recentes relevantes, " +
         "use notícias de até sete dias e deixe a data clara no resumo. " +
@@ -69,11 +81,15 @@ export async function generateHealthDigest(env, now = new Date()) {
         "Evite sensacionalismo, aconselhamento médico individual e fontes não verificadas. " +
         "Retorne SOMENTE JSON válido: {\"items\":[{\"title\":\"...\",\"summary\":\"...\",\"source\":\"...\",\"url\":\"https://...\"}]} " +
         "com exatamente cinco itens e links diretos para matérias ou fontes originais. " +
-        "Nunca invente URLs. Resumos em português do Brasil."
+        "Nunca invente URLs. Resumos curtos de até duas frases, em português do Brasil. Priorize também Parkinson e envelhecimento saudável."
     })
   });
   if (!response.ok) throw new Error("Research API error: " + response.status);
   const data = await response.json();
+  if (data.status !== "completed")
+    throw new Error("Research incomplete: " + (data.incomplete_details?.reason || data.status || "unknown"));
+  if (!data.output?.some(item => item.type === "web_search_call"))
+    throw new Error("Research did not perform web search");
   const digest = normalizeDigest(extractText(data), date);
   // History first; latest is updated only after a valid complete digest.
   await env.HEALTH_NEWS_KV.put(HISTORY_PREFIX + date, JSON.stringify(digest), {

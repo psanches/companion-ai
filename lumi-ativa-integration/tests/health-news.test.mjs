@@ -52,7 +52,26 @@ test('daily generator reuses Brazilian-day cache and retains last good digest on
   assert.equal(await generateHealthDigest(env,new Date('2026-10-16T09:00:00Z')),cached);assert.equal(requests,0);
   env.HEALTH_NEWS_KV.get=async()=>null;
   await assert.rejects(generateHealthDigest(env,new Date('2026-10-17T09:00:00Z')),/503/);
-  assert.deepEqual(puts,[]);assert.equal(requests,1);
+  assert.equal(puts.length,1,'Cached history repairs only the latest pointer');assert.equal(puts[0][0],'health-news:latest');assert.equal(requests,1);
   await assert.rejects(generateHealthDigest({}),/required/);
+ }finally{globalThis.fetch=savedFetch;}
+});
+
+test('generator requests strict JSON and refuses incomplete or unsearched results',async()=>{
+ const {generateHealthDigest}=await import('../../health-news-daily.mjs');
+ const savedFetch=globalThis.fetch;const writes=[];
+ const env={LUMI_RESEARCH_OPENAI_API_KEY:'test-only',HEALTH_NEWS_KV:{get:async()=>null,put:async(...args)=>writes.push(args)}};
+ let payload;
+ try{
+  globalThis.fetch=async(url,opts)=>{payload=JSON.parse(opts.body);return Response.json({status:'incomplete',incomplete_details:{reason:'max_output_tokens'}});};
+  await assert.rejects(generateHealthDigest(env),/incomplete: max_output_tokens/);
+  assert.equal(payload.text.format.type,'json_schema');assert.equal(payload.text.format.strict,true);
+  assert.equal(payload.reasoning.effort,'low');assert.equal(payload.max_tool_calls,3);
+  globalThis.fetch=async()=>Response.json({status:'completed',output:[]});
+  await assert.rejects(generateHealthDigest(env),/did not perform web search/);
+  assert.equal(writes.length,0);
+  const items=Array.from({length:5},(_,i)=>({title:'Story '+i,summary:'Summary',source:'Source',url:'https://example.org/'+i}));
+  globalThis.fetch=async()=>Response.json({status:'completed',output:[{type:'web_search_call'},{type:'message',content:[{type:'output_text',text:JSON.stringify({items})}]}]});
+  assert.equal((await generateHealthDigest(env)).items.length,5);assert.equal(writes.length,2);
  }finally{globalThis.fetch=savedFetch;}
 });
