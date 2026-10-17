@@ -143,7 +143,7 @@ Para assuntos de pesquisa, colaboração institucional ou associações de pacie
 - faleconosco@mylumicompanion.com
 - speakwithus@mylumicompanion.com
 
-faleconosco: ativo. O endereço adicional speakwithus ainda não está disponível.
+Os dois endereços estão ativos. speakwithus é um alias de faleconosco e utiliza a mesma caixa postal.
 
 O link abre seu aplicativo de e-mail. Este preview não coleta nem envia mensagens diretamente.
 

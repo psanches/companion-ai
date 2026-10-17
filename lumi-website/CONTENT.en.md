@@ -143,7 +143,7 @@ For research, institutional collaboration or patient-organization inquiries, con
 - faleconosco@mylumicompanion.com
 - speakwithus@mylumicompanion.com
 
-faleconosco: active. The additional speakwithus address is not yet available.
+Both addresses are active. speakwithus is an alias of faleconosco and uses the same inbox.
 
 Email opens your email application. This preview does not collect or send messages itself.
 
