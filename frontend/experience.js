@@ -3,6 +3,7 @@
  // Add future public sites here; non-Portuguese entries get a translation link.
  const importantLinks=[
   {title:"The Parkinson’s Institute — KeySense",url:"https://www.parkinsons-research.org/index.htm",language:"en"},
+  {title:"Associação Brasil Parkinson — Sobre Parkinson",url:"https://www.parkinson.org.br/sobre-parkinson",language:"pt"},
   {title:"Movement Disorder Society",url:"https://www.movementdisorders.org/MDS/About.htm",language:"en"},
   {title:"ProSense — A jornada da doença de Parkinson",url:"https://prosense.com.br/a-jornada-da-doenca-de-parkinson-compreendendo-sua-progressao-e-enfrentando-desafios/",language:"pt"},
   {title:"Ativa Parkinson — Instagram",url:"https://www.instagram.com/ativaparkinson/",language:"pt"},

@@ -76,11 +76,11 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.locator('#lumiImportantLinksBtn').click();
  const linksDialog=page.locator('#lumiImportantLinksDialog');
  assert.equal(await linksDialog.isVisible(),true);
- assert.equal(await linksDialog.locator('article').count(),6);
+ assert.equal(await linksDialog.locator('article').count(),7);
  assert.equal(await linksDialog.getByRole('link',{name:'Ler em português',exact:true}).count(),3);
  assert.equal(await linksDialog.getByRole('link',{name:'Abrir site original',exact:true}).first().getAttribute('href'),'https://www.parkinsons-research.org/index.htm');
  assert.ok((await linksDialog.getByRole('link',{name:'Ler em português',exact:true}).first().getAttribute('href')).includes('tl=pt'));
- assert.equal(await linksDialog.locator('a[target="_blank"][rel="noopener noreferrer"]').count(),9);
+ assert.equal(await linksDialog.locator('a[target="_blank"][rel="noopener noreferrer"]').count(),10);
  const freshVisits=await linksDialog.locator('a').first().evaluate(a=>{a.addEventListener('click',e=>e.preventDefault());a.click();const first=a.href;a.click();return [first,a.href];});
  assert.notEqual(freshVisits[0],freshVisits[1]);assert.ok(new URL(freshVisits[1]).searchParams.has('_lumi_visit'));
  assert.ok(await linksDialog.evaluate(n=>n.getBoundingClientRect().right<=innerWidth));
