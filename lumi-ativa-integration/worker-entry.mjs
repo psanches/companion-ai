@@ -10,4 +10,6 @@ import {withFrontendVersion} from './frontend-version.mjs';
 import release from './frontend-release.mjs';
 import previous from './frontend-previous.mjs';
 import {withConversationSidebar} from './conversation-worker.mjs';
-export default withFrontendVersion(withConversationSidebar(withCalendar(withHealthNews(createLumiAtivaIntegration(baseline,assets,fetch,createLumiResearchHandler())))),release,previous);
+import {withInstitutional} from './institutional-worker.mjs';
+import institutional from './institutional-bundle.mjs';
+export default withFrontendVersion(withInstitutional(withConversationSidebar(withCalendar(withHealthNews(createLumiAtivaIntegration(baseline,assets,fetch,createLumiResearchHandler())))),institutional),release,previous);

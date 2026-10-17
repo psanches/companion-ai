@@ -1,6 +1,8 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';import fs from 'node:fs';
 import assets from '../lumi-ativa-integration/assets.generated.mjs';
+import institutional from '../lumi-website/bundle.generated.mjs';
+import {withInstitutional} from '../lumi-website/development-wrapper.mjs';
 import release from './release.generated.mjs';import {withFrontendVersion} from './version-worker.mjs';
 import {createLumiAtivaIntegration} from '../lumi-ativa-integration/factory.mjs';
 import {NEWS_HTML,NEWS_CSS,NEWS_SCRIPT} from '../lumi-ativa-integration/health-news-ui-assets.mjs';
@@ -37,7 +39,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile,serviceWorkers:'block'}),page=await context.newPage();const errors=[];
  page.setDefaultTimeout(15000);console.log('Viewport scenario:',name);
  page.on('pageerror',e=>errors.push(e.message));let newer=false;
- const worker=withFrontendVersion(withNews,release);
+ const worker=withFrontendVersion(withInstitutional(withNews,institutional),release);
  await context.route('**/*',async route=>{
   const url=route.request().url();
   if(new URL(url).pathname.endsWith('/supabase.js'))return route.fulfill({body:fixture,contentType:'application/javascript'});
@@ -86,6 +88,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  assert.ok(await linksDialog.evaluate(n=>n.getBoundingClientRect().right<=innerWidth));
  await linksDialog.getByRole('button',{name:'Fechar links importantes',exact:true}).click();
  if(width<=900)await page.keyboard.press('Escape');
+ assert.equal(await page.locator('#lumiInstitutionalLink').getAttribute('href'),'/sobre/pt/');
  const geometry=await page.evaluate(()=>{const input=document.getElementById('messageInput').getBoundingClientRect(),send=document.querySelector('.send-button').getBoundingClientRect(),out=document.getElementById('signOutBtn');return {input:{bottom:input.bottom,top:input.top,width:input.width},send:{bottom:send.bottom,right:send.right},vw:innerWidth,vh:innerHeight,overflow:document.documentElement.scrollWidth>innerWidth,labelFits:out.scrollWidth<=out.clientWidth};});
  assert.equal(geometry.overflow,false,JSON.stringify({name,geometry}));assert.ok(geometry.input.bottom<=height+1&&geometry.input.top>=0&&geometry.input.width>40,JSON.stringify({name,geometry}));assert.ok(geometry.send.right<=width&&geometry.labelFits,JSON.stringify({name,geometry}));
  if(width<=900){await page.locator('#chatHistoryBtn').click();await page.locator('#lumiExerciseBtn').waitFor({state:'visible'});await page.locator('#lumiHealthNewsBtn').waitFor({state:'visible'});await page.locator('#lumiAgendaBtn').click();await page.locator('#lumiCalendarWeek').getByText('14:00 – 14:30 · Compromisso fictício da agenda',{exact:true}).waitFor();assert.ok(await page.locator('#lumiCalendarWeek').evaluate(n=>n.getBoundingClientRect().right<=innerWidth));await page.getByRole('button',{name:'Fechar agenda',exact:true}).click();await page.locator('#chatHistoryBtn').click();await page.keyboard.press('Escape');assert.equal(await page.locator('#conversationSidebar').evaluate(n=>n.inert),true);}
@@ -98,6 +101,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.reload();await page.locator('#signInBtn').waitFor({state:'visible'});assert.equal(await page.locator('#chatForm').isVisible(),false);
  assert.deepEqual(errors,[],name+' runtime errors');
  await page.screenshot({path:new URL('./test-results/'+name+'.png',import.meta.url).pathname,fullPage:true});
+ await page.goto(HOST+'/sobre/pt/');assert.equal(await page.locator('html').getAttribute('lang'),'pt-BR');assert.equal(await page.locator('.contact-emails a').count(),2);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.locator('.language a[href="/sobre/"]').click();assert.equal(await page.locator('html').getAttribute('lang'),'en');await page.screenshot({path:new URL('./test-results/'+name+'-institutional.png',import.meta.url).pathname,fullPage:true});assert.deepEqual(errors,[]);
  results.push({name,width,height,passed:true,authentication:'synthetic session and redirect contracts',keyboard:mobile&&height>500?'reduced viewport simulation':'not tested',realAndroidHardware:false});await context.close();
 }
 }finally{await browser.close();fs.writeFileSync(new URL('./test-results/browser-results.json',import.meta.url),JSON.stringify(results,null,2));}

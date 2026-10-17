@@ -1,0 +1,5 @@
+dist/
+bundle.generated.mjs
+node_modules/
+screenshots/
+test-results/

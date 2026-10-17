@@ -31,10 +31,12 @@ dialog{max-width:calc(100vw - 24px);max-height:calc(var(--lumi-viewport-height,1
 #lumiCalendarDay,#lumiCalendarWeek{max-width:100%;min-width:0;overflow-wrap:anywhere}
 #lumiCalendarDay input,#lumiCalendarDay button,#lumiCalendarWeek input,#lumiCalendarWeek button{max-width:100%;min-height:44px}
 
-#lumiImportantLinksBtn{margin:0 14px 12px;padding:12px;border:1px solid #9bd6f5;border-radius:12px;background:#25344a;color:#fff;font:17px system-ui;text-align:left;cursor:pointer}
+#lumiImportantLinksBtn,#lumiInstitutionalLink{margin:0 14px 12px;padding:12px;border:1px solid #9bd6f5;border-radius:12px;background:#25344a;color:#fff;font:17px system-ui;text-align:left;cursor:pointer}
 #lumiImportantLinksDialog{width:min(560px,calc(100vw - 24px));background:#101827;color:#f5f7fb;border:1px solid #9bd6f5;border-radius:16px;padding:20px;box-sizing:border-box}
 #lumiImportantLinksDialog::backdrop{background:rgba(0,0,0,.65)}
 #lumiImportantLinksList article{padding:12px 0;border-bottom:1px solid #53657c}
 #lumiImportantLinksList h3{margin:0 0 8px;overflow-wrap:anywhere}
 #lumiImportantLinksList a{display:flex;align-items:center;min-height:44px;color:#a8dcf2;overflow-wrap:anywhere}
 #lumiImportantLinksDialog button{min-height:44px;padding:10px 16px}
+
+#lumiInstitutionalLink{text-decoration:none;display:block;min-height:44px}

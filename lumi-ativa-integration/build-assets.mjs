@@ -103,6 +103,7 @@ html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-o
 </script>`;
   content=content.replace('</body>',authObserver+'<script src="/lumi-research.js" defer></script></body>');
 
+  content=content.replace('<div class="sidebar-label">ÚLTIMAS', '<a id="lumiInstitutionalLink" href="/sobre/pt/">✦ Sobre a Lumi</a><div class="sidebar-label">ÚLTIMAS');
   // Shared sidebar is the sole navigation on desktop and mobile.
   // Keep profile and fictional health actions visible when signed in.
   const headerEnd='<div class="header-actions">';
@@ -197,3 +198,6 @@ fs.writeFileSync(new URL('./assets.generated.mjs',import.meta.url),'export defau
 const {buildRelease}=await import('../frontend/build-release.mjs');
 const release=buildRelease(assets);
 console.log(JSON.stringify({release:release.release,commit:release.commit,immutableAssets:Object.keys(release.immutable).length}));
+
+process.env.LUMI_INSTITUTIONAL_PREFIX='/sobre';
+await import('../lumi-website/build.mjs');
