@@ -3,6 +3,7 @@
  // Add future public sites here; non-Portuguese entries get a translation link.
  const importantLinks=[
   {title:"The Parkinson’s Institute — KeySense",url:"https://www.parkinsons-research.org/index.htm",language:"en"},
+  {title:"Viver com Parkinson — Quiz",url:"https://vivercomparkinson.com.br/quiz",language:"pt"},
   {title:"The Michael J. Fox Foundation",url:"https://www.michaeljfox.org/",language:"en",translation:"https://www-michaeljfox-org.translate.goog/?_x_tr_sl=en&_x_tr_tl=pt&_x_tr_hl=pt&_x_tr_pto=tc"}
  ];
  const linksDialog=document.getElementById('lumiImportantLinksDialog');
