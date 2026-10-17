@@ -1,0 +1,20 @@
+name: Lumi authorized public website publication
+on:
+  push:
+    branches: [feature/lumi-institutional-refresh-20261017]
+    paths: ['lumi-website/inspect-publication.mjs', '.github/workflows/lumi-publication.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect production routing and compatibility without writes
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
+        run: node lumi-website/inspect-publication.mjs
