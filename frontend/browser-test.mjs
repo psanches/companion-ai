@@ -72,6 +72,20 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
 
  assert.equal(await page.locator('#lumiMindBodyMobile').count(),0,'No duplicate mobile navigation above chat');
  assert.deepEqual(await page.locator('#conversationSidebar').evaluate(n=>[...n.querySelectorAll('#lumiAgendaBtn,#lumiExerciseBtn,#lumiHealthNewsBtn')].map(e=>e.id)),['lumiAgendaBtn','lumiExerciseBtn','lumiHealthNewsBtn'],'Same ordered sidebar navigation at every viewport');
+ if(width<=900)await page.locator('#chatHistoryBtn').click();
+ await page.locator('#lumiImportantLinksBtn').click();
+ const linksDialog=page.locator('#lumiImportantLinksDialog');
+ assert.equal(await linksDialog.isVisible(),true);
+ assert.equal(await linksDialog.locator('article').count(),2);
+ assert.equal(await linksDialog.getByRole('link',{name:'Ler em português',exact:true}).count(),2);
+ assert.equal(await linksDialog.getByRole('link',{name:'Abrir site original',exact:true}).first().getAttribute('href'),'https://www.parkinsons-research.org/index.htm');
+ assert.ok((await linksDialog.getByRole('link',{name:'Ler em português',exact:true}).first().getAttribute('href')).includes('tl=pt'));
+ assert.equal(await linksDialog.locator('a[target="_blank"][rel="noopener noreferrer"]').count(),4);
+ const freshVisits=await linksDialog.locator('a').first().evaluate(a=>{a.addEventListener('click',e=>e.preventDefault());a.click();const first=a.href;a.click();return [first,a.href];});
+ assert.notEqual(freshVisits[0],freshVisits[1]);assert.ok(new URL(freshVisits[1]).searchParams.has('_lumi_visit'));
+ assert.ok(await linksDialog.evaluate(n=>n.getBoundingClientRect().right<=innerWidth));
+ await linksDialog.getByRole('button',{name:'Fechar links importantes',exact:true}).click();
+ if(width<=900)await page.keyboard.press('Escape');
  const geometry=await page.evaluate(()=>{const input=document.getElementById('messageInput').getBoundingClientRect(),send=document.querySelector('.send-button').getBoundingClientRect(),out=document.getElementById('signOutBtn');return {input:{bottom:input.bottom,top:input.top,width:input.width},send:{bottom:send.bottom,right:send.right},vw:innerWidth,vh:innerHeight,overflow:document.documentElement.scrollWidth>innerWidth,labelFits:out.scrollWidth<=out.clientWidth};});
  assert.equal(geometry.overflow,false,JSON.stringify({name,geometry}));assert.ok(geometry.input.bottom<=height+1&&geometry.input.top>=0&&geometry.input.width>40,JSON.stringify({name,geometry}));assert.ok(geometry.send.right<=width&&geometry.labelFits,JSON.stringify({name,geometry}));
  if(width<=900){await page.locator('#chatHistoryBtn').click();await page.locator('#lumiExerciseBtn').waitFor({state:'visible'});await page.locator('#lumiHealthNewsBtn').waitFor({state:'visible'});await page.locator('#lumiAgendaBtn').click();await page.locator('#lumiCalendarWeek').getByText('14:00 – 14:30 · Compromisso fictício da agenda',{exact:true}).waitFor();assert.ok(await page.locator('#lumiCalendarWeek').evaluate(n=>n.getBoundingClientRect().right<=innerWidth));await page.getByRole('button',{name:'Fechar agenda',exact:true}).click();await page.locator('#chatHistoryBtn').click();await page.keyboard.press('Escape');assert.equal(await page.locator('#conversationSidebar').evaluate(n=>n.inert),true);}

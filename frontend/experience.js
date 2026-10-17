@@ -1,5 +1,31 @@
 /* No personal data is persisted by the viewport/update controller. */
 (() => {
+ // Add future public sites here; non-Portuguese entries get a translation link.
+ const importantLinks=[
+  {title:"The Parkinson’s Institute — KeySense",url:"https://www.parkinsons-research.org/index.htm",language:"en"},
+  {title:"The Michael J. Fox Foundation",url:"https://www.michaeljfox.org/",language:"en",translation:"https://www-michaeljfox-org.translate.goog/?_x_tr_sl=en&_x_tr_tl=pt&_x_tr_hl=pt&_x_tr_pto=tc"}
+ ];
+ const linksDialog=document.getElementById('lumiImportantLinksDialog');
+ const linksList=document.getElementById('lumiImportantLinksList');
+ if(linksDialog&&linksList){
+  for(const site of importantLinks){
+   const article=document.createElement('article'),heading=document.createElement('h3');heading.textContent=site.title;article.append(heading);
+   const link=(label,url)=>{const a=document.createElement('a');a.textContent=label;a.href=url;a.target='_blank';a.rel='noopener noreferrer';
+    // Only public outbound pages: distinct navigation URL on each visit.
+    a.addEventListener('click',()=>{
+     const fresh=new URL(url),visit=Date.now()+'-'+Math.random().toString(36).slice(2);
+     if(fresh.hostname==='translate.google.com'&&fresh.searchParams.has('u')){
+      const source=new URL(fresh.searchParams.get('u'));source.searchParams.set('_lumi_visit',visit);fresh.searchParams.set('u',source.href);
+     }else fresh.searchParams.set('_lumi_visit',visit);
+     a.href=fresh.href;
+    });
+    article.append(a);};
+   link('Abrir site original',site.url);
+   if(site.language!=='pt')link('Ler em português',site.translation||'https://translate.google.com/translate?sl=auto&tl=pt&u='+encodeURIComponent(site.url));
+   linksList.append(article);
+  }
+  document.getElementById('lumiImportantLinksBtn')?.addEventListener('click',()=>linksDialog.showModal());
+ }
  const root=document.documentElement,viewport=window.visualViewport;
  function fit(){
   // Chrome Android resizes the visual viewport when the keyboard opens.

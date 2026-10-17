@@ -53,6 +53,7 @@
   <button id="lumiGuideBtn" type="button" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:16px;cursor:pointer;text-align:left">❔ Como usar a Lumi</button>
   <button id="lumiAgendaBtn" type="button">📅 Agenda</button>
   <button id="lumiExerciseBtn" type="button" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:17px;cursor:pointer;text-align:left">🏠 Exercícios em Casa</button>
+  <button id="lumiImportantLinksBtn" type="button">🔗 Links importantes</button>
   <div class="sidebar-label">ÚLTIMAS 5 CONVERSAS</div>
   <div id="conversationList"></div>
   <div id="sidebarStatus" role="status" aria-live="polite"></div>
@@ -421,5 +422,12 @@ document.getElementById("profileDialog").addEventListener("close", () => {
 document.getElementById("lumiExerciseBtn").addEventListener("click",()=>document.getElementById("lumiExerciseDialog").showModal());
 document.getElementById("lumiExerciseClose").addEventListener("click",()=>document.getElementById("lumiExerciseDialog").close());
 </script>
+<dialog id="lumiImportantLinksDialog" aria-labelledby="lumiImportantLinksTitle">
+  <h2 id="lumiImportantLinksTitle">Links importantes</h2>
+  <p>Abra o site original ou leia em português. Os links abrem em outra aba.</p>
+  <div id="lumiImportantLinksList"></div>
+  <p><small>Tradução automática pelo Google Tradutor; alguns recursos do site podem não ser traduzidos.</small></p>
+  <form method="dialog"><button type="submit">Fechar links importantes</button></form>
+</dialog>
 </body>
 </html>
