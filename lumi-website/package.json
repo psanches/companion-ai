@@ -1,0 +1,1 @@
+{"name":"lumi-institutional-preview","private":true,"type":"module","scripts":{"build":"node build.mjs","test":"node --test tests/contracts.test.mjs","test:browser":"node tests/browser.mjs"},"devDependencies":{"playwright":"1.58.2","@axe-core/playwright":"4.11.1"}}
