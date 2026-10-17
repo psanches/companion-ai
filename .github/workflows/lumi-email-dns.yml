@@ -1,0 +1,30 @@
+name: Lumi institutional email DNS
+on:
+  push:
+    branches: [feature/lumi-institutional-refresh-20261017]
+    paths: ['lumi-website/email-dns-request.json', 'lumi-website/email-dns-setup.mjs', '.github/workflows/lumi-email-dns.yml']
+permissions:
+  contents: read
+concurrency:
+  group: lumi-email-dns
+  cancel-in-progress: false
+jobs:
+  email-dns:
+    if: github.ref == 'refs/heads/feature/lumi-institutional-refresh-20261017'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Configure only owner-supplied GoDaddy mail records
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
+        run: node lumi-website/email-dns-setup.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lumi-email-dns-evidence-${{ github.sha }}
+          path: lumi-website/test-results/email-dns*.json

@@ -2,7 +2,7 @@ name: Lumi isolated institutional preview
 on:
   push:
     branches: [feature/lumi-institutional-refresh-20261017]
-    paths: ['lumi-website/**', '.github/workflows/lumi-institutional-preview.yml']
+    paths: ['lumi-website/src/**', 'lumi-website/build.mjs', 'lumi-website/worker.mjs', 'lumi-website/tests/**', 'lumi-website/package*.json', 'lumi-website/deploy-preview.mjs', '.github/workflows/lumi-institutional-preview.yml']
 permissions:
   contents: read
 concurrency:
