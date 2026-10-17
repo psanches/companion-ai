@@ -12,3 +12,16 @@ Validation: four institutional routing/resource/cache/delegation contracts suppl
 ## Future public routing (not applied)
 
 The owner selected `mylumicompanion.com` for this institutional site and `app.mylumicompanion.com` for the interactive application. Production publication requires separate explicit authorization. Before migration, validate the application at its new origin, authentication redirect allowlists and Google Calendar callbacks, account/history access, origin-specific sessions/storage, CORS, PWA/service worker scope and links. Capture current Worker version, custom-domain routing and configuration before any switch. Publish the application subdomain first, then the public site; retain the previous production version and domain configuration for rollback. Email DNS must remain untouched. This development integration changes neither public domain nor production Worker.
+
+## Verified development deployment — 2026-10-17
+
+- Tested/deployed commit: `5b948f5aaeaf35bd3df39a1d15d2f0a33a00745d`.
+- Cloudflare development version: `679f13c2-1469-4371-83eb-21cf3ca29c10`.
+- Application release: `fb55a23a31c0b78b90e7d66a3ac80e239321a8480b4b41d579692ce443fe1563`.
+- Institutional release: `1be92b8d543f70e5d809a7d2af7139b1aee925d23a36ec2f6d7c7aafac0ede47`.
+- Successful protected pipeline: https://github.com/psanches/companion-ai/actions/runs/39032263986.
+- All 282 Node tests passed locally and in CI (139 medical, 18 synthetic demo, 85 integration, 17 research, 23 frontend). All five browser viewport scenarios and the real localhost Chromium service-worker lifecycle check passed. Actual Android hardware was not tested.
+- Deployed byte checks passed for both institutional languages and all four institutional assets, both contact addresses, the application's nine immutable assets and its original homepage/sidebar. Existing configuration/bindings were preserved and production module source hash remained unchanged. Calendar authentication-boundary and read-only health-news checks passed.
+- An additional independent shell HTTPS probe was blocked by the workspace network gateway (HTTP 403); deployed verification above was performed through the authorized CI runner.
+
+This documentation commit does not request another deployment. Public domain routing remains pending separate authorization.
