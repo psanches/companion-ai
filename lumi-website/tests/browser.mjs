@@ -1,5 +1,5 @@
 // Automated Chromium desktop and Android viewport simulation; no Android hardware.
-import {chromium}from'playwright';import AxeBuilder from'@axe-core/playwright';import assert from'node:assert/strict';import fs from'node:fs';import http from'node:http';import worker from'../worker.mjs';
+import {chromium}from'playwright';import AxeBuilder from'@axe-core/playwright';import assert from'node:assert/strict';import fs from'node:fs';import http from'node:http';const worker=(await import(process.env.LUMI_PUBLIC_TEST==='1'?'../public-worker.mjs':'../worker.mjs')).default;
 const server=http.createServer(async(req,res)=>{try{const r=await worker.fetch(new Request('http://localhost'+req.url,{method:req.method}));res.writeHead(r.status,Object.fromEntries(r.headers));res.end(Buffer.from(await r.arrayBuffer()));}catch(e){res.writeHead(500);res.end('error');}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
 fs.mkdirSync(new URL('../screenshots/',import.meta.url),{recursive:true});fs.mkdirSync(new URL('../test-results/',import.meta.url),{recursive:true});
 const browser=await chromium.launch({headless:true,...(process.env.LUMI_CHROMIUM_EXECUTABLE?{executablePath:process.env.LUMI_CHROMIUM_EXECUTABLE,args:['--no-sandbox','--disable-dev-shm-usage','--no-zygote']}: {})});const results=[];

@@ -2,19 +2,43 @@ name: Lumi authorized public website publication
 on:
   push:
     branches: [feature/lumi-institutional-refresh-20261017]
-    paths: ['lumi-website/inspect-publication.mjs', '.github/workflows/lumi-publication.yml']
+    paths: ['lumi-website/inspect-publication.mjs', 'lumi-website/public-worker.mjs', 'lumi-website/public.test.mjs', 'lumi-website/deploy-public.mjs', '.github/workflows/lumi-publication.yml']
 permissions:
   contents: read
 jobs:
-  inspect:
+  publish:
+    if: contains(github.event.head_commit.message, '[publish-institutional-owner-approved]')
+    concurrency:
+      group: lumi-public-website
+      cancel-in-progress: false
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Inspect production routing and compatibility without writes
+      - name: Build and test reviewed institutional source and public router
+        run: |
+          npm ci --prefix lumi-website --ignore-scripts --no-audit --no-fund
+          node lumi-website/build.mjs
+          node --test lumi-website/tests/contracts.test.mjs lumi-website/public.test.mjs
+      - name: Desktop and Android simulations and accessibility
+        run: |
+          node lumi-website/node_modules/playwright/cli.js install --with-deps chromium
+          cd lumi-website
+          LUMI_PUBLIC_TEST=1 npm run test:browser
+      - name: Publish authorized public site with guarded routing and rollback
         env:
+          LUMI_PUBLICATION_CONFIRM: PUBLISH_OWNER_AUTHORIZED_20261017
           CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
-        run: node lumi-website/inspect-publication.mjs
+        run: node lumi-website/deploy-public.mjs
+      - name: Preserve publication evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: institutional-publication-${{ github.sha }}
+          path: |
+            lumi-website/test-results/
+            lumi-website/screenshots/
