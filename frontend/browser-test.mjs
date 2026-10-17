@@ -57,6 +57,8 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.evaluate(()=>window.__setAuth(true));await page.locator('#signOutBtn').waitFor({state:'visible'});await page.locator('#chatForm').waitFor({state:'visible'});
  await page.locator('#lumiGuideDialog').waitFor({state:'visible'});await page.locator('#lumiGuideDontShow').check();await page.getByRole('button',{name:'Começar a conversar',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('#messages .msg').length===6);
+ const unchangedSettings=await page.evaluate(()=>localStorage.getItem('companion-ai-v2'));await page.locator('#settingsBtn').click();await page.locator('#userName').fill('Alteração não salva');await page.locator('#closeSettingsBtn').click();assert.equal(await page.locator('#settingsDialog').isVisible(),false);assert.equal(await page.evaluate(()=>localStorage.getItem('companion-ai-v2')),unchangedSettings);
+
  await page.locator('#loadEarlierBtn').click();assert.equal(await page.locator('#messages .msg').count(),12);
  await page.waitForFunction(()=>document.querySelectorAll('#conversationList .conversation-item').length===5);
  assert.deepEqual(await page.locator('#conversationList .conversation-item').allTextContents(),['Conversa salva 7','Conversa salva 6','Conversa salva 5','Conversa salva 4','Conversa salva 3']);
