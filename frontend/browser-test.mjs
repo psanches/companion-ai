@@ -102,6 +102,16 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  assert.deepEqual(errors,[],name+' runtime errors');
  await page.screenshot({path:new URL('./test-results/'+name+'.png',import.meta.url).pathname,fullPage:true});
  await page.goto(HOST+'/sobre/pt/');assert.equal(await page.locator('html').getAttribute('lang'),'pt-BR');assert.equal(await page.locator('.contact-emails a').count(),2);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.locator('.language a[href="/sobre/"]').click();assert.equal(await page.locator('html').getAttribute('lang'),'en');await page.screenshot({path:new URL('./test-results/'+name+'-institutional.png',import.meta.url).pathname,fullPage:true});assert.deepEqual(errors,[]);
+ // Direct entry, long scroll and explicit return must work without browser history.
+ for(const path of ['/lumi-mind-body.html','/ativa','/ativa-medical/']){
+  await page.goto(HOST+path);const back=page.locator('#lumiReturnNav a');await back.waitFor({state:'visible'});
+  assert.equal(await back.getAttribute('href'),'/');assert.equal(await back.getAttribute('target'),'_top');
+  if(path==='/lumi-mind-body.html'){for(const id of ['bodyTab','psychTab','mindTab'])await page.locator('#'+id).click();}
+  await page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));
+  assert.ok(await back.evaluate(a=>{const r=a.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&r.height>=44;}),name+' visible return '+path);
+  await back.focus();await page.keyboard.press('Enter');await page.waitForURL(HOST+'/');await page.locator('#signInBtn').waitFor({state:'visible'});
+ }
+ assert.deepEqual(errors,[],name+' standalone feature runtime errors');
  results.push({name,width,height,passed:true,authentication:'synthetic session and redirect contracts',keyboard:mobile&&height>500?'reduced viewport simulation':'not tested',realAndroidHardware:false});await context.close();
 }
 }finally{await browser.close();fs.writeFileSync(new URL('./test-results/browser-results.json',import.meta.url),JSON.stringify(results,null,2));}
