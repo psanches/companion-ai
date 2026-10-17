@@ -64,3 +64,7 @@ On 17 October Pedro supplied the exact GoDaddy Professional Email TXT, SPF, DMAR
 DNS-specific new files: `email-dns-request.json`, `email-dns-setup.mjs`, `.github/workflows/lumi-email-dns.yml`. They do not run the website deployment workflow. Authenticating through the Cloudflare dashboard is a separate user-assisted step; the mailbox must still pass incoming and outgoing delivery checks before enabling a real institutional contact action. No test messages have been sent.
 
 Google phone approval was completed, but the Cloudflare sign-in returned “Unable to sign in.” No successful authenticated DNS session or DNS write is claimed. Automated login stopped after this first generic failure. Manual account-owner continuation is required.
+
+## Mailbox delivery confirmed, 17 October
+
+The owner completed the GoDaddy setup and confirmed successful incoming and outgoing mail tests for faleconosco@mylumicompanion.com. Both MX records were independently verified through Google and Cloudflare DNS after correcting accidental numeric host names. The preview now enables only that verified mailto link. speakwithus@mylumicompanion.com remains explicitly unavailable pending provisioning and delivery testing; it has no mailto link. Contact information / Informações de contato remains the navigation and collaboration action label. No production/application deployment is authorized or performed.

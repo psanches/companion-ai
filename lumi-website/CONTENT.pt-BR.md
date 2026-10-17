@@ -136,11 +136,16 @@ Buscamos diálogo com instituições que queiram ajudar a construir uma companhi
 
 Não há indicação de endosso institucional, parceria formal ou estudo clínico ativo. Não utilizamos logotipos de terceiros.
 
-## Contato
+## Informações de contato
 
-Para assuntos de pesquisa, colaboração institucional ou associações de pacientes, estamos preparando nosso canal institucional. Enquanto isso, você pode baixar um modelo breve de contato.
+Para assuntos de pesquisa, colaboração institucional ou associações de pacientes, entre em contato por e-mail. Você também pode baixar um modelo breve de contato.
 
-Caixa postal institucional: aguardando ativação e teste de entrega. Este preview não envia mensagens.
+- faleconosco@mylumicompanion.com
+- speakwithus@mylumicompanion.com
+
+faleconosco: ativo. O endereço adicional speakwithus ainda não está disponível.
+
+O link abre seu aplicativo de e-mail. Este preview não coleta nem envia mensagens diretamente.
 
 Quer conhecer a aplicação?
 

@@ -136,11 +136,16 @@ We are seeking thoughtful dialogue with institutions willing to help shape a use
 
 No institutional endorsement, formal partnership or active clinical study is implied. No third-party logos are used.
 
-## Contact
+## Contact information
 
-For research, institutional collaboration or patient-organization inquiries, our institutional contact channel is being prepared. You can download a short inquiry template in the meantime.
+For research, institutional collaboration or patient-organization inquiries, contact us by email. You may also download a short inquiry template.
 
-Institutional mailbox: awaiting activation and delivery testing. No message is sent from this preview.
+- faleconosco@mylumicompanion.com
+- speakwithus@mylumicompanion.com
+
+faleconosco: active. The additional speakwithus address is not yet available.
+
+Email opens your email application. This preview does not collect or send messages itself.
 
 Want to see the application?
 
