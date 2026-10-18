@@ -1,8 +1,8 @@
-import {NEWS_HTML,NEWS_SCRIPT,NEWS_CSS} from './health-news-ui-assets.mjs';
-import {generateHealthDigest, getLatestHealthDigest, HEALTH_NEWS_CRON_UTC} from './health-news-daily.mjs';
+import {NEWS_HTML,NEWS_SCRIPT,NEWS_CSS,NEWS_DEMO_DIGEST} from './health-news-ui-assets.mjs';
+import {HEALTH_NEWS_CRON_UTC} from './health-news-daily.mjs';
 const HOST = 'lumi-develop.psanchesnle.workers.dev';
 /** Add public-news read access and cron without changing Lumi's existing handlers. */
-export function withHealthNews(original, generate = generateHealthDigest, latest = getLatestHealthDigest) {
+export function withHealthNews(original, generate = null, latest = async () => NEWS_DEMO_DIGEST) {
   return {
     ...original,
     async fetch(request, env, ctx) {
@@ -32,13 +32,8 @@ export function withHealthNews(original, generate = generateHealthDigest, latest
       // Other schedules remain owned by the existing Worker.
       if (controller.cron !== HEALTH_NEWS_CRON_UTC)
         return original.scheduled?.call(original, controller, env, ctx);
-      // Returning the promise lets cron failures remain visible to Cloudflare.
-      const task = Promise.all([
-        generate(env, new Date(controller.scheduledTime)),
-        original.scheduled?.call(original, controller, env, ctx)
-      ]).then(([digest]) => digest);
-      ctx.waitUntil(task);
-      return task;
+      // News generation is paused until an explicitly reviewed production launch.
+      return {status:'demo-static',automaticUpdates:false};
     }
   };
 }
