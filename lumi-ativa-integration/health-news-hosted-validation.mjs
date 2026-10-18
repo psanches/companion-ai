@@ -5,7 +5,7 @@ assert.equal(process.env.GITHUB_REF,'refs/heads/feature/pc-android-permanent-fix
 const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API_TOKEN;assert.ok(account&&token);
 const name='lumi-news-validate-'+process.env.GITHUB_RUN_ID;assert.match(name,/^lumi-news-validate-[0-9]+$/);
 const root='https://api.cloudflare.com/client/v4/accounts/'+account+'/workers/scripts/';
-async function cf(path,options={}){const r=await fetch(root+path,{...options,headers:{authorization:'Bearer '+token,...options.headers},signal:AbortSignal.timeout(45000)});assert.ok(r.ok,'Cloudflare operation failed: '+r.status);return r;}
+async function cf(path,options={}){const r=await fetch(root+path,{...options,headers:{authorization:'Bearer '+token,...options.headers},signal:AbortSignal.timeout(45000)});if(!r.ok){const d=await r.json().catch(()=>({}));throw Error('Cloudflare '+path+' failed: '+r.status+' '+JSON.stringify(d.errors?.map(e=>({code:e.code,message:String(e.message).replaceAll(token,'REDACTED').replaceAll(account,'ACCOUNT')}))));}return r;}
 const active=async()=>(await (await cf('lumi-develop/deployments')).json()).result.deployments?.[0]?.id;
 const before=await active();assert.ok(before);
 const settings=(await (await cf('lumi-develop/settings')).json()).result;
@@ -44,5 +44,5 @@ try{
  assert.deepEqual(after.map(s=>s.cron).sort(),schedules.map(s=>s.cron).sort());
  console.log(JSON.stringify({...result,hostedValidation:true,compatibilityDate:settings.compatibility_date,existingDevelopCodeUnchanged:true,newsCronPaused:true}));
 }finally{
- if(created){await cf(name,{method:'DELETE'});const removed=await fetch(root+name+'/settings',{headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(30000)});assert.equal(removed.status,404,'Temporary Worker removal not confirmed');console.log(JSON.stringify({temporaryWorkerRemoved:true,realAIRequests:0}));}
+ if(created){const deletion=await fetch(root+name,{method:'DELETE',headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(30000)});assert.ok(deletion.ok||deletion.status===404,'Temporary cleanup failed: '+deletion.status);const removed=await fetch(root+name+'/settings',{headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(30000)});assert.equal(removed.status,404,'Temporary Worker removal not confirmed');console.log(JSON.stringify({temporaryWorkerRemoved:true,realAIRequests:0}));}
 }
