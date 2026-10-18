@@ -10,13 +10,10 @@ for(const name of ['health-news-worker.mjs','health-news-ui-assets.mjs']) fs.cop
 for(const name of ['health-news-daily.mjs','health-news-verification.mjs'])fs.copyFileSync(new URL('../../'+name,import.meta.url),path.join(dir,name));
 const {withHealthNews}=await import(pathToFileURL(path.join(dir,'health-news-worker.mjs')));
 test.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
-test('cron dispatch uses scheduled time and exposes failures without swallowing them',async()=>{
- const env={}, date=Date.parse('2026-10-16T09:00:00Z');let received,waited;
- const w=withHealthNews({fetch(){}},async(e,now)=>{received=[e,now];return 'ok';});
- assert.equal(await w.scheduled({cron:'0 9 * * *',scheduledTime:date},env,{waitUntil(p){waited=p;}}),'ok');
- assert.equal(await waited,'ok');assert.equal(received[0],env);assert.equal(+received[1],date);
- const failed=withHealthNews({fetch(){}},async()=>{throw Error('failed');});
- await assert.rejects(failed.scheduled({cron:'0 9 * * *',scheduledTime:date},env,{waitUntil(){}}),/failed/);
+test('news cron is paused and never calls generation during static demonstration',()=>{
+ let calls=0;const worker=withHealthNews({fetch(){}},()=>{calls++;throw Error('Generation disabled');});
+ assert.deepEqual(worker.scheduled({cron:'0 9 * * *'}, {}, {}),{status:'demo-static',automaticUpdates:false});
+ assert.equal(calls,0);
 });
 test('existing routes, receiver, handlers and unrelated schedules are preserved',async()=>{
  const original={async fetch(...args){assert.equal(this,original);return new Response(args[0].url);},scheduled(){assert.equal(this,original);return 'existing';},queue(){return 'queue';}};
