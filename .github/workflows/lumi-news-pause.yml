@@ -1,0 +1,23 @@
+name: Pause news generation without deployment
+on:
+  push:
+    branches: [feature/pc-android-permanent-fix-20261016]
+    paths: ['lumi-ativa-integration/health-news-pause.mjs', '.github/workflows/lumi-news-pause.yml']
+permissions:
+  contents: read
+jobs:
+  pause:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify static edition and parsing regression without network or AI
+        run: node --test lumi-ativa-integration/tests/health-news-static.test.mjs lumi-ativa-integration/tests/health-news-verification.test.mjs
+      - name: Remove only daily news cron; do not deploy any code
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
+        run: node lumi-ativa-integration/health-news-pause.mjs
