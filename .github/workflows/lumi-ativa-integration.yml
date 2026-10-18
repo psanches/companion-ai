@@ -85,7 +85,8 @@ jobs:
       - name: Verify existing public health-news edition (read-only)
         run: node frontend/health-news-check.mjs
   health_news_check:
-    if: github.ref == 'refs/heads/feature/pc-android-permanent-fix-20261016' && github.event_name == 'push' && contains(github.event.head_commit.message, '[health-news-runtime-check]')
+    # News generation stays disabled until the official beta launch review.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
