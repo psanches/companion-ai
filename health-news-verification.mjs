@@ -8,7 +8,25 @@ export function publicSourceUrl(value){
  u.hash='';for(const k of [...u.searchParams.keys()])if(k.startsWith('utm_')||['os_cid','fbclid','gclid','mc_cid','mc_eid'].includes(k))u.searchParams.delete(k);
  return u;
 }
-function attributes(tag){const out={};for(const m of tag.matchAll(/([\w:-]+)\s*=\s*(["'])(.*?)\2/gs))out[m[1].toLowerCase()]=m[3];return out;}
+// Scan each attribute once. An unanchored name regex can backtrack quadratically
+// on malformed publisher markup and exhaust a scheduled Worker's CPU budget.
+function attributes(tag){
+ const out={};let at=0;
+ while(at<tag.length){
+  if(!/[\w:-]/.test(tag[at])){at++;continue;}
+  const start=at;while(at<tag.length&&/[\w:-]/.test(tag[at]))at++;
+  const name=tag.slice(start,at).toLowerCase();
+  while(at<tag.length&&/\s/.test(tag[at]))at++;
+  if(tag[at]!=='=')continue;
+  at++;while(at<tag.length&&/\s/.test(tag[at]))at++;
+  const quote=tag[at];
+  if(quote!=='"'&&quote!=="'"){while(at<tag.length&&!/[\s>]/.test(tag[at]))at++;continue;}
+  const valueStart=++at,close=tag.indexOf(quote,at);
+  if(close<0)break;
+  out[name]=tag.slice(valueStart,close);at=close+1;
+ }
+ return out;
+}
 export function isoDay(value){
  if(typeof value!=='string')return null;
  const m=value.trim().match(/^(\d{4}-\d{2}-\d{2})(?:[T\s]|$)/);
