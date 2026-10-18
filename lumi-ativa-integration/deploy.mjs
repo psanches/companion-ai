@@ -52,7 +52,8 @@ try{
  let uploadedVersion=uploaded?.result?.version_id||uploaded?.result?.version?.id||null;for(let attempt=0;attempt<12;attempt++){const items=(await (await cf(base+'/versions')).json()).result.items||[];const newer=items.find(v=>!versionBefore.some(previous=>previous.id===v.id));if(newer?.id){uploadedVersion=newer.id;break;}if(uploadedVersion)break;await new Promise(resolve=>setTimeout(resolve,1000));}assert.ok(uploadedVersion&&!versionBefore.some(v=>v.id===uploadedVersion),'Cannot identify uploaded sandbox version after polling; rollback required');
  const versionDetails=(await (await cf(base+'/versions/'+uploadedVersion)).json()).result;assert.ok(versionDetails.resources?.script?.handlers?.includes('scheduled'),'Cloudflare did not register scheduled handler');
  await cf(base+'/deployments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({strategy:'percentage',versions:[{version_id:uploadedVersion,percentage:100}],annotations:{'workers/message':'PC/Android verified commit '+process.env.GITHUB_SHA}})});
- const expectedCrons=[...new Set([...schedulesBefore.map(s=>s.cron),HEALTH_NEWS_CRON_UTC])];
+ // Static demo: retain unrelated schedules; news cron requires a launch review.
+ const expectedCrons=[...new Set(schedulesBefore.map(s=>s.cron).filter(cron=>cron!==HEALTH_NEWS_CRON_UTC))];
  await cf(base+'/schedules',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(expectedCrons.map(cron=>({cron})))});
  const schedulesAfter=(await (await cf(base+'/schedules')).json()).result.schedules;assert.deepEqual(schedulesAfter.map(s=>s.cron).sort(),expectedCrons.sort(),'Cron configuration mismatch');
  console.log(JSON.stringify({stage:'sandbox-version-activated',version:uploadedVersion,commit:process.env.GITHUB_SHA,crons:expectedCrons}));
