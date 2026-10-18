@@ -5,7 +5,7 @@ import {randomBytes} from 'node:crypto';
 const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API_TOKEN;
 const key=process.env.LUMI_RESEARCH_OPENAI_API_KEY;
 assert.ok(account&&token&&key,'Existing deployment/research access required');
-assert.equal(process.env.GITHUB_REF,'refs/heads/feature/restore-lumi-home-20261014');
+assert.equal(process.env.GITHUB_REF,'refs/heads/feature/pc-android-permanent-fix-20261016');
 const name='lumi-health-news-check-'+process.env.GITHUB_RUN_ID;
 assert.match(name,/^lumi-health-news-check-[0-9]+$/);
 const base=`https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/`;
@@ -26,7 +26,7 @@ export default {async fetch(request,env,ctx){
  catch(error){console.error('Public news generation failed:',error.message);return Response.json({error:error.message},{status:502});}
 }};`;
 const form=new FormData();
-form.set('metadata',new Blob([JSON.stringify({main_module:'worker.js',compatibility_date:settings.compatibility_date,bindings:[binding,{type:'secret_text',name:'OPENAI_API_KEY',text:key},{type:'secret_text',name:'CHECK_TOKEN',text:checkToken}]})],{type:'application/json'}));
+form.set('metadata',new Blob([JSON.stringify({main_module:'worker.js',limits:{cpu_ms:100000},compatibility_date:settings.compatibility_date,bindings:[binding,{type:'secret_text',name:'OPENAI_API_KEY',text:key},{type:'secret_text',name:'CHECK_TOKEN',text:checkToken}]})],{type:'application/json'}));
 for(const [module,content] of [['worker.js',entry],['health-news-ui-assets.mjs',fs.readFileSync(new URL('./health-news-ui-assets.mjs',import.meta.url))],['health-news-worker.mjs',fs.readFileSync(new URL('./health-news-worker.mjs',import.meta.url))],['health-news-daily.mjs',fs.readFileSync(new URL('../health-news-daily.mjs',import.meta.url))],['health-news-verification.mjs',fs.readFileSync(new URL('../health-news-verification.mjs',import.meta.url))]])form.set(module,new Blob([content],{type:'application/javascript+module'}),module);
 let created=false;
 try{
