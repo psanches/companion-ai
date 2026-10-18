@@ -19,5 +19,5 @@ test('unrelated schedules remain owned by original worker',()=>{
 });
 test('reader clearly labels frozen demonstration and keeps original dates',async()=>{
  const response=await withHealthNews({}).fetch(new Request('https://lumi-develop.psanchesnle.workers.dev/noticias'));
- const html=await response.text();assert.match(html,/DEMONSTRAÇÃO/);assert.match(html,/17\\/10\\/2026/);assert.match(html,/Sem atualização automática/);
+ const html=await response.text();assert.match(html,/DEMONSTRAÇÃO/);assert.ok(html.includes('17/10/2026'));assert.match(html,/Sem atualização automática/);
 });
