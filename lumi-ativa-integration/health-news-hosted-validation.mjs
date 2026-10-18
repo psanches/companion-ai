@@ -26,7 +26,7 @@ export default {async fetch(request,env,ctx){
 }};`;
 const modules=[['worker.mjs',entry],['runtime-test.mjs',fs.readFileSync(new URL('./health-news-runtime-test.mjs',import.meta.url))],['runtime-fixtures.mjs','export default '+JSON.stringify({snapshot,pages})+';']];
 for(const [name,path] of [['health-news-verification.mjs','../health-news-verification.mjs'],['health-news-daily.mjs','../health-news-daily.mjs'],['health-news-worker.mjs','./health-news-worker.mjs'],['health-news-ui-assets.mjs','./health-news-ui-assets.mjs']])modules.push([name,fs.readFileSync(new URL(path,import.meta.url))]);
-const form=new FormData();form.set('metadata',new Blob([JSON.stringify({main_module:'worker.mjs',compatibility_date:settings.compatibility_date,limits:{cpu_ms:100000},bindings:[{type:'secret_text',name:'CHECK_TOKEN',text:checkToken}]})],{type:'application/json'}));
+const form=new FormData();form.set('metadata',new Blob([JSON.stringify({main_module:'worker.mjs',compatibility_date:settings.compatibility_date,bindings:[{type:'secret_text',name:'CHECK_TOKEN',text:checkToken}]})],{type:'application/json'}));
 for(const [name,content] of modules)form.set(name,new Blob([content],{type:'application/javascript+module'}),name);
 let created=false;
 try{
