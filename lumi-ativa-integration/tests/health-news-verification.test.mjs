@@ -39,3 +39,12 @@ test('selection mixes general health, exercises, wellbeing and ageing with maxim
  assert.equal(selectStories(pool,new Set([pool[0].url])).some(s=>s.url===pool[0].url),false);
  assert.equal(classifyStory('Study about strength training and physical activity'),'exercicios');assert.equal(classifyStory('Nutrition and sleep quality'),'qualidade-de-vida');assert.equal(classifyStory('A new vaccine protects adults'),'saude-geral');
 });
+
+// A publisher's malformed attribute must not consume the cron CPU budget.
+test('large malformed attribute names remain bounded and preserve real publication evidence',()=>{
+ const start=performance.now();
+ const html='<meta '+ 'x'.repeat(500000)+'><meta property="article:published_time" content="2026-10-18">';
+ assert.equal(publicationFromHtml(html).date,'2026-10-18');
+ assert.ok(performance.now()-start<1000,'Malformed HTML exceeded parsing CPU budget');
+ assert.equal(publicationFromHtml('<meta data-note="date=\\\'fake\\\'" name=\'date\' content=\'2026-10-18\'>').date,'2026-10-18');
+});
