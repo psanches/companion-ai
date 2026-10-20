@@ -23,7 +23,7 @@ test('assembled real chat routes agenda reads, event creation and confirmation w
   calls.length = 0;
   assert.equal((await getReply('criar evento amanhã às 14:30')).reply, 'Review event');
   assert.deepEqual(calls, [{create: 'criar evento amanhã às 14:30'}]);
-  for (const text of ['CONFIRMAR EVENTO', 'Olá Lumi']) {
+  for (const text of ['CONFIRMAR EVENTO', 'Olá Lumi', 'Quero que você me diga qual o melhor exame para detectar riscos de eventos cerebrais?', 'O que são eventos adversos de medicamentos?', 'Como prevenir eventos cardiovasculares?']) {
     calls.length = 0;
     assert.equal((await getReply(text)).reply, 'Chat response');
     assert.equal(calls.length, 1);
