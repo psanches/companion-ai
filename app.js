@@ -755,9 +755,11 @@ async function getReply(text) {
     /\b(?:calendar|calendário|agenda|compromisso|compromissos|evento|eventos|appointment|appointments|reunião|consulta)\b/i
       .test(text);
 
+  // Generic words such as "eventos" also occur in health questions.
+  // Only explicit calendar references or complete agenda-list requests belong here.
   const calendarRequest =
-    /\b(calendar|agenda|compromisso|compromissos|evento|eventos|appointment|appointments)\b/i
-      .test(text);
+    /\b(calendar|calendário|agenda)\b/i.test(text) ||
+    /^(?:(?:lumi|por favor)[, ]+)?(?:(?:mostre|mostrar|liste|listar|ver|consultar|quais são|show|list)\s+)?(?:(?:os meus|meus|os|my|the)\s+)?(?:compromissos|eventos|appointments|events)(?:\s+(?:(?:de|para|for)\s+)?(?:hoje|amanhã|desta semana|da semana|today|tomorrow|this week))?[?.!\s]*$/i.test(text.trim());
 
   // Explicit confirmation must reach the Worker, never the listing handler.
   const calendarConfirmation =
