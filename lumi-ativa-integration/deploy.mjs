@@ -78,7 +78,13 @@ try{
  assert.equal(await contentHash(productionUrl),productionHash,'Production source hash changed');
  const code=process.env.DEMO_ACCESS_CODE;assert.ok(code);const login=await http('/demo-api/session',{method:'POST',headers:{origin:sandbox,'content-type':'application/json'},body:JSON.stringify({code})});if(login.status!==200){const diagnostic=await login.json().catch(()=>({}));console.log(JSON.stringify({stage:'integrated-session',status:login.status,diagnostic:diagnostic.diagnostic||null}));}assert.equal(login.status,200,'Integrated demo login failed');const cookie=login.headers.get('set-cookie')?.split(';')[0];assert.ok(cookie);
  const ai=await http('/demo-api/explain',{method:'POST',headers:{origin:sandbox,cookie,'content-type':'application/json'},body:JSON.stringify({recordId:'laboratorio',questionId:'explicar'})});assert.equal(ai.status,200,'Integrated synthetic AI check failed');const answer=await ai.json();assert.equal(answer.fictional,true);assert.ok(answer.reply?.length);
- await (await import('../frontend/deployed-check.mjs')).verifyFrontend(sandbox,release);
+ // Cloudflare can serve a previous runtime on a later connection even after
+ // the first identity probe succeeds. Require the full byte check to converge.
+ const {verifyFrontend}=await import('../frontend/deployed-check.mjs');
+ for(let attempt=0;;attempt++){
+  try{await verifyFrontend(sandbox,release);break;}
+  catch(error){if(attempt>=29)throw error;await new Promise(resolve=>setTimeout(resolve,1000));}
+ }
  await (await import('../lumi-website/deployed-check.mjs')).verifyInstitutional(sandbox,(await import('../lumi-website/bundle.generated.mjs')).default);
  await (await import('../frontend/return-deployed-check.mjs')).verifyFeatureReturns(sandbox);
  const result={commit:process.env.GITHUB_SHA,cloudflareVersion:uploadedVersion,release:release.release,url:sandbox+'/',medicalUrl:sandbox+'/ativa-medical/',fictional:true,baselineSha256:originalHash,productionSourceUnchanged:true,bindingsPreserved:true,syntheticServiceBinding:true,liveAI:true};console.log(JSON.stringify(result,null,2));if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'## Lumi + Ativa deployed in authorized development sandbox\n\n```json\n'+JSON.stringify(result,null,2)+'\n```\nReal medical routes remain blocked; original code and bindings preserved. No private source/secret values exported.\n');
