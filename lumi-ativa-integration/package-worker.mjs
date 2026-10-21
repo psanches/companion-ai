@@ -7,6 +7,7 @@ const files = {
   'conversation-worker.mjs': '../frontend/conversation-worker.mjs',
   'frontend-release.mjs': '../frontend/release.generated.mjs',
   'frontend-previous.mjs': '../frontend/previous.generated.mjs',
+  'calendar-conversation.mjs': '../lumi-calendar/calendar-conversation.mjs',
   'calendar.mjs': '../lumi-calendar/calendar.mjs',
   'calendar-auth.mjs': '../lumi-calendar/calendar-auth.mjs',
   'calendar-conflicts.mjs': '../lumi-calendar/calendar-conflicts.mjs',

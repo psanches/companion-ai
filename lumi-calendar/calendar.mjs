@@ -1,3 +1,4 @@
+import {calendarProposal} from './calendar-conversation.mjs';
 import {findConflicts,calendarMidnight} from './calendar-conflicts.mjs';
 import {createCalendarVerifier,CalendarAuthError} from './calendar-auth.mjs';
 export const HOST='lumi-develop.psanchesnle.workers.dev',ORIGIN='https://'+HOST;
@@ -75,7 +76,8 @@ export function createCalendarHandler({fetcher=fetch,verify=createCalendarVerifi
    }catch(error){if(error instanceof Failure&&['INPUT','CONNECT','CONFIG'].includes(error.code))throw error;fail('DAY');}}
    if(path.endsWith('/pending')){
     if(Object.keys(body).length)fail('INPUT');
-    const pending=await env.Memory.get('calendar:pending:user:'+user.id,'json');
+    let pending=await env.Memory.get('calendar:pending:user:'+user.id,'json');
+    if(!pending){const history=await env.Memory.get('history:user:'+user.id,'json');for(const message of (Array.isArray(history)?history:[]).slice(-12).reverse()){if(message.role!=='assistant')continue;if(/Evento criado|Criação.*cancelada/i.test(message.content||''))break;pending=calendarProposal(message.content);if(pending)break;}}
     if(!pending)return json({created:false,event:null});
     return json({created:false,event:validateEvent(pending,now())});
    }
