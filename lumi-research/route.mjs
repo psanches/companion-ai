@@ -15,11 +15,14 @@ export function createResearchRoute({ verifyToken, fetcher = fetch } = {}) {
     try { user = await verifyToken(auth.slice(7), env); } catch { return Response.json({error:'Sign in required'},{status:401}); }
     if (!user?.id) return Response.json({error:'Sign in required'},{status:401});
     const len = Number(request.headers.get('content-length') || 0);
-    if (len > 1500) return Response.json({error:'Request too large'},{status:413});
+    if (len > 6000) return Response.json({error:'Request too large'},{status:413});
     let question;
     try {
-      const raw = await request.text();
-      if (raw.length > 1500) throw Error('large');
+      const reader=request.body?.getReader();if(!reader)throw Error('empty');
+      const decoder=new TextDecoder();let raw='',size=0;
+      for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>6000){await reader.cancel();throw Error('large');}raw+=decoder.decode(value,{stream:true});}
+      raw+=decoder.decode();
+      if(raw.length>1500)throw Error('large');
       const payload = JSON.parse(raw);
       if (Object.keys(payload).length !== 1 || typeof payload.question !== 'string') throw Error('invalid');
       question = payload.question;
@@ -33,3 +36,4 @@ export function createResearchRoute({ verifyToken, fetcher = fetch } = {}) {
     }
   };
 }
+

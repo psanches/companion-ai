@@ -29,7 +29,7 @@ test('public endpoint only reads stored public news, no generation from HTTP',as
  assert.equal((await w.fetch(req('POST'))).status,405);assert.equal(calls,0);
 });
 test('deployment package includes executable default scheduled handler and all imports',async()=>{
- const modules=packageWorker({type:'application/javascript+module',bytes:Buffer.from('export default {fetch(){return new Response("baseline")}}')});
+ const modules=packageWorker({type:'application/javascript+module',bytes:Buffer.from('async function askOpenAI(){const instructions = `fixture`.trim();return instructions;} export default {fetch(){return new Response("baseline")}}')});
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'lumi-package-'));
  try{
   fs.writeFileSync(path.join(root,'package.json'),'{"type":"module"}');
@@ -102,3 +102,4 @@ test('supplementary research completes exactly five daily readings and never pub
   return api([{url:base+1}]);
  }),/complete five/);assert.equal(writes,0);
 });
+

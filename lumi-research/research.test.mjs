@@ -47,3 +47,14 @@ test('rejects uncited or unsearched answer as unverified', async () => {
     assert.equal(result.status,'unverified');
   }
 });
+
+
+test('failed, unfinished searches and incomplete answers cannot masquerade as verified research',async()=>{
+ for(const [searchStatus,status]of [['failed','completed'],['incomplete','completed'],['in_progress','completed'],['completed','incomplete']]){const r=await researchNow({question:'weather Bauru',authorized:true,apiKey:'test',fetcher:async()=>Response.json({status,output:[{type:'web_search_call',status:searchStatus},{content:[{type:'output_text',text:'Claim',annotations:[{type:'url_citation',url:'https://example.org/forecast'}]}]}]})});assert.equal(r.status,'unverified');}
+});
+test('weather rejects homepage-only evidence, records search time, and distinguishes source update date in instructions',async()=>{
+ let payload;const fetcher=url=>async(_url,opts)=>{payload=JSON.parse(opts.body);return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Previsão. Quer que eu crie um lembrete?',annotations:[{type:'url_citation',url}]}]}]});};
+ const options={question:'Previsão do tempo para Bauru hoje',authorized:true,apiKey:'test',now:new Date('2026-10-22T01:00:00Z')};
+ assert.equal((await researchNow({...options,fetcher:fetcher('https://example.org/')})).status,'unverified');
+ const r=await researchNow({...options,fetcher:fetcher('https://example.org/forecast/bauru')});assert.equal(r.status,'complete');assert.equal(r.answer,'Previsão.');assert.equal(r.researchedAt,'2026-10-22T01:00:00.000Z');assert.match(payload.input[0].content,/2026-10-21/);assert.match(payload.input[0].content,/source update dates/);assert.equal(payload.max_output_tokens,600);
+});

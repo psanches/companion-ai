@@ -1,14 +1,6 @@
 import {WEEK_FRONTEND} from './calendar-week-frontend.mjs';
 // Appended only to the inspected development app.js; no auth/session replacement.
 export const CALENDAR_FRONTEND=String.raw`
-async function lumiResearchWeather(text,request,base){
- const response=await request(base.replace(/\/?$/,'/')+'research',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:text})});
- const data=await response.json();
- if(!response.ok||data.status!=='complete')return {reply:data.answer||data.error||'Não consegui verificar a previsão agora.'};
- if(!data.citations?.some(c=>/^https:\/\//.test(c.url)))return {reply:'Não consegui verificar a previsão com fontes agora.'};
- const sources=data.citations.filter(c=>/^https:\/\//.test(c.url)).map(c=>c.url);
- return {reply:data.answer+'\n\nFontes:\n'+[...new Set(sources)].join('\n')};
-}
 async function lumiReviewPendingCalendarEvent(request,base){
  const response=await request(base.replace(/\/?$/,'/')+'calendar/events/pending',{method:'POST',headers:{'content-type':'application/json','accept-language':'pt-BR'},body:'{}'});
  const data=await response.json();if(!response.ok)return {reply:data.error||'Não consegui recuperar o evento. Tente novamente.'};
@@ -101,7 +93,7 @@ async function lumiResumeCalendarEvent(request,base){
 export function patchCalendarApp(source){
  const start=source.indexOf('async function getReply(text) {'),end=source.indexOf('  const calendarRequest =',start);
  if(start<0||end<start)throw Error('Unrecognized live Calendar frontend; refusing to replace app');
- const branch=`async function getReply(text) {\n  if(/(?:previs[aã]o(?: do tempo)?|clima|tempo (?:hoje|amanh[aã]|em|para)|weather|forecast)/i.test(text))return lumiResearchWeather(text,authFetch,WORKER_URL);\n  const calendarCreationRequest = /\\b(marque|marcar|agende|agendar|schedule|book)\\b/i.test(text) || (/\\b(crie|criar|create|add|adicione|adicionar)\\b/i.test(text) && /\\b(evento|event|appointment|compromisso|calendar|agenda|reunião|consulta)\\b/i.test(text));\n  if(/^(?:confirmar?|comfirmar?|confirm)(?:\\s+(?:evento|event))?[.!\\s]*$/i.test(text.trim()))return lumiReviewPendingCalendarEvent(authFetch,WORKER_URL);\n  if(/\\bmarca\\s+(?:(?:uma?|o|a|meu|minha)\\s+)?(?:consulta|evento|compromisso|reunião|exame|retorno)\\b/i.test(text))return lumiCreateCalendarEvent(text,authFetch,WORKER_URL);\n  if(calendarCreationRequest)return lumiCreateCalendarEvent(text,authFetch,WORKER_URL);\n`;
+ const branch=`async function getReply(text) {\n  const calendarCreationRequest = /\\b(marque|marcar|agende|agendar|schedule|book)\\b/i.test(text) || (/\\b(crie|criar|create|add|adicione|adicionar)\\b/i.test(text) && /\\b(evento|event|appointment|compromisso|calendar|agenda|reunião|consulta)\\b/i.test(text));\n  if(/^(?:confirmar?|comfirmar?|confirm)(?:\\s+(?:evento|event))?[.!\\s]*$/i.test(text.trim()))return lumiReviewPendingCalendarEvent(authFetch,WORKER_URL);\n  if(/\\bmarca\\s+(?:(?:uma?|o|a|meu|minha)\\s+)?(?:consulta|evento|compromisso|reunião|exame|retorno)\\b/i.test(text))return lumiCreateCalendarEvent(text,authFetch,WORKER_URL);\n  if(calendarCreationRequest)return lumiCreateCalendarEvent(text,authFetch,WORKER_URL);\n`;
  const tail=source.slice(end).replace('  return data;\n}', '  if(data.calendarEvent)return lumiCreateCalendarEvent("",authFetch,WORKER_URL,data.calendarEvent);\n  return data;\n}');
  return source.slice(0,start)+branch+tail+'\n'+CALENDAR_FRONTEND+'\ndocument.getElementById("lumiAgendaBtn")?.addEventListener("click",async()=>{if(typeof setSidebarOpen==="function")setSidebarOpen(false);await lumiShowCalendarWeek(authFetch,WORKER_URL);});\nif(new URLSearchParams(location.search).get("calendar_connected")==="1"&&!new URLSearchParams(location.search).has("calendar_resume"))void lumiShowCalendarWeek(authFetch,WORKER_URL);\nvoid lumiResumeCalendarEvent(authFetch,WORKER_URL);\nvoid lumiResumeCalendarSignIn(authFetch,WORKER_URL);\ndocument.addEventListener("click",e=>{if(e.target.closest?.("#signInBtn"))lumiCalendarRememberForSignIn();if(e.target.closest?.("#signOutBtn"))sessionStorage.removeItem("lumiCalendarSignInDraft");},true);\nsupabaseClient.auth.onAuthStateChange(event=>{if(event==="SIGNED_IN")setTimeout(()=>{void lumiResumeCalendarSignIn(authFetch,WORKER_URL);},0);});';
 }

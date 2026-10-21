@@ -27,3 +27,6 @@ test('limit exhaustion blocks API call and returns 429',async()=>{
  const r=await handler(req(),{LUMI_RESEARCH_OPENAI_API_KEY:'server-key',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>({success:false})}});
  assert.equal(r.status,429);assert.equal(apiCalls,0);
 });
+
+
+test('each valid research request verifies identity once; foreign routes and origins do not consume the limiter',async()=>{let verifies=0,limits=0;const handler=createLumiResearchHandler({fetcher:async(url,opts)=>{if(url.endsWith('/auth/v1/user'))verifies++;return mockFetch(url,opts);}});const env={LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>{limits++;return {success:true};}}};assert.equal((await handler(req(),env)).status,200);assert.equal(verifies,1);assert.equal(limits,1);const foreign=new Request(origin+'/research',{method:'POST',headers:{origin:'https://evil.example'},body:'{}'});assert.equal((await handler(foreign,env)).status,403);assert.equal(limits,1);assert.equal(await handler(new Request(origin+'/other'),env),null);});

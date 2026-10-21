@@ -1,6 +1,7 @@
 import {withBetaFeedback} from './beta-feedback-worker.mjs';
 // LUMI_ATIVA_INTEGRATION_VERSION=1
-import baseline from './ativa-baseline-preserved.mjs';
+import baseline from './ativa-baseline-runtime.mjs';
+import {withCompanionChat} from './companion-chat.mjs';
 import assets from './ativa-assets.mjs';
 import {createLumiAtivaIntegration} from './ativa-factory.mjs';
 import {createLumiResearchHandler} from './lumi-research-handler.mjs';
@@ -13,4 +14,7 @@ import previous from './frontend-previous.mjs';
 import {withConversationSidebar} from './conversation-worker.mjs';
 import {withInstitutional} from './institutional-worker.mjs';
 import institutional from './institutional-bundle.mjs';
-export default withFrontendVersion(withInstitutional(withBetaFeedback(withConversationSidebar(withCalendar(withHealthNews(createLumiAtivaIntegration(baseline,assets,fetch,createLumiResearchHandler()))))),institutional),release,previous);
+const integrated=createLumiAtivaIntegration(baseline,assets,fetch,createLumiResearchHandler());
+const companion=withCompanionChat(withHealthNews(integrated));
+const application=withBetaFeedback(withConversationSidebar(withCalendar(companion)));
+export default withFrontendVersion(withInstitutional(application,institutional),release,previous);

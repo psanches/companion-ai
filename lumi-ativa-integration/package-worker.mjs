@@ -1,5 +1,8 @@
 import fs from 'node:fs';
+import {applyRuntimePolicy} from './runtime-policy.mjs';
 const files = {
+  'companion-instructions.mjs': './companion-instructions.mjs',
+  'companion-chat.mjs': './companion-chat.mjs',
   'beta-feedback-worker.mjs': '../lumi-beta/feedback-worker.mjs',
   'worker.js': './worker-entry.mjs',
   'frontend-version.mjs': '../frontend/version-worker.mjs',
@@ -28,6 +31,8 @@ const files = {
 };
 export function packageWorker(original) {
   return [{name:'ativa-baseline-preserved.mjs',type:original.type,bytes:original.bytes},
+    {name:'ativa-baseline-runtime.mjs',type:original.type,bytes:Buffer.from(applyRuntimePolicy(original.bytes.toString('utf8')))},
     ...Object.entries(files).map(([name,path]) => ({name,
-      type:'application/javascript+module',bytes:name==='beta-feedback-worker.mjs'?Buffer.from(fs.readFileSync(new URL(path,import.meta.url),'utf8').replaceAll('../lumi-calendar/','./')):fs.readFileSync(new URL(path,import.meta.url))}))];
+      type:'application/javascript+module',bytes:name==='beta-feedback-worker.mjs'?Buffer.from(fs.readFileSync(new URL(path,import.meta.url),'utf8').replaceAll('../lumi-calendar/','./')):Buffer.from(fs.readFileSync(new URL(path,import.meta.url),'utf8').replaceAll('../lumi-ativa-integration/','./').replaceAll('../lumi-calendar/','./').replaceAll('../lumi-research/handler.mjs','./lumi-research-handler.mjs').replaceAll('../lumi-research/','./'))}))];
 }
+

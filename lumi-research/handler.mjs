@@ -8,6 +8,9 @@ export function createLumiResearchHandler({fetcher=fetch}={}) {
   const publicAuth={SUPABASE_URL:'https://hjdrnxqvmpwfztlrqknp.supabase.co',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv'};
   const route=createResearchRoute({verifyToken,fetcher});
   return async (request,env)=>{
+    const url=new URL(request.url);
+    if(url.hostname!=='lumi-develop.psanchesnle.workers.dev'||url.pathname!=='/research')return null;
+    if(request.method!=='POST'||request.headers.get('origin')!==url.origin)return route(request,{...env,...publicAuth});
     env={...env,...publicAuth};
     // Fail closed until a server-managed per-user rate limiter is configured.
     if (!env?.LUMI_RESEARCH_RATE_LIMIT || typeof env.LUMI_RESEARCH_RATE_LIMIT.limit!=='function')
@@ -21,6 +24,7 @@ export function createLumiResearchHandler({fetcher=fetch}={}) {
       const limit=await env.LUMI_RESEARCH_RATE_LIMIT.limit({key:user.id});
       if (!limit?.success) return Response.json({status:'limited',answer:'Limite de pesquisas atingido. Tente novamente mais tarde.'},{status:429});
     } catch {return Response.json({status:'unavailable',answer:'Pesquisa temporariamente indisponível.'},{status:503});}
-    return route(request,env);
+    return createResearchRoute({verifyToken:async()=>user,fetcher})(request,env);
   };
 }
+

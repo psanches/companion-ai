@@ -1003,6 +1003,10 @@ form.onsubmit = async e => {
 
   } catch (err) {
     wait.remove();
+    if (!input.value.trim()) {
+      input.value = text;
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+    }
 
     add(
       "system",
@@ -1605,3 +1609,4 @@ supabaseClient.auth.onAuthStateChange((event,session) => {
     void refreshConversationList();
   },0);
 });
+
