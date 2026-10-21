@@ -2,11 +2,12 @@
 export function mergeDictation(previous,next,replaceEqual=false){
  previous=String(previous||'').trim();next=String(next||'').trim();if(!previous)return next;if(!next)return previous;
  const words=value=>value.toLocaleLowerCase('pt-BR').replace(/[.,!?;:]/g,'').split(/\s+/).filter(Boolean),a=words(previous),b=words(next);
+ if(replaceEqual&&a.length>b.length&&b.every((word,index)=>word===a[index]))return previous;
  if((b.length>a.length||(replaceEqual&&b.length===a.length))&&a.every((word,index)=>word===b[index]))return next;
  return previous+' '+next;
 }
 export function recognitionText(results){
- let final='',interim='';for(const result of Array.from(results||[])){const text=String(result?.[0]?.transcript||'').trim();if(!text)continue;if(result.isFinal===true)final=mergeDictation(final,text);else interim=text;}
+ let final='',interim='';for(const result of Array.from(results||[])){const text=String(result?.[0]?.transcript||'').trim();if(!text)continue;if(result.isFinal===true)final=mergeDictation(final,text,true);else interim=text;}
  return interim?mergeDictation(final,interim,true):final;
 }
 export function installLumiVoiceInput(){
@@ -28,7 +29,7 @@ export function installLumiVoiceInput(){
   let recognition;try{recognition=new Constructor();}catch{release();error('start');return;}
   current=recognition;if(resuming)committed=heard;else{original=input.value.trimEnd();committed='';heard='';}failed=false;phase='starting';show(resuming?'Continuando a escuta…':'Aguardando o microfone… Se solicitado, toque em Permitir.');button.textContent='⏳';button.setAttribute('aria-label','Cancelar ditado');button.setAttribute('aria-pressed','true');recognition.lang=document.documentElement.lang?.startsWith('en')?'en-US':'pt-BR';recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=1;
   recognition.onstart=()=>{if(current!==recognition)return;clearTimeout(timer);phase='listening';button.textContent='🔴';button.title='Parar de ouvir';button.setAttribute('aria-label','Parar de ouvir');show('Ouvindo… Você pode pausar até 30 segundos. Toque para parar (máximo 2 minutos).');armSilence();};
-  recognition.onresult=event=>{if(current!==recognition)return;const recognized=recognitionText(event.results);if(!recognized)return;heard=mergeDictation(committed,recognized);hasText=true;lastActivity=Date.now();restarts=0;if(sessionActive)armSilence();input.value=(original?original+' ':'')+heard;input.dispatchEvent(new Event('input',{bubbles:true}));show('Ouvindo… Pode continuar ou tocar no microfone para parar.');};
+  recognition.onresult=event=>{if(current!==recognition)return;const recognized=recognitionText(event.results);if(!recognized)return;heard=mergeDictation(committed,recognized,true);hasText=true;lastActivity=Date.now();restarts=0;if(sessionActive)armSilence();input.value=(original?original+' ':'')+heard;input.dispatchEvent(new Event('input',{bubbles:true}));show('Ouvindo… Pode continuar ou tocar no microfone para parar.');};
   recognition.onerror=event=>{if(current!==recognition)return;if(event.error==='no-speech'&&sessionActive)return;failed=true;const code={'not-allowed':'permission','service-not-allowed':'permission','audio-capture':'capture',network:'network','no-speech':'silence','language-not-supported':'unsupported'}[event.error]||'start';release(true);if(event.error!=='aborted')error(code);else show('Ditado interrompido. Toque no microfone para tentar novamente.');};
   recognition.onend=()=>{if(current!==recognition)return;
    if(sessionActive&&!failed&&Date.now()-lastActivity<30000&&restarts<6){
@@ -53,3 +54,4 @@ export function patchVoiceInput(source){
  if(start<0||end<start)throw Error('Voice input section missing; refusing an unverified patch');
  return source.slice(0,start)+'const mergeDictation='+mergeDictation.toString()+';\nconst recognitionText='+recognitionText.toString()+';\n('+installLumiVoiceInput.toString()+')();\n\n'+source.slice(end);
 }
+

@@ -26,3 +26,11 @@ test('Android cumulative interim hypotheses replace one another rather than repe
 test('final and interim speech revisions do not accumulate and genuine repeated words survive',()=>{const result=(text,isFinal)=>Object.assign([{transcript:text}],{isFinal});assert.equal(recognitionText([result('Oi Luane',true),result('Oi Luane tudo bem',true),result('Oi Luane tudo bem qual é a previsão',false)]),'Oi Luane tudo bem qual é a previsão');assert.equal(recognitionText([result('Não não, quero segunda-feira',true),result('às dezessete horas',false)]),'Não não, quero segunda-feira às dezessete horas');assert.equal(mergeDictation('bom dia','bom dia'),'bom dia bom dia');});
 
 test('an interim copy of an already finalized phrase is displayed once',()=>{const result=(transcript,isFinal)=>Object.assign([{transcript}],{isFinal});assert.equal(recognitionText([result('Previsão para Bauru hoje e amanhã',true),result('Previsão para Bauru hoje e amanhã',false)]),'Previsão para Bauru hoje e amanhã');});
+
+
+test('Android repeated final results and restarted cumulative snapshots appear once',()=>{
+ const result=(transcript,isFinal=true)=>Object.assign([{transcript}],{isFinal});
+ assert.equal(recognitionText([result('Oi Luane'),result('Oi Luane'),result('Oi Luane tudo bem'),result('Oi Luane tudo bem qual é a previsão',false)]),'Oi Luane tudo bem qual é a previsão');
+ assert.equal(mergeDictation('Oi Luane tudo bem','Oi Luane',true),'Oi Luane tudo bem');
+ const f=fixture();f.button.click();let rec=f.instances[0];rec.onstart();rec.onresult({results:[result('Previsão para Bauru')]});rec.onend();[...f.timers.values()].find(t=>t.ms===300).fn();rec=f.instances[1];rec.onstart();rec.onresult({results:[result('Previsão para Bauru hoje e amanhã')]});assert.equal(f.input.value,'Previsão para Bauru hoje e amanhã');f.close();
+});
