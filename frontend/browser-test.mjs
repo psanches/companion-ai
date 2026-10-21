@@ -57,6 +57,20 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.evaluate(()=>window.__setAuth(true));await page.locator('#signOutBtn').waitFor({state:'visible'});await page.locator('#chatForm').waitFor({state:'visible'});
  await page.locator('#lumiGuideDialog').waitFor({state:'visible'});await page.locator('#lumiGuideDontShow').check();await page.getByRole('button',{name:'Começar a conversar',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('#messages .msg').length===6);
+ // Exercise the real sidebar button with the pre-existing beta demo dialog present.
+ if(width<=900)await page.locator('#chatHistoryBtn').click();
+ await page.locator('#lumiBetaFeedbackBtn').click();
+ await page.locator('#lumiBetaFeedbackDialog').waitFor({state:'visible'});
+ assert.equal(await page.locator('#lumiBetaDialog').isVisible(),false);
+ await page.locator('#lumiBetaFeedbackDialog [name=description]').fill('Relato fictício: botão de teste.');
+ await page.locator('#lumiBetaFeedbackDialog > button').click();
+ await page.locator('#lumiBetaFeedbackDialog').waitFor({state:'detached'});
+ if(width<=900)await page.locator('#chatHistoryBtn').click();
+ await page.locator('#lumiBetaFeedbackBtn').click();
+ await page.locator('#lumiBetaFeedbackDialog').waitFor({state:'visible'});
+ assert.equal(await page.locator('#lumiBetaFeedbackDialog').count(),1);
+ await page.locator('#lumiBetaFeedbackDialog > button').click();
+
  const unchangedSettings=await page.evaluate(()=>localStorage.getItem('companion-ai-v2'));await page.locator('#settingsBtn').click();await page.locator('#userName').fill('Alteração não salva');await page.locator('#closeSettingsBtn').click();assert.equal(await page.locator('#settingsDialog').isVisible(),false);assert.equal(await page.evaluate(()=>localStorage.getItem('companion-ai-v2')),unchangedSettings);
 
  await page.locator('#loadEarlierBtn').click();assert.equal(await page.locator('#messages .msg').count(),12);

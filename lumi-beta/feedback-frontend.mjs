@@ -1,9 +1,9 @@
 import {FEEDBACK_CODES} from './feedback-worker.mjs';
 export const BETA_FEEDBACK_FRONTEND='\nconst lumiBetaCodes='+JSON.stringify(FEEDBACK_CODES)+';\n'+String.raw`
 function lumiOpenBetaFeedback(){
- if(document.getElementById('lumiBetaDialog'))return;
+ if(document.getElementById('lumiBetaFeedbackDialog'))return;
  if(typeof setSidebarOpen==='function')setSidebarOpen(false);
- const make=(tag,text)=>{const n=document.createElement(tag);if(text)n.textContent=text;return n;},dialog=make('dialog'),form=make('form'),status=make('p'),list=make('section');dialog.id='lumiBetaDialog';dialog.setAttribute('aria-labelledby','lumiBetaHeading');dialog.style.cssText='max-width:580px;width:calc(100% - 24px);max-height:90dvh;overflow:auto;box-sizing:border-box;background:#162235;color:white;border:1px solid #9bd6f5;border-radius:16px;padding:20px;font:17px system-ui';
+ const make=(tag,text)=>{const n=document.createElement(tag);if(text)n.textContent=text;return n;},dialog=make('dialog'),form=make('form'),status=make('p'),list=make('section');dialog.id='lumiBetaFeedbackDialog';dialog.setAttribute('aria-labelledby','lumiBetaHeading');dialog.style.cssText='max-width:580px;width:calc(100% - 24px);max-height:90dvh;overflow:auto;box-sizing:border-box;background:#162235;color:white;border:1px solid #9bd6f5;border-radius:16px;padding:20px;font:17px system-ui';
  const heading=make('h2','Relatar problema · Beta');heading.id='lumiBetaHeading';const close=make('button','Voltar à Lumi');close.type='button';close.onclick=()=>dialog.close();dialog.append(close,heading,make('p','Conte o que aconteceu. Não inclua senhas nem informações médicas pessoais.'),form,status,list);status.setAttribute('role','status');
  const fields={};function field(name,label,element){const l=make('label',label);element.name=name;element.id='lumiBeta-'+name;l.htmlFor=element.id;element.style.cssText='display:block;width:100%;box-sizing:border-box;margin:6px 0 16px;padding:10px;font:inherit;background:#fff;color:#162235;border-radius:8px';l.append(element);form.append(l);fields[name]=element;return element;}
  const category=field('category','Onde ocorreu?',make('select'));for(const [code,label]of Object.entries(lumiBetaCodes)){const o=make('option',code+' · '+label);o.value=code;category.append(o);}
