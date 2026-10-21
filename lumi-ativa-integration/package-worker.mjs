@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 const files = {
+  'beta-feedback-worker.mjs': '../lumi-beta/feedback-worker.mjs',
   'worker.js': './worker-entry.mjs',
   'frontend-version.mjs': '../frontend/version-worker.mjs',
   'institutional-worker.mjs': '../lumi-website/development-wrapper.mjs',
@@ -28,5 +29,5 @@ const files = {
 export function packageWorker(original) {
   return [{name:'ativa-baseline-preserved.mjs',type:original.type,bytes:original.bytes},
     ...Object.entries(files).map(([name,path]) => ({name,
-      type:'application/javascript+module',bytes:fs.readFileSync(new URL(path,import.meta.url))}))];
+      type:'application/javascript+module',bytes:name==='beta-feedback-worker.mjs'?Buffer.from(fs.readFileSync(new URL(path,import.meta.url),'utf8').replaceAll('../lumi-calendar/','./')):fs.readFileSync(new URL(path,import.meta.url))}))];
 }

@@ -1,3 +1,4 @@
+import {withBetaFeedback} from './beta-feedback-worker.mjs';
 // LUMI_ATIVA_INTEGRATION_VERSION=1
 import baseline from './ativa-baseline-preserved.mjs';
 import assets from './ativa-assets.mjs';
@@ -12,4 +13,4 @@ import previous from './frontend-previous.mjs';
 import {withConversationSidebar} from './conversation-worker.mjs';
 import {withInstitutional} from './institutional-worker.mjs';
 import institutional from './institutional-bundle.mjs';
-export default withFrontendVersion(withInstitutional(withConversationSidebar(withCalendar(withHealthNews(createLumiAtivaIntegration(baseline,assets,fetch,createLumiResearchHandler())))),institutional),release,previous);
+export default withFrontendVersion(withInstitutional(withBetaFeedback(withConversationSidebar(withCalendar(withHealthNews(createLumiAtivaIntegration(baseline,assets,fetch,createLumiResearchHandler()))))),institutional),release,previous);
