@@ -82,6 +82,8 @@ jobs:
         run: node lumi-ativa-integration/deploy.mjs
       - name: Verify Calendar frontend and authentication boundaries (no calendar writes)
         run: node lumi-calendar/deployed-check.mjs
+      - name: Verify microphone control package (no audio capture)
+        run: node frontend/voice-deployed-check.mjs
       - name: Verify beta feedback UI and access boundaries (no reports submitted)
         run: node lumi-beta/deployed-check.mjs
       - name: Verify existing public health-news edition (read-only)

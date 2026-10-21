@@ -1,0 +1,3 @@
+import assert from 'node:assert/strict';
+const base='https://lumi-develop.psanchesnle.workers.dev';const r=await fetch(base+'/app.js',{cache:'no-store'});assert.equal(r.status,200);const script=await r.text();for(const marker of ['installLumiVoiceInput','lumiVoiceStatus','VOZ-02','VOZ-04','webkitSpeechRecognition'])assert.ok(script.includes(marker),'Missing microphone control: '+marker);assert.ok(!script.includes('const SpeechRecognition ='),'Legacy silent microphone control still served');
+console.log(JSON.stringify({voiceControlDeployed:true,errorCodesVisible:true,hardwareMicrophoneTested:false,audioCaptured:false}));

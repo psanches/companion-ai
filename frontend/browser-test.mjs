@@ -31,7 +31,7 @@ const backend={fetch:async request=>{
 }};
 const original=createLumiAtivaIntegration(backend,assets);
 const withNews={fetch:async request=>{const path=new URL(request.url).pathname;if(path==='/noticias')return new Response(NEWS_HTML,{headers:{'content-type':'text/html'}});let r=await original.fetch(request);if(path==='/'){r=new Response((await r.text()).replace('</body>','<script src="/health-news-ui.js" defer></script></body>'),{headers:r.headers});}return r;}};
-const fixture=`(()=>{let signedIn=false;const listeners=[];window.__setAuth=value=>{signedIn=value;for(const cb of listeners)cb(value?'SIGNED_IN':'SIGNED_OUT',value?{access_token:'synthetic-test-token',user:{id:'synthetic-owner'}}:null);};window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:signedIn?{access_token:'synthetic-test-token',user:{id:'synthetic-owner'}}:null}}),onAuthStateChange:cb=>{listeners.push(cb);return {data:{subscription:{unsubscribe(){}}}};},signOut:async()=>{window.__setAuth(false);return {};},signInWithOtp:async options=>{window.__authOptions=options;return {};},signInWithOAuth:async options=>{window.__authOptions=options;return {};}}})};})();`;
+const fixture=`(()=>{window.__voiceInstances=[];window.SpeechRecognition=class {constructor(){window.__voiceInstances.push(this);}start(){this.onstart?.();}stop(){this.onend?.();}abort(){}};let signedIn=false;const listeners=[];window.__setAuth=value=>{signedIn=value;for(const cb of listeners)cb(value?'SIGNED_IN':'SIGNED_OUT',value?{access_token:'synthetic-test-token',user:{id:'synthetic-owner'}}:null);};window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:signedIn?{access_token:'synthetic-test-token',user:{id:'synthetic-owner'}}:null}}),onAuthStateChange:cb=>{listeners.push(cb);return {data:{subscription:{unsubscribe(){}}}};},signOut:async()=>{window.__setAuth(false);return {};},signInWithOtp:async options=>{window.__authOptions=options;return {};},signInWithOAuth:async options=>{window.__authOptions=options;return {};}}})};})();`;
 const browser=await chromium.launch({headless:true,...(process.env.LUMI_CHROMIUM_EXECUTABLE?{executablePath:process.env.LUMI_CHROMIUM_EXECUTABLE,args:["--no-sandbox","--disable-dev-shm-usage","--no-zygote"]}:{})});const results=[];
 try{
 for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360',360,800,true],['android-393',393,851,true],['small-320',320,640,true],['landscape',800,360,true]]){
@@ -57,6 +57,15 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.evaluate(()=>window.__setAuth(true));await page.locator('#signOutBtn').waitFor({state:'visible'});await page.locator('#chatForm').waitFor({state:'visible'});
  await page.locator('#lumiGuideDialog').waitFor({state:'visible'});await page.locator('#lumiGuideDontShow').check();await page.getByRole('button',{name:'Começar a conversar',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('#messages .msg').length===6);
+ // Browser speech events are simulated; this checks the live DOM contract, not hardware.
+ await page.locator('#voiceButton').click();await page.getByText('Ouvindo… Fale agora. Toque no microfone para parar.',{exact:true}).waitFor();
+ await page.evaluate(()=>{const r=window.__voiceInstances.at(-1);r.onresult({results:[[{transcript:'Mensagem ditada fictícia'}]]});r.onend();});
+ assert.equal(await page.locator('#messageInput').inputValue(),'Mensagem ditada fictícia');assert.equal(await page.locator('#messages .msg').count(),6);
+ await page.locator('#voiceButton').click();await page.evaluate(()=>window.__voiceInstances.at(-1).onerror({error:'not-allowed'}));
+ await page.getByText(/Código: VOZ-02/).waitFor();assert.equal(await page.locator('#messageInput').inputValue(),'Mensagem ditada fictícia');
+ await page.locator('#voiceButton').click();await page.locator('#voiceButton').click();await page.locator('#messageInput').fill('');
+ await page.evaluate(()=>{document.getElementById('lumiVoiceStatus').hidden=true;});
+
  // Exercise the real sidebar button with the pre-existing beta demo dialog present.
  if(width<=900)await page.locator('#chatHistoryBtn').click();
  await page.locator('#lumiBetaFeedbackBtn').click();
