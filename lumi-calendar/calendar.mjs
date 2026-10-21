@@ -76,8 +76,11 @@ export function createCalendarHandler({fetcher=fetch,verify=createCalendarVerifi
    }catch(error){if(error instanceof Failure&&['INPUT','CONNECT','CONFIG'].includes(error.code))throw error;fail('DAY');}}
    if(path.endsWith('/pending')){
     if(Object.keys(body).length)fail('INPUT');
-    let pending=await env.Memory.get('calendar:pending:user:'+user.id,'json');
-    if(!pending){const history=await env.Memory.get('history:user:'+user.id,'json');for(const message of (Array.isArray(history)?history:[]).slice(-12).reverse()){if(message.role!=='assistant')continue;if(/Evento criado|Criação.*cancelada/i.test(message.content||''))break;pending=calendarProposal(message.content);if(pending)break;}}
+    let pending=null,closed=false;const history=await env.Memory.get('history:user:'+user.id,'json');
+    for(const message of (Array.isArray(history)?history:[]).slice(-12).reverse()){if(message.role!=='assistant')continue;if(/Evento criado|Criação.*cancelada/i.test(message.content||'')){closed=true;break;}pending=calendarProposal(message.content);if(pending)break;}
+    const stored=await env.Memory.get('calendar:pending:user:'+user.id,'json');
+    if(pending&&stored&&pending.title===stored.title&&Date.parse(pending.start)===Date.parse(stored.start)&&Date.parse(pending.end)===Date.parse(stored.end))pending={...pending,description:pending.description||stored.description||'',location:pending.location||stored.location||''};
+    if(!pending&&!closed)pending=stored;
     if(!pending)return json({created:false,event:null});
     return json({created:false,event:validateEvent(pending,now())});
    }

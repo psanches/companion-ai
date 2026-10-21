@@ -23,6 +23,9 @@ test('assembled real chat routes agenda reads, event creation and confirmation w
   calls.length = 0;
   assert.equal((await getReply('criar evento amanhã às 14:30')).reply, 'Review event');
   assert.deepEqual(calls, [{create: 'criar evento amanhã às 14:30'}]);
+  calls.length=0;
+  assert.equal((await getReply('Oi Luane me marca uma consulta de neurologista')).reply,'Review event');
+  assert.deepEqual(calls,[{create:'Oi Luane me marca uma consulta de neurologista'}]);
   assert.equal((await getReply('CONFIRMAR EVENTO')).reply, 'Pending review');
   for (const text of ['Olá Lumi', 'Quero que você me diga qual o melhor exame para detectar riscos de eventos cerebrais?', 'O que são eventos adversos de medicamentos?', 'Como prevenir eventos cardiovasculares?']) {
     calls.length = 0;

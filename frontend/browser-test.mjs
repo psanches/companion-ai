@@ -59,7 +59,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.waitForFunction(()=>document.querySelectorAll('#messages .msg').length===6);
  // Browser speech events are simulated; this checks the live DOM contract, not hardware.
  await page.locator('#voiceButton').click();await page.getByText('Ouvindo… Você pode pausar até 30 segundos. Toque para parar (máximo 2 minutos).',{exact:true}).waitFor();
- await page.evaluate(()=>{const r=window.__voiceInstances.at(-1);r.onresult({results:[[{transcript:'Mensagem ditada fictícia'}]]});});
+ await page.evaluate(()=>{const r=window.__voiceInstances.at(-1);r.onresult({results:['Mensagem','Mensagem ditada','Mensagem ditada fictícia'].map(transcript=>Object.assign([{transcript}],{isFinal:false}))});});
  await page.locator('#voiceButton').click();
  assert.equal(await page.locator('#messageInput').inputValue(),'Mensagem ditada fictícia');assert.equal(await page.locator('#messages .msg').count(),6);
  await page.locator('#voiceButton').click();await page.evaluate(()=>window.__voiceInstances.at(-1).onerror({error:'not-allowed'}));
