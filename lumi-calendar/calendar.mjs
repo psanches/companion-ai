@@ -47,7 +47,7 @@ export function createCalendarHandler({fetcher=fetch,verify=createCalendarVerifi
  }
  return async function handle(request,env){
   const url=new URL(request.url),path=url.pathname.replace(/^\/api(?=\/)/,'');if(url.hostname!==HOST)return null;
-  const eventPath=path==='/calendar/events',draftPath=/^\/calendar\/events\/(prepare|confirm|cancel|resume|day|week)$/.test(path),oauth=['/auth/google/start','/auth/google/callback'].includes(path);
+  const eventPath=path==='/calendar/events',draftPath=/^\/calendar\/events\/(prepare|confirm|cancel|resume|pending|day|week)$/.test(path),oauth=['/auth/google/start','/auth/google/callback'].includes(path);
   // Preserve GET event listing byte-for-byte through the original integration.
   if(!(eventPath&&request.method!=='GET'&&request.method!=='HEAD')&&!draftPath&&!oauth){
    // Do not let legacy chat confirmations write through the older helper.
@@ -73,6 +73,12 @@ export function createCalendarHandler({fetcher=fetch,verify=createCalendarVerifi
     }
     fail('DAY');
    }catch(error){if(error instanceof Failure&&['INPUT','CONNECT','CONFIG'].includes(error.code))throw error;fail('DAY');}}
+   if(path.endsWith('/pending')){
+    if(Object.keys(body).length)fail('INPUT');
+    const pending=await env.Memory.get('calendar:pending:user:'+user.id,'json');
+    if(!pending)return json({created:false,event:null});
+    return json({created:false,event:validateEvent(pending,now())});
+   }
    if(path.endsWith('/resume')){if(Object.keys(body).some(k=>k!=='resumeId')||!/^[a-f0-9]{64}$/.test(body.resumeId||''))fail('INPUT');const stored=await env.Memory.get('calendar:v3:resume:'+user.id+':'+body.resumeId);if(!stored)fail('EXPIRED');const pending=await decrypt(env,stored);if(pending.expiresAt<now())fail('EXPIRED');return json({event:pending.event});}
    if(path.endsWith('/confirm')||path.endsWith('/cancel')){
     if(Object.keys(body).some(k=>!['confirmationId','confirmed','allowConflicts','conflictToken'].includes(k))||!/^[a-f0-9]{64}$/.test(body.confirmationId||''))fail('CONFIRM');

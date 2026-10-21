@@ -1,6 +1,12 @@
 import {WEEK_FRONTEND} from './calendar-week-frontend.mjs';
 // Appended only to the inspected development app.js; no auth/session replacement.
 export const CALENDAR_FRONTEND=String.raw`
+async function lumiReviewPendingCalendarEvent(request,base){
+ const response=await request(base.replace(/\/?$/,'/')+'calendar/events/pending',{method:'POST',headers:{'content-type':'application/json','accept-language':'pt-BR'},body:'{}'});
+ const data=await response.json();if(!response.ok)return {reply:data.error||'Não consegui recuperar o evento. Tente novamente.'};
+ if(!data.event)return {reply:'O evento pendente expirou. Envie novamente o título, a data e o horário para abrir a revisão.'};
+ return lumiCreateCalendarEvent('',request,base,data.event);
+}
 function lumiCalendarRememberForSignIn(){const form=document.querySelector('#lumiCalendarDialog form');if(!form)return;const fields={};for(const name of ['title','start','end','duration','location'])fields[name]=String(form.elements[name]?.value||'').slice(0,500);sessionStorage.setItem('lumiCalendarSignInDraft',JSON.stringify({fields,expiresAt:Date.now()+600000}));}
 function lumiCalendarSignIn(container,message){const button=document.createElement('button');button.type='button';button.textContent=message;button.style.cssText='padding:10px 14px;font:inherit;color:#fff;background:#25344a;border:1px solid #9bd6f5;border-radius:8px;cursor:pointer';button.onclick=()=>{lumiCalendarRememberForSignIn();const login=document.getElementById('signInBtn');if(login)login.click();};container.replaceChildren(button);return button;}
 async function lumiCreateCalendarEvent(text,request,base,restored=null){
@@ -86,6 +92,6 @@ async function lumiResumeCalendarEvent(request,base){
 export function patchCalendarApp(source){
  const start=source.indexOf('async function getReply(text) {'),end=source.indexOf('  const calendarRequest =',start);
  if(start<0||end<start)throw Error('Unrecognized live Calendar frontend; refusing to replace app');
- const branch=`async function getReply(text) {\n  const calendarCreationRequest = /\\b(marque|marcar|agende|agendar|schedule|book)\\b/i.test(text) || (/\\b(crie|criar|create|add|adicione|adicionar)\\b/i.test(text) && /\\b(evento|event|appointment|compromisso|calendar|agenda|reunião|consulta)\\b/i.test(text));\n  if(calendarCreationRequest)return lumiCreateCalendarEvent(text,authFetch,WORKER_URL);\n`;
+ const branch=`async function getReply(text) {\n  const calendarCreationRequest = /\\b(marque|marcar|agende|agendar|schedule|book)\\b/i.test(text) || (/\\b(crie|criar|create|add|adicione|adicionar)\\b/i.test(text) && /\\b(evento|event|appointment|compromisso|calendar|agenda|reunião|consulta)\\b/i.test(text));\n  if(/^(?:confirmar?|comfirmar?|confirm)(?:\\s+(?:evento|event))?[.!\\s]*$/i.test(text.trim()))return lumiReviewPendingCalendarEvent(authFetch,WORKER_URL);\n  if(calendarCreationRequest)return lumiCreateCalendarEvent(text,authFetch,WORKER_URL);\n`;
  return source.slice(0,start)+branch+source.slice(end)+'\n'+CALENDAR_FRONTEND+'\ndocument.getElementById("lumiAgendaBtn")?.addEventListener("click",async()=>{if(typeof setSidebarOpen==="function")setSidebarOpen(false);await lumiShowCalendarWeek(authFetch,WORKER_URL);});\nif(new URLSearchParams(location.search).get("calendar_connected")==="1"&&!new URLSearchParams(location.search).has("calendar_resume"))void lumiShowCalendarWeek(authFetch,WORKER_URL);\nvoid lumiResumeCalendarEvent(authFetch,WORKER_URL);\nvoid lumiResumeCalendarSignIn(authFetch,WORKER_URL);\ndocument.addEventListener("click",e=>{if(e.target.closest?.("#signInBtn"))lumiCalendarRememberForSignIn();if(e.target.closest?.("#signOutBtn"))sessionStorage.removeItem("lumiCalendarSignInDraft");},true);\nsupabaseClient.auth.onAuthStateChange(event=>{if(event==="SIGNED_IN")setTimeout(()=>{void lumiResumeCalendarSignIn(authFetch,WORKER_URL);},0);});';
 }

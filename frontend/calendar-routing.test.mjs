@@ -13,8 +13,8 @@ test('assembled real chat routes agenda reads, event creation and confirmation w
     return Response.json(url.endsWith('/chat') ? {reply: 'Chat response'} : {events: []});
   };
   const create = async text => { calls.push({create: text}); return {reply: 'Review event'}; };
-  const getReply = new Function('authFetch', 'WORKER_URL', 'state', 'lumiCreateCalendarEvent',
-    source.slice(start, end) + '; return getReply;')(authFetch, 'https://lumi.test/', {messages: []}, create);
+  const getReply = new Function('authFetch', 'WORKER_URL', 'state', 'lumiCreateCalendarEvent', 'lumiReviewPendingCalendarEvent',
+    source.slice(start, end) + '; return getReply;')(authFetch, 'https://lumi.test/', {messages: []}, create, async () => ({reply:'Pending review'}));
   for (const text of ['agenda', 'eventos de hoje', 'calendar']) {
     calls.length = 0;
     await getReply(text);
@@ -23,7 +23,8 @@ test('assembled real chat routes agenda reads, event creation and confirmation w
   calls.length = 0;
   assert.equal((await getReply('criar evento amanhã às 14:30')).reply, 'Review event');
   assert.deepEqual(calls, [{create: 'criar evento amanhã às 14:30'}]);
-  for (const text of ['CONFIRMAR EVENTO', 'Olá Lumi', 'Quero que você me diga qual o melhor exame para detectar riscos de eventos cerebrais?', 'O que são eventos adversos de medicamentos?', 'Como prevenir eventos cardiovasculares?']) {
+  assert.equal((await getReply('CONFIRMAR EVENTO')).reply, 'Pending review');
+  for (const text of ['Olá Lumi', 'Quero que você me diga qual o melhor exame para detectar riscos de eventos cerebrais?', 'O que são eventos adversos de medicamentos?', 'Como prevenir eventos cardiovasculares?']) {
     calls.length = 0;
     assert.equal((await getReply(text)).reply, 'Chat response');
     assert.equal(calls.length, 1);

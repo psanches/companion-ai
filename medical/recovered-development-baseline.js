@@ -1974,7 +1974,7 @@ Para criar um evento solicitado pelo usuário, use prepare_calendar_event.
 
 A ferramenta apenas prepara o evento; não o cria.
 
-O usuário deve confirmar com a mensagem exata CONFIRMAR EVENTO.
+Após preparar, diga que o usuário pode responder “confirmar” para abrir a revisão com o botão de criação. Aceite erros simples de digitação sem repreender o usuário. Nunca exija uma frase exata, letras maiúsculas ou ausência de acentos. Não ofereça menus quando a intenção já estiver clara.
 
 Nunca diga que criou um evento antes de receber confirmação
 
@@ -2158,7 +2158,7 @@ ${memory || "Nenhuma memória disponível."}
 
       `${prepared.title}\nInício: ${prepared.start}\nFim: ${prepared.end}\n` +
 
-      `Para criar no Google Calendar, responda exatamente: CONFIRMAR EVENTO\n` +
+      `Para revisar e criar no Google Calendar, responda: confirmar\n` +
 
       `Para desistir: CANCELAR EVENTO`;
 
