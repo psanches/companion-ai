@@ -58,8 +58,9 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.locator('#lumiGuideDialog').waitFor({state:'visible'});await page.locator('#lumiGuideDontShow').check();await page.getByRole('button',{name:'Começar a conversar',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('#messages .msg').length===6);
  // Browser speech events are simulated; this checks the live DOM contract, not hardware.
- await page.locator('#voiceButton').click();await page.getByText('Ouvindo… Fale agora. Toque no microfone para parar.',{exact:true}).waitFor();
- await page.evaluate(()=>{const r=window.__voiceInstances.at(-1);r.onresult({results:[[{transcript:'Mensagem ditada fictícia'}]]});r.onend();});
+ await page.locator('#voiceButton').click();await page.getByText('Ouvindo… Você pode pausar até 30 segundos. Toque para parar (máximo 2 minutos).',{exact:true}).waitFor();
+ await page.evaluate(()=>{const r=window.__voiceInstances.at(-1);r.onresult({results:[[{transcript:'Mensagem ditada fictícia'}]]});});
+ await page.locator('#voiceButton').click();
  assert.equal(await page.locator('#messageInput').inputValue(),'Mensagem ditada fictícia');assert.equal(await page.locator('#messages .msg').count(),6);
  await page.locator('#voiceButton').click();await page.evaluate(()=>window.__voiceInstances.at(-1).onerror({error:'not-allowed'}));
  await page.getByText(/Código: VOZ-02/).waitFor();assert.equal(await page.locator('#messageInput').inputValue(),'Mensagem ditada fictícia');
