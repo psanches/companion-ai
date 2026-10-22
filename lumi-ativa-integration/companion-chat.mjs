@@ -4,11 +4,24 @@ import {removeUnsolicitedOffers} from './companion-instructions.mjs';
 const HOST='lumi-develop.psanchesnle.workers.dev';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
 export const isWeatherQuestion=text=>/\b(?:clima|weather|forecast)\b|previs[aã]o\s+(?:do\s+)?tempo|(?:como (?:est[aá]|vai estar)|qual[^?]{0,30})\s+o tempo|tempo\s+(?:hoje|amanh[aã]|em|para)\b/i.test(text);
+// Scheduling stays with the calendar wrapper; research uses its existing auth,
+// per-user limits and verified-source requirements.
+export function isResearchQuestion(text){
+ const value=text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ if(/\b(?:agende|agendar|marque|marcar|lembre|lembrar|crie|criar|adicione|adicionar|schedule|book)\b/.test(value)&&/\b(?:consulta|evento|compromisso|lembrete|agenda|appointment|event|reminder)\b/.test(value))return false;
+ return isWeatherQuestion(text)||
+  /\b(?:pesquise|pesquisar|busque|buscar|procure|search|look up)\b/.test(value)||
+  /\b(?:noticias|news|cotacao|cotacoes|placar|score)\b/.test(value)||
+  /(?:quanto foi|resultado|quem (?:ganhou|venceu))[^?]{0,100}\b(?:jogo|partida|roma|napoli|futebol|campeonato)\b/.test(value)||
+  /(?:ultimas?|recentes?|novidades|atualizad[oa]s?|atualmente|latest|current)[^?]{0,100}(?:pesquisas?|estudos?|tratamentos?|parkinson|noticias|precos?|resultados?)/.test(value)||
+  /(?:pesquisas?|estudos?|tratamentos?|precos?|resultados?)[^?]{0,100}(?:recentes?|atuais|hoje|atualizad[oa]s?)/.test(value)||
+  /\b(?:quem e|who is)\b[^?]{0,50}\b(?:presidente|president|ceo|governador|prefeito)\b/.test(value);
+}
 const isResearchFollowup=text=>/^(?:(?:se eu quiser lembrete[^.!?]*[.!?]?|n[aã]o (?:quero|ofereça)[^.!?]*[.!?]?)\s*)?(?:essa|esta|a|isso|foi|voc[eê]|e as?|qual|de|[ée])[^\n]{0,250}(?:informaç|hoje|fonte|atualiz|verific|data|confi[aá]vel|previs[aã]o|alerta)/i.test(text.trim());
-function weatherContext(history){
+function researchContext(history){
  for(const item of [...history].reverse()){
   if(item?.role!=='user'||typeof item.content!=='string')continue;
-  if(isWeatherQuestion(item.content))return item.content;
+  if(isResearchQuestion(item.content))return item.content;
   if(!isResearchFollowup(item.content))return null;
  }
  return null;
@@ -30,20 +43,20 @@ export function withCompanionChat(original,{verify=createCalendarVerifier(),rese
   if(url.hostname!==HOST||path!=='/chat'||request.method!=='POST')return original.fetch.call(original,request,env,ctx);
   let body;try{body=await boundedBody(request.clone());}catch{return json({error:'Confira sua mensagem. O pedido deve ter até 64 KB.'},400);}
   const text=body.message.trim();
-  if(isWeatherQuestion(text)||isResearchFollowup(text)){
+  if(isResearchQuestion(text)||isResearchFollowup(text)){
    if(request.headers.get('origin')!==url.origin)return json({error:'Origem não autorizada.'},403);
    let user;try{const token=request.headers.get('authorization')?.match(/^Bearer (\S+)$/i)?.[1];user=token&&await verify(token,env);}catch{return json({error:'Não consegui verificar sua sessão agora.'},503);}
    if(!user?.id)return json({error:'Entre na Lumi para continuar.'},401);
    if(!env?.Memory)return json({error:'Histórico temporariamente indisponível.'},503);
    let history;try{history=cleanedHistory(await env.Memory.get('history:user:'+user.id,'json'));}catch{return json({error:'Não consegui recuperar a conversa agora.'},503);}
-   const context=isWeatherQuestion(text)?null:weatherContext(history);
-   if(isWeatherQuestion(text)||context){
-    const question=context?'Pergunta anterior sobre o tempo: '+context+'\nPergunta atual: '+text:text;
-    if(question.length>1200)return json({error:'Resuma a pergunta sobre o tempo para até 1.200 caracteres.'},400);
+   const context=isResearchQuestion(text)?null:researchContext(history);
+   if(isResearchQuestion(text)||context){
+    const question=context?'Pergunta anterior: '+context+'\nPergunta atual: '+text:text;
+    if(question.length>1200)return json({error:'Resuma a pergunta para até 1.200 caracteres.'},400);
     const upstream=await research(new Request(url.origin+'/research',{method:'POST',headers:{origin:url.origin,authorization:request.headers.get('authorization')||'','content-type':'application/json'},body:JSON.stringify({question})}),env);
     const data=await upstream.json();
     const ok=upstream.ok&&data.status==='complete'&&Array.isArray(data.citations)&&data.citations.length;
-    let reply=ok?removeUnsolicitedOffers(data.answer)+'\n\nFontes:\n'+data.citations.map(c=>c.url).join('\n'):(data.answer||data.error||'Não consegui verificar a previsão agora.');
+    let reply=ok?removeUnsolicitedOffers(data.answer)+'\n\nFontes:\n'+data.citations.filter(c=>typeof c.url==='string'&&c.url.startsWith('https://')).map(c=>'[Fonte]('+c.url+')').join('\n'):(data.answer||data.error||'Não consegui verificar essa informação agora.');
     // A completed request time is distinct from a source publication/update date.
     if(ok&&data.researchedAt)reply+='\nConsulta realizada em '+new Date(data.researchedAt).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',hourCycle:'h23'})+' (Brasília).';
     history.push({role:'user',content:text},{role:'assistant',content:reply});history=cleanedHistory(history);
