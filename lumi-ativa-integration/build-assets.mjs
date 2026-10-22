@@ -15,7 +15,6 @@ for(let i=1;i<=4;i++){
  mindBodyHtml=mindBodyHtml.replace('exercicio-'+i+'.webp','data:image/webp;base64,'+bytes.toString('base64'));
 }
 assets['/lumi-original/lumi-mind-body.html']={type:'text/html; charset=utf-8',encoding:'utf8',content:mindBodyHtml};
-assets['/lumi-original/lumi-research.js']={type:'application/javascript; charset=utf-8',encoding:'utf8',content:fs.readFileSync(new URL('../lumi-research/browser.js',import.meta.url),'utf8')};
 
  // Preserve the original Lumi conversation UI as the development home.
  // Assets are copied from the existing develop app; no production deployment.
