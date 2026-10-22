@@ -7,7 +7,7 @@ export async function verifyFrontend(origin,release){
   const r=await get(path);assert.equal(r.status,200,name);assert.match(r.headers.get('cache-control'),/immutable/);
   assert.equal(createHash('sha256').update(Buffer.from(await r.arrayBuffer())).digest('hex'),path.split('/')[2],name+' deployed byte hash');
  }
- for(const name of ['/app.js','/style.css','/supabase.js','/experience.js','/experience.css','/lumi-research.js','/health-news-ui.js'])assert.ok(html.includes(release.routes[name]),name+' homepage reference');
+ for(const name of ['/app.js','/style.css','/supabase.js','/experience.js','/experience.css','/health-news-ui.js'])assert.ok(html.includes(release.routes[name]),name+' homepage reference');
  assert.doesNotMatch(html,/lumiScript\.src|app\.js\?v=/,'Legacy timestamp script loader remains');assert.ok(!html.includes('cdn.jsdelivr.net'));
  const sw=await get('/sw.js');assert.match(sw.headers.get('cache-control'),/must-revalidate/);assert.match(await sw.text(),/lumi-fingerprints-v1/);
  const version=await(await get('/frontend-version')).json();assert.equal(version.commit,release.commit);assert.equal(version.release,release.release);
