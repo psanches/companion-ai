@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {pathToFileURL} from 'node:url';
-import {withCompanionChat,isWeatherQuestion} from '../companion-chat.mjs';
+import {withCompanionChat,isWeatherQuestion,isResearchQuestion} from '../companion-chat.mjs';
 import {applyRuntimePolicy} from '../runtime-policy.mjs';
 import {removeUnsolicitedOffers,runtimeCompanionInstructions} from '../companion-instructions.mjs';
 const origin='https://lumi-develop.psanchesnle.workers.dev';
@@ -26,3 +26,28 @@ test('actual recovered backend sends policy to model, after old instructions, wi
 });
 
 test('oversized chat body is rejected without research or KV access',async()=>{const f=fixture();const response=await f.w.fetch(req('x'.repeat(70000)),f.env,{});assert.equal(response.status,400);assert.equal(f.calls.length,0);assert.equal(f.map.size,0);});
+
+test('normal chat researches current topics and saves answer with clickable sources',async()=>{
+ for(const text of ['Pesquise exercícios para Parkinson','Quais as notícias de hoje?','Quanto foi Roma x Napoli?','Últimas pesquisas sobre Parkinson','Qual a cotação do dólar?','Quem é o presidente do Brasil?']){
+  const f=fixture();const data=await(await f.w.fetch(req(text),f.env,{})).json();
+  assert.equal(f.calls.length,1);assert.equal(f.calls[0].question,text);
+  assert.match(data.reply,/\[Fonte\]\(https:\/\//);assert.equal(data.history.at(-1).content,data.reply);
+ }
+});
+test('general research retains follow-up context, authentication and rate failure response',async()=>{
+ const f=fixture();await f.w.fetch(req('Últimas pesquisas sobre Parkinson'),f.env,{});
+ await f.w.fetch(req('essa informação é de hoje'),f.env,{});
+ assert.match(f.calls.at(-1).question,/Pergunta anterior: Últimas pesquisas sobre Parkinson/);
+ const denied=fixture();assert.equal((await denied.w.fetch(req('Pesquise Parkinson',{authorization:'Bearer invalid'}),denied.env,{})).status,401);assert.equal(denied.calls.length,0);
+ const w=withCompanionChat({fetch(){throw Error('must not fall back to unverified chat');}},{verify:async()=>({id:'alice'}),research:async()=>Response.json({status:'limited',answer:'Limite de pesquisas atingido.'},{status:429})});
+ const data=await(await w.fetch(req('Notícias de hoje'),f.env,{})).json();assert.equal(data.researchStatus,'limited');assert.equal(data.reply,'Limite de pesquisas atingido.');
+});
+test('research intent preserves ordinary conversation and explicit scheduling',()=>{
+ for(const text of ['Olá Lumi','Como tomar Prolopa?','Quanto tempo esperar após Prolopa?','Marque uma consulta amanhã','Crie um lembrete para pesquisar notícias amanhã','Agendar evento para ver o jogo hoje'])assert.equal(isResearchQuestion(text),false,text);
+});
+test('development home has one message composer without a separate research button',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const assets=(await import('../assets.generated.mjs')).default;
+ assert.doesNotMatch(assets['/lumi-original/index.html'].content,/<script[^>]+src="\/lumi-research\.js"/);
+ assert.doesNotMatch(readFileSync(new URL('../../lumi-research/browser.js',import.meta.url),'utf8'),/createElement|addEventListener/);
+});
