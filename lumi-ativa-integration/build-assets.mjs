@@ -103,7 +103,7 @@ html:not(.lumi-authenticated) #signInBtn {animation:lumiSignInPulse 3s ease-in-o
   else ready();
 })();
 </script>`;
-  content=content.replace('</body>',authObserver+'<script src="/lumi-research.js" defer></script></body>');
+  content=content.replace('</body>',authObserver+'</body>');
 
   content=content.replace('<div class="sidebar-label">ÚLTIMAS', '<a id="lumiInstitutionalLink" href="/sobre/pt/">✦ Sobre a Lumi</a><div class="sidebar-label">ÚLTIMAS');
   // Shared sidebar is the sole navigation on desktop and mobile.
