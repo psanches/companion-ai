@@ -34,3 +34,17 @@ test('assembled real chat routes agenda reads, event creation and confirmation w
     assert.equal(calls[0].url, 'https://lumi.test/chat');
   }
 });
+
+
+test('today requests and Calendar connection followups use real integration instead of generic chat', async () => {
+  const source=patchCalendarApp(readFileSync(new URL('../app.js',import.meta.url),'utf8'));
+  const start=source.indexOf('async function getReply(text) {'),end=source.indexOf('\n  return data;\n}',start)+'\n  return data;\n}'.length;
+  const state={messages:[]},calls=[];
+  const getReply=new Function('authFetch','WORKER_URL','state','lumiCreateCalendarEvent','lumiReviewPendingCalendarEvent','lumiRememberTodayAgenda','lumiShowCalendarDay','lumiConnectGoogleCalendar',source.slice(start,end)+';return getReply;')(
+    async()=>{calls.push('chat');return Response.json({reply:'chat'});},'https://lumi.test/',state,async()=>({reply:'create'}),async()=>({reply:'review'}),()=>calls.push('remember'),async(created)=>{assert.equal(created,null);calls.push('day');},async()=>{calls.push('connect');return {reply:'opening'};});
+  for(const text of ['O que temos para hoje','O que tenho pra hoje?','Qual é a minha agenda de hoje?']){calls.length=0;await getReply(text);assert.deepEqual(calls,['remember','day']);}
+  state.messages=[{role:'assistant',content:'Você quer ver sua agenda/compromissos de hoje?'},{role:'user',content:'Sim'}];calls.length=0;await getReply('Sim');assert.deepEqual(calls,['remember','day']);
+  calls.length=0;await getReply('Conectar');assert.deepEqual(calls,['remember','connect']);
+  state.messages=[{role:'assistant',content:'Como está seu sono hoje?'}];calls.length=0;await getReply('Sim');assert.deepEqual(calls,['chat']);
+  state.messages=[{role:'assistant',content:'Criar e confirmar evento hoje?'}];calls.length=0;await getReply('Sim');assert.deepEqual(calls,['chat']);
+});
