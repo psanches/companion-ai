@@ -1,0 +1,9 @@
+.lumi-language-control{display:inline-flex;align-items:center;flex:0 0 auto;margin:0;position:relative}
+.lumi-language-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#lumiLanguageSelect{min-height:44px;max-width:126px;padding:8px;border:1px solid #9bd6f5;border-radius:10px;background:#162235;color:#fff;font:15px system-ui;cursor:pointer}
+.lumi-language-toolbar{display:flex;justify-content:flex-end;padding:8px 0}
+#lumiLanguageSelect:focus-visible{outline:3px solid #facc15;outline-offset:3px}
+@media(max-height:500px){#lumiLanguageSelect{font-size:14px;max-width:113px}}
+@media(max-height:500px){#lumiUpdateNotice{max-height:64px;margin:4px 8px;font-size:13px}}
+html[lang="pt-BR"]:not(.lumi-authenticated) .app:after{content:"Entre na Lumi para continuar."}
+html[lang="en"]:not(.lumi-authenticated) .app:after{content:"Please sign in to continue."}

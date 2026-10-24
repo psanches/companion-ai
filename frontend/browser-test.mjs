@@ -1,5 +1,6 @@
 import {chromium} from 'playwright';
 import {checkEmergencyContact} from './emergency-contact-browser.mjs';
+import {checkAppLanguages,checkMindBodyEnglish} from './language-browser.mjs';
 import assert from 'node:assert/strict';import fs from 'node:fs';
 import assets from '../lumi-ativa-integration/assets.generated.mjs';
 import institutional from '../lumi-website/bundle.generated.mjs';
@@ -126,6 +127,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  else{await page.locator('#lumiAgendaBtn').click();await page.locator('#lumiCalendarWeek').getByText('14:00 – 14:30 · Compromisso fictício da agenda',{exact:true}).waitFor();assert.ok(await page.locator('#lumiCalendarWeek').evaluate(n=>n.getBoundingClientRect().right<=innerWidth));await page.getByRole('button',{name:'Fechar agenda',exact:true}).click();await page.locator('#lumiExerciseBtn').waitFor({state:'visible'});await page.locator('#lumiHealthNewsBtn').waitFor({state:'visible'});}
  // A reduced visual viewport is a keyboard simulation, not real Android hardware.
  if(mobile&&height>500){await page.setViewportSize({width,height:400});await page.locator('#messageInput').fill('Rascunho preservado');const bottom=await page.locator('#messageInput').evaluate(n=>n.getBoundingClientRect().bottom);assert.ok(bottom<=401);await page.setViewportSize({width,height});}
+ await checkAppLanguages(page,{mobile:width<=900,screenshotPath:new URL('./test-results/'+name+'-english.png',import.meta.url).pathname});
  await page.screenshot({path:new URL('./test-results/'+name+'-authenticated.png',import.meta.url).pathname,fullPage:true});
  await page.locator('#messageInput').fill('Mensagem em edição');newer=true;await page.evaluate(()=>window.dispatchEvent(new Event('online')));await page.locator('#lumiUpdateNotice').waitFor({state:'visible'});assert.ok(await page.locator('.send-button').evaluate(n=>{const r=n.getBoundingClientRect();return r.bottom<=innerHeight&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===n;}),'Update notice must not cover Send');await page.getByRole('button',{name:'Atualizar',exact:true}).click();assert.equal(await page.locator('#messageInput').inputValue(),'Mensagem em edição');
  await page.locator('#messageInput').fill('');await page.locator('#signOutBtn').click();await page.locator('#signInBtn').waitFor({state:'visible'});assert.equal(await page.locator('#chatForm').isVisible(),false);assert.equal(await page.locator('#messages .msg').count(),0);await page.waitForFunction(()=>document.querySelectorAll('#conversationList .conversation-item').length===0);
@@ -137,7 +139,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  for(const path of ['/lumi-mind-body.html','/ativa','/ativa-medical/']){
   await page.goto(HOST+path);const back=page.locator('#lumiReturnNav a');await back.waitFor({state:'visible'});
   assert.equal(await back.getAttribute('href'),'/');assert.equal(await back.getAttribute('target'),'_top');
-  if(path==='/lumi-mind-body.html'){for(const id of ['bodyTab','psychTab','mindTab'])await page.locator('#'+id).click();}
+  if(path==='/lumi-mind-body.html'){await checkMindBodyEnglish(page);for(const id of ['bodyTab','psychTab','mindTab'])await page.locator('#'+id).click();}
   await page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));
   assert.ok(await back.evaluate(a=>{const r=a.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&r.height>=44;}),name+' visible return '+path);
   await back.focus();await page.keyboard.press('Enter');await page.waitForURL(HOST+'/');await page.locator('#signInBtn').waitFor({state:'visible'});

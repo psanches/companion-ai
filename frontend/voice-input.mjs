@@ -47,6 +47,7 @@ export function installLumiVoiceInput(){
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&(current||sessionActive)){release(true);show('Ditado pausado. Toque no microfone para continuar.');}});
  document.getElementById('signOutBtn')?.addEventListener('click',()=>{release(true);status.hidden=true;});
  window.addEventListener('pagehide',()=>release(true));
+ window.addEventListener('lumi-language-change',()=>{if(current||sessionActive){release(true);show('Ditado pausado. Toque no microfone para continuar.');}});
  input.form?.addEventListener('submit',()=>{if(current||sessionActive)release(true);});
 }
 export function patchVoiceInput(source){

@@ -23,6 +23,7 @@ export function withFrontendVersion(original,release,previous={}){
    for(const key of ['etag','content-length','content-encoding'])headers.delete(key);
    body=body.replace(/((?:src|href)=["'])([^"']+)(["'])/g,(all,prefix,value,suffix)=>{const path='/'+value.replace(/^\//,'').split('?')[0];return release.routes[path]?prefix+release.routes[path]+suffix:all;});
    body=body.replace(/(<meta name="lumi-build" content=")[^"]*(">)/, '$1'+release.commit+'$2');
+   if(!url.pathname.startsWith('/sobre')&&release.routes['/language.js'])body=body.replace('</head>','<link rel="stylesheet" href="'+release.routes['/language.css']+'"><script src="'+release.routes['/language.js']+'" defer></script></head>');
    if(url.pathname==='/'||url.pathname==='/index.html')body=body.replace('</head>','<meta name="lumi-release" content="'+release.release+'"><link rel="stylesheet" href="'+release.routes['/experience.css']+'"><script src="'+release.routes['/experience.js']+'" defer></script></head>');
    headers.set('cache-control','private, no-cache, max-age=0, must-revalidate');headers.set('x-lumi-release',release.release);headers.set('x-lumi-commit',release.commit);
    return new Response(request.method==='HEAD'?null:body,{status:response.status,headers});

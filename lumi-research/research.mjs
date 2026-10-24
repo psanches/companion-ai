@@ -15,7 +15,7 @@ export function canPromiseFollowUp(job) {
   return Boolean(job && job.persisted === true && typeof job.id === 'string' &&
     job.id.length > 0 && job.deliveryConfigured === true);
 }
-export async function researchNow({ question, apiKey, fetcher, authorized, maxOutputTokens = 600, now = new Date() }) {
+export async function researchNow({ question, apiKey, fetcher, authorized, maxOutputTokens = 600, now = new Date(), language=null }) {
   const input = validateResearchQuestion(question);
   if (authorized !== true) return { status: 'denied', answer: 'Pesquisa não autorizada.' };
   if (typeof apiKey !== 'string' || !apiKey || typeof fetcher !== 'function') {
@@ -34,7 +34,7 @@ export async function researchNow({ question, apiKey, fetcher, authorized, maxOu
       tool_choice: 'required',
       max_output_tokens: tokenLimit,
       input: [
-        { role: 'developer', content: runtimeCompanionInstructions(now)+'\nAnswer this research question only. Search now, report source update dates when present, and explicitly say when those dates could not be verified. Use specific pages supporting each claim; for weather and alerts include the location and validity period supported by the source. Do not infer an official warning from a general forecast or homepage. Never offer reminders, monitoring or future follow-ups.' },
+        { role: 'developer', content: runtimeCompanionInstructions(now,language)+'\nAnswer this research question only. Search now, report source update dates when present, and explicitly say when those dates could not be verified. Use specific pages supporting each claim; for weather and alerts include the location and validity period supported by the source. Do not infer an official warning from a general forecast or homepage. Never offer reminders, monitoring or future follow-ups.' },
         { role: 'user', content: input }
       ]
     })

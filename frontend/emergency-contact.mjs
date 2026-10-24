@@ -10,9 +10,9 @@ export function normalizeEmergencyPhone(value) {
  return /^[1-9]\d{7,14}$/.test(digits)?digits:null;
 }
 
-export function emergencyDestinations(phone) {
+export function emergencyDestinations(phone,english=false) {
  if(!/^[1-9]\d{7,14}$/.test(phone))throw Error('Invalid emergency phone');
- const message='Preciso de ajuda. Por favor, entre em contato comigo.';
+ const message=english?'I need help. Please contact me.':'Preciso de ajuda. Por favor, entre em contato comigo.';
  return {message,whatsapp:'https://wa.me/'+phone+'?text='+encodeURIComponent(message),call:'tel:+'+phone};
 }
 
@@ -61,7 +61,7 @@ export function installLumiEmergencyContact(auth) {
    function edit(){editor.hidden=false;actions.hidden=true;name.value=contact?.name||'';phone.value=contact?'+'+contact.phone:'';cancel.hidden=!contact;name.focus();}
    function render(){
     editor.hidden=!!contact;actions.hidden=!contact;cancel.hidden=!contact;actions.replaceChildren();if(!contact)return;
-    const destinations=emergencyDestinations(contact.phone);
+    const destinations=emergencyDestinations(contact.phone,window.LumiI18n?.language==='en');
     actions.append(make('h3',contact.name),make('p','+'+contact.phone),make('p',destinations.message),make('p','No WhatsApp, confira a conversa e toque em Enviar. Abrir o aplicativo não confirma envio, leitura ou atendimento.'));
     const wa=make('a','Pedir ajuda pelo WhatsApp');wa.id='lumiSosWhatsApp';wa.href=destinations.whatsapp;wa.target='_blank';wa.rel='noopener noreferrer';styleAction(wa);
     const call=make('a','Ligar para o cuidador');call.id='lumiSosCall';call.href=destinations.call;styleAction(call);
@@ -78,7 +78,8 @@ export function installLumiEmergencyContact(auth) {
     const next={name:cleanName,phone:digits};
     try{localStorage.setItem(key(currentOwner),JSON.stringify(next));contact=next;render();status.textContent='Contato salvo. Escolha como pedir ajuda.';heading.focus();}catch{status.textContent='Não foi possível salvar neste navegador. Confira as permissões de armazenamento e tente novamente.';}
    };
-   d.addEventListener('close',()=>{d.remove();if(dialog===d)dialog=null;button.focus();},{once:true});
+   const languageChanged=()=>{if(contact&&editor.hidden)render();};window.addEventListener('lumi-language-change',languageChanged);
+   d.addEventListener('close',()=>{window.removeEventListener('lumi-language-change',languageChanged);d.remove();if(dialog===d)dialog=null;button.focus();},{once:true});
    document.body.append(d);render();d.showModal();heading.focus();
    if(loadFailed)status.textContent='Não foi possível recuperar o contato. Cadastre-o novamente.';
   }finally{opening=false;}

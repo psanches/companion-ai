@@ -22,9 +22,10 @@ If reliable evidence is unavailable, say so rather than lowering standards. Cite
 `.trim();
 
 
-export function runtimeCompanionInstructions(now=new Date()){
+export function runtimeCompanionInstructions(now=new Date(),language=null){
  const current=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
- return LUMI_COMPANION_INSTRUCTIONS+'\nCurrent server date in America/Sao_Paulo: '+current+'. Current UTC instant: '+now.toISOString()+'. This clock is not evidence of publication or source verification.';
+ const preferred=language==='en'?'English':language==='pt-BR'?'Brazilian Portuguese':null;
+ return LUMI_COMPANION_INSTRUCTIONS+'\nCurrent server date in America/Sao_Paulo: '+current+'. Current UTC instant: '+now.toISOString()+'. This clock is not evidence of publication or source verification.'+(preferred?'\nThe selected interface language is '+preferred+'. Reply in '+preferred+' by default, unless the user explicitly requests a different response language. Do not change or translate previously stored messages.':'');
 }
 export function removeUnsolicitedOffers(reply){
  return String(reply||'').replace(/(?:^|\s)(?:Quer que eu|Deseja que eu|Gostaria que eu|Você quer que eu|Posso (?:criar|preparar|acompanhar|monitorar)|Would you like me to|Do you want me to)[^?\n]{0,500}(?:lembrete|lembretes|radar|acompanhe|acompanhar|atualizaç[õo]es|monitor|reminder|follow.up)[^?\n]{0,250}\?\s*$/i,'').trim();

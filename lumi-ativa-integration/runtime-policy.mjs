@@ -7,5 +7,5 @@ export function applyRuntimePolicy(source){
  const start=matches[0].index+matches[0][0].length;
  const end=source.indexOf('`.trim();',start);
  if(end<start)throw Error('Unrecognized baseline instruction boundary; refusing deployment');
- return "import {runtimeCompanionInstructions} from './companion-instructions.mjs';\n"+source.slice(0,end)+"`.trim() + '\\n\\n' + runtimeCompanionInstructions();"+source.slice(end+'`.trim();'.length);
+ return "import {runtimeCompanionInstructions} from './companion-instructions.mjs';\n"+source.slice(0,end)+"`.trim() + '\\n\\n' + runtimeCompanionInstructions(new Date(), env.LUMI_RESPONSE_LANGUAGE);"+source.slice(end+'`.trim();'.length);
 }

@@ -43,6 +43,7 @@ export function withCompanionChat(original,{verify=createCalendarVerifier(),rese
   if(url.hostname!==HOST||path!=='/chat'||request.method!=='POST')return original.fetch.call(original,request,env,ctx);
   let body;try{body=await boundedBody(request.clone());}catch{return json({error:'Confira sua mensagem. O pedido deve ter até 64 KB.'},400);}
   const text=body.message.trim();
+  const selected=request.headers.get('x-lumi-language');const language=['en','pt-BR'].includes(selected)?selected:null;const english=language==='en';
   if(isResearchQuestion(text)||isResearchFollowup(text)){
    if(request.headers.get('origin')!==url.origin)return json({error:'Origem não autorizada.'},403);
    let user;try{const token=request.headers.get('authorization')?.match(/^Bearer (\S+)$/i)?.[1];user=token&&await verify(token,env);}catch{return json({error:'Não consegui verificar sua sessão agora.'},503);}
@@ -53,12 +54,12 @@ export function withCompanionChat(original,{verify=createCalendarVerifier(),rese
    if(isResearchQuestion(text)||context){
     const question=context?'Pergunta anterior: '+context+'\nPergunta atual: '+text:text;
     if(question.length>1200)return json({error:'Resuma a pergunta para até 1.200 caracteres.'},400);
-    const upstream=await research(new Request(url.origin+'/research',{method:'POST',headers:{origin:url.origin,authorization:request.headers.get('authorization')||'','content-type':'application/json'},body:JSON.stringify({question})}),env);
+    const upstream=await research(new Request(url.origin+'/research',{method:'POST',headers:{origin:url.origin,authorization:request.headers.get('authorization')||'','content-type':'application/json',...(language?{'x-lumi-language':language}:{})},body:JSON.stringify({question})}),env);
     const data=await upstream.json();
     const ok=upstream.ok&&data.status==='complete'&&Array.isArray(data.citations)&&data.citations.length;
-    let reply=ok?removeUnsolicitedOffers(data.answer)+'\n\nFontes:\n'+data.citations.filter(c=>typeof c.url==='string'&&c.url.startsWith('https://')).map(c=>'[Fonte]('+c.url+')').join('\n'):(data.answer||data.error||'Não consegui verificar essa informação agora.');
+    let reply=ok?removeUnsolicitedOffers(data.answer)+(english?'\n\nSources:\n':'\n\nFontes:\n')+data.citations.filter(c=>typeof c.url==='string'&&c.url.startsWith('https://')).map(c=>(english?'[Source](':'[Fonte](')+c.url+')').join('\n'):(english?(data.status==='limited'?'Research limit reached. Please try again later.':'I could not verify this information right now.'):(data.answer||data.error||'Não consegui verificar essa informação agora.'));
     // A completed request time is distinct from a source publication/update date.
-    if(ok&&data.researchedAt)reply+='\nConsulta realizada em '+new Date(data.researchedAt).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',hourCycle:'h23'})+' (Brasília).';
+    if(ok&&data.researchedAt)reply+=(english?'\nSearched on ':'\nConsulta realizada em ')+new Date(data.researchedAt).toLocaleString(english?'en-GB':'pt-BR',{timeZone:'America/Sao_Paulo',hourCycle:'h23'})+(english?' (Brasilia time).':' (Brasília).');
     history.push({role:'user',content:text},{role:'assistant',content:reply});history=cleanedHistory(history);
     try{await env.Memory.put('history:user:'+user.id,JSON.stringify(history));}catch{return json({error:'Não consegui salvar a conversa. Tente novamente.'},503);}
     return json({reply,history,researchStatus:data.status||'failed'});
@@ -70,7 +71,8 @@ export function withCompanionChat(original,{verify=createCalendarVerifier(),rese
    if(name==='put')return async(key,value,...rest)=>{if(/^history:user:/.test(String(key))&&typeof value==='string'){try{const history=JSON.parse(value);sanitizeResponse({history});value=JSON.stringify(history);}catch{}}return target.put(key,value,...rest);};
    const value=Reflect.get(target,name,target);return typeof value==='function'?value.bind(target):value;
   }});
-  const response=await original.fetch.call(original,request,proxy?{...env,Memory:proxy}:env,ctx);
+  const nextEnv=proxy?{...env,Memory:proxy}:env;
+  const response=await original.fetch.call(original,request,language?{...nextEnv,LUMI_RESPONSE_LANGUAGE:language}:nextEnv,ctx);
   if(!response.ok||!response.headers.get('content-type')?.includes('application/json'))return response;
   const data=sanitizeResponse(await response.json()),headers=new Headers(response.headers);for(const key of ['etag','content-length','content-encoding'])headers.delete(key);headers.set('cache-control','no-store');return new Response(JSON.stringify(data),{status:response.status,headers});
  }};

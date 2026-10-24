@@ -96,6 +96,7 @@ async function authFetch(url, options = {}) {
     "Authorization",
     `Bearer ${token}`
   );
+  if(window.LumiI18n){headers.set('x-lumi-language',window.LumiI18n.language);headers.set('accept-language',window.LumiI18n.language);}
 
   return fetch(url, {
     ...options,
@@ -449,6 +450,7 @@ function add(role, content, persist = true) {
     document.createElement("div");
 
   el.className = `msg ${role}`;
+  if(role === 'system')el.dataset.lumiUi = 'true';
   if (role === "assistant") {
     appendLumiLinks(el, content);
   } else {
@@ -474,6 +476,11 @@ function add(role, content, persist = true) {
 }
 
 
+function lumiWelcomeText(){
+ const english=window.LumiI18n?.language==='en';
+ return (english?'Hello':'Olá')+(state.name?', '+state.name:'')+(english?'! I am Lumi, your personal companion. I can chat with you and remember important information.':'! Eu sou a Lumi, sua assistente no Companion AI. Posso conversar com você e lembrar de informações importantes.');
+}
+window.addEventListener('lumi-language-change',()=>{const welcome=document.querySelector('[data-lumi-welcome]');if(welcome)welcome.textContent=lumiWelcomeText();});
 function render() {
   messagesEl.innerHTML = "";
 
@@ -488,13 +495,10 @@ function render() {
   if (!state.messages.length) {
     add(
       "assistant",
-      `Olá${
-        state.name
-          ? ", " + state.name
-          : ""
-      }! Eu sou a Lumi, sua assistente no Companion AI. Posso conversar com você e lembrar de informações importantes.`,
+      lumiWelcomeText(),
       false
     );
+    messagesEl.lastElementChild.dataset.lumiWelcome = 'true';
 
   }
 requestAnimationFrame(() => {
@@ -977,6 +981,7 @@ form.onsubmit = async e => {
 
   wait.className =
     "msg assistant";
+  wait.dataset.lumiUi = 'true';
 
   wait.textContent =
     "Pensando…";
@@ -1277,7 +1282,7 @@ function speakLumi(text) {
 
   // Detect whether Lumi's response is Portuguese or English.
   const portuguese =
-    /[áàâãéêíóôõúç]|\b(o|a|os|as|de|do|da|que|para|com|não|uma|você|seu|sua|é)\b/i
+    window.LumiI18n ? window.LumiI18n.language !== 'en' : /[áàâãéêíóôõúç]|\b(o|a|os|as|de|do|da|que|para|com|não|uma|você|seu|sua|é)\b/i
       .test(text);
 
   speech.lang =

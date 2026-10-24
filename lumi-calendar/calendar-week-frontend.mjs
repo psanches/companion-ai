@@ -1,6 +1,6 @@
 // Read-only weekly agenda. Event creation remains in its explicit review flow.
 export const WEEK_FRONTEND = String.raw`
-async function lumiShowCalendarWeek(request,base,english=false){
+async function lumiShowCalendarWeek(request,base,english=typeof window!=='undefined'&&window.LumiI18n?.language==='en'){
  const say=(pt,en)=>english?en:pt;
  const make=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
  const addDays=(day,count)=>new Date(Date.parse(day+'T12:00:00Z')+count*86400000).toISOString().slice(0,10);
@@ -14,7 +14,7 @@ async function lumiShowCalendarWeek(request,base,english=false){
  panel.style.cssText='padding:20px;margin:16px 0;border:1px solid #9bd6f5;border-radius:14px;background:#162235;color:#fff;font:17px system-ui';
  const heading=make('h2'),note=make('p',say('Agenda principal · segunda a domingo · horário de Brasília','Primary calendar · Monday to Sunday · Brasilia time'));
  const controls=make('div'),date=make('input'),previous=make('button',say('← Semana anterior','← Previous week')),next=make('button',say('Próxima semana →','Next week →')),current=make('button',say('Semana atual','Current week')),reload=make('button',say('Atualizar agenda','Refresh calendar')),close=make('button',say('Fechar agenda','Close calendar')),list=make('div'),status=make('p');
- date.type='date';date.lang='pt-BR';date.value=first;date.setAttribute('aria-label',say('Semana da agenda','Calendar week'));
+ date.type='date';date.lang=english?'en-GB':'pt-BR';date.value=first;date.setAttribute('aria-label',say('Semana da agenda','Calendar week'));
  controls.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:6px';
  for(const button of [previous,next,current,reload,close]){button.type='button';button.style.cssText='padding:10px;font:inherit;min-height:44px';}
  date.style.cssText='padding:10px;font:inherit;min-height:44px;max-width:100%';
@@ -26,7 +26,7 @@ async function lumiShowCalendarWeek(request,base,english=false){
  function eventTime(item){if(item.allDay)return say('Dia inteiro','All day');if(dayKey(item.start)===dayKey(item.end))return time(item.start)+' – '+time(item.end);const options={timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'};return new Date(item.start).toLocaleString('pt-BR',options)+' – '+new Date(item.end).toLocaleString('pt-BR',options);}
  function render(events){list.replaceChildren();for(let i=0;i<7;i++){
   const day=addDays(date.value,i),section=make('section');section.dataset.agendaDay=day;section.style.cssText='border-top:1px solid #30445d;padding:12px 0';
-  const label=new Intl.DateTimeFormat(english?'en':'pt-BR',{timeZone:'UTC',weekday:'long',day:'2-digit',month:'2-digit'}).format(new Date(day+'T12:00:00Z'));
+  const label=new Intl.DateTimeFormat(english?'en-GB':'pt-BR',{timeZone:'UTC',weekday:'long',day:'2-digit',month:'2-digit'}).format(new Date(day+'T12:00:00Z'));
   section.append(make('h3',label+(day===today?say(' · hoje',' · today'):'')));
   if(day===today){section.style.borderLeft='3px solid #a8dcf2';section.style.paddingLeft='10px';}
   const items=events.filter(item=>contains(item,day)).sort((a,b)=>a.allDay===b.allDay?String(a.start).localeCompare(String(b.start)):a.allDay?-1:1);
@@ -36,7 +36,7 @@ async function lumiShowCalendarWeek(request,base,english=false){
  }}
  async function load(){if(loading||!date.value)return;date.value=monday(date.value);loading=true;for(const item of [previous,next,current,date,reload])item.disabled=true;
   heading.textContent=say('🗓 Sua semana · ','🗓 Your week · ')+short(date.value)+' – '+short(addDays(date.value,6));status.textContent=say('Carregando agenda…','Loading calendar…');list.replaceChildren();
-  try{const response=await request(base.replace(/\/?$/,'/')+'calendar/events/week',{method:'POST',headers:{'content-type':'application/json','accept-language':english?'en':'pt-BR'},body:JSON.stringify({date:date.value}),signal:AbortSignal.timeout(20000)}),data=await response.json();
+  try{const response=await request(base.replace(/\/?$/,'/')+'calendar/events/week',{method:'POST',headers:{'content-type':'application/json','accept-language':english?'en-GB':'pt-BR'},body:JSON.stringify({date:date.value}),signal:AbortSignal.timeout(20000)}),data=await response.json();
    if(response.status===401){lumiCalendarSignIn(status,data.error||say('Entre na Lumi para continuar','Sign in to Lumi to continue'));return;}
    if(data.code==='CONNECT'||data.code==='PERMISSION'){await lumiConnectGoogleCalendar(request,base);return;}
    if(!response.ok||!Array.isArray(data.events))throw Error(data.error||say('Não foi possível consultar a agenda.','Could not load the calendar.'));

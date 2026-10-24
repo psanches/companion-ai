@@ -28,7 +28,8 @@ export function createResearchRoute({ verifyToken, fetcher = fetch } = {}) {
       question = payload.question;
     } catch { return Response.json({error:'Invalid question'},{status:400}); }
     try {
-      const result = await researchNow({question, authorized:true,apiKey:env?.LUMI_RESEARCH_OPENAI_API_KEY,fetcher,maxOutputTokens:600});
+      const selected=request.headers.get('x-lumi-language'),language=['en','pt-BR'].includes(selected)?selected:null;
+      const result = await researchNow({question, authorized:true,apiKey:env?.LUMI_RESEARCH_OPENAI_API_KEY,fetcher,maxOutputTokens:600,language});
       return Response.json(result,{status:result.status==='complete'?200:result.status==='unverified'?422:503,
         headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
     } catch {
