@@ -51,6 +51,9 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  });
  if(name==='small-320')await page.addInitScript(()=>localStorage.setItem('companion-ai-v2','{corrupt'));
  await page.goto(HOST);await page.locator('#signInBtn').waitFor({state:'visible'});
+ await page.locator('#lumiSosSamuCall').waitFor({state:'visible'});
+ assert.equal(await page.locator('#lumiSosSamuCall').getAttribute('href'),'tel:192');
+ assert.equal(await page.locator('#lumiSosBtn').isVisible(),false,'Caregiver contact remains account-protected');
  assert.equal(await page.locator('#chatForm').isVisible(),false);
  await page.locator('#signInBtn').focus();await page.keyboard.press('Enter');await page.locator('#lumiGoogleSignIn').waitFor({state:'visible'});assert.notEqual(await page.evaluate(()=>document.activeElement?.id),'lumiSignInEmail');assert.ok(await page.locator('#lumiGoogleSignIn').evaluate(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}));await page.locator('#lumiSignInEmail').fill('synthetic@example.invalid');await page.getByRole('button',{name:'Enviar link',exact:true}).click();
  assert.equal(await page.evaluate(()=>window.__authOptions.options.emailRedirectTo),HOST+'/');

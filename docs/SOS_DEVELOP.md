@@ -2,14 +2,15 @@
 
 Authorized by Pedro on 2026-10-24 for lumi-develop only.
 
-The sidebar entry **SOS · Contato de emergência** opens a dialog containing
+The main screen has two independent actions beneath the header. **Cuidador / SOS** opens a dialog containing
 name/phone registration and editing. A saved contact exposes a WhatsApp link
 with the fixed message “Preciso de ajuda. Por favor, entre em contato comigo.”,
 a telephone link, and native sharing when supported.
 
-An independent **Ligar para o SAMU · 192** link (`tel:192`) is visible even before
-registering a caregiver and while editing the contact. It identifies the service
-as a medical emergency service in Brazil and lets the user complete the call in
+The independent **SAMU · 192** link (`tel:192`) is directly on the main screen,
+outside the caregiver dialog, and is available without caregiver registration
+or signing in. Its accessible name identifies a call to SAMU 192 and its title
+identifies the service as a medical emergency service in Brazil. The user completes the call in
 the phone app; no automated call or WhatsApp to SAMU is made. The number and
 free 24-hour service were checked on 2026-10-24 at the Ministry of Health:
 https://www.gov.br/saude/pt-br/composicao/saes/samu-192

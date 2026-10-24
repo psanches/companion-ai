@@ -4,7 +4,7 @@ import {JSDOM} from '../ativa-demo/node_modules/jsdom/lib/api.js';
 import {EMERGENCY_CONTACT_FRONTEND} from './emergency-contact.mjs';
 
 async function fixture(){
- const dom=new JSDOM('<aside id="conversationSidebar"><button id="sidebarNewChatBtn">Nova conversa</button></aside>',{url:'https://lumi-develop.psanchesnle.workers.dev',runScripts:'outside-only'});
+ const dom=new JSDOM('<aside id="conversationSidebar"><button id="sidebarNewChatBtn">Nova conversa</button></aside><main class="app"><header class="app-header">Lumi</header></main>',{url:'https://lumi-develop.psanchesnle.workers.dev',runScripts:'outside-only'});
  const {window:w}=dom;let session=null;const callbacks=[];
  w.supabaseClient={auth:{getSession:async()=>({data:{session}}),onAuthStateChange:cb=>callbacks.push(cb)}};
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
@@ -20,10 +20,13 @@ async function fixture(){
 test('SOS hides while signed out, scopes contacts by account, closes on logout/account change and keeps chat storage intact',async()=>{
  const f=await fixture();try{
   const {w,auth,open,save}=f,doc=w.document;assert.equal(doc.getElementById('lumiSosBtn').hidden,true);
+  assert.equal(doc.querySelector('#lumiEmergencyBar > #lumiSosSamuCall').getAttribute('href'),'tel:192');
+  assert.equal(doc.getElementById('lumiSosSamuCall').hidden,false,'SAMU requires no sign-in');
+  assert.equal(doc.getElementById('lumiSosDialog'),null);
   w.localStorage.setItem('companion-ai-v2','{"messages":[]}');
   auth('owner-a');await open();
   assert.equal(doc.getElementById('lumiSosSamuCall').getAttribute('href'),'tel:192');
-  assert.equal(doc.getElementById('lumiSosSamu').hidden,false);
+  assert.equal(doc.querySelector('#lumiSosDialog #lumiSosSamuCall'),null);
   assert.equal(doc.getElementById('lumiSosActions').hidden,true);
   save('Contato fictício A','11999990000');
   assert.equal(doc.querySelector('#lumiSosActions h3').textContent,'Contato fictício A');

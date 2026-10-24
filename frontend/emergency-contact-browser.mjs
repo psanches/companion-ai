@@ -3,11 +3,16 @@ import assert from 'node:assert/strict';
 // Runs against the real packaged app with synthetic identity and phone only.
 // Outbound destinations are inspected, never clicked: no SOS is sent or dialed.
 export async function checkEmergencyContact(page,{mobile=false,screenshotPath}={}){
- if(mobile)await page.locator('#chatHistoryBtn').click();
+ assert.equal(await page.locator('#lumiSosSamuCall').getAttribute('href'),'tel:192');
+ assert.equal(await page.locator('#lumiSosSamuCall').isVisible(),true);
+ assert.equal(await page.locator('#lumiSosDialog').count(),0,'SAMU requires no caregiver dialog');
+ assert.equal(await page.locator('#lumiEmergencyBar > #lumiSosSamuCall').count(),1);
+ const bar=await page.locator('#lumiEmergencyBar').evaluate(n=>{const r=n.getBoundingClientRect();return {left:r.left,right:r.right,bottom:r.bottom,width:innerWidth,height:innerHeight};});
+ assert.ok(bar.left>=0&&bar.right<=bar.width+1&&bar.bottom<=bar.height,'Emergency actions are on the main screen');
  await page.locator('#lumiSosBtn').click();
  const dialog=page.locator('#lumiSosDialog');await dialog.waitFor({state:'visible'});
  assert.equal(await page.locator('#lumiSosSamuCall').getAttribute('href'),'tel:192');
- assert.equal(await page.locator('#lumiSosSamuCall').isVisible(),true,'SAMU is available before caregiver registration');
+ assert.equal(await dialog.locator('#lumiSosSamuCall').count(),0,'Caregiver dialog and SAMU are separate');
  assert.equal(await page.locator('#lumiSosActions').isVisible(),false);
  await page.locator('#lumiSosName').fill('Cuidador fictício');
  await page.locator('#lumiSosPhone').fill('99999-0000');
@@ -27,12 +32,10 @@ export async function checkEmergencyContact(page,{mobile=false,screenshotPath}={
  assert.ok(rect.left>=0&&rect.right<=rect.width+1&&!rect.overflow,JSON.stringify(rect));
  if(screenshotPath)await page.screenshot({path:screenshotPath,fullPage:true});
  await dialog.getByRole('button',{name:'Editar contato',exact:true}).click();
- assert.equal(await page.locator('#lumiSosSamuCall').isVisible(),true);
  await page.locator('#lumiSosName').fill('Edição cancelada');
  await dialog.getByRole('button',{name:'Cancelar edição',exact:true}).click();
  assert.equal(await page.locator('#lumiSosActions h3').textContent(),'Cuidador fictício');
  await dialog.getByRole('button',{name:'Voltar à Lumi',exact:true}).click();
- if(mobile)await page.locator('#chatHistoryBtn').click();
  await page.locator('#lumiSosBtn').click();
  await page.locator('#lumiSosActions').waitFor({state:'visible'});
  assert.equal(await page.locator('#lumiSosActions h3').textContent(),'Cuidador fictício');
