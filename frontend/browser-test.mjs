@@ -1,4 +1,5 @@
 import {chromium} from 'playwright';
+import {checkEmergencyContact} from './emergency-contact-browser.mjs';
 import assert from 'node:assert/strict';import fs from 'node:fs';
 import assets from '../lumi-ativa-integration/assets.generated.mjs';
 import institutional from '../lumi-website/bundle.generated.mjs';
@@ -57,6 +58,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.evaluate(()=>window.__setAuth(true));await page.locator('#signOutBtn').waitFor({state:'visible'});await page.locator('#chatForm').waitFor({state:'visible'});
  await page.locator('#lumiGuideDialog').waitFor({state:'visible'});await page.locator('#lumiGuideDontShow').check();await page.getByRole('button',{name:'Começar a conversar',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('#messages .msg').length===6);
+ await checkEmergencyContact(page,{mobile:width<=900,screenshotPath:new URL('./test-results/'+name+'-sos.png',import.meta.url).pathname});
  // Browser speech events are simulated; this checks the live DOM contract, not hardware.
  await page.locator('#voiceButton').click();await page.getByText('Ouvindo… Você pode pausar até 30 segundos. Toque para parar (máximo 2 minutos).',{exact:true}).waitFor();
  await page.evaluate(()=>{const r=window.__voiceInstances.at(-1);r.onresult({results:['Mensagem','Mensagem ditada','Mensagem ditada fictícia'].map(transcript=>Object.assign([{transcript}],{isFinal:false}))});});
