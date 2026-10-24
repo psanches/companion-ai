@@ -1,5 +1,5 @@
 // Verify public primary-source pages before a story can enter the daily edition.
-const DOMAINS=['parkinson.org.br','apdaparkinson.org','cureparkinsons.org.uk','parkinsonseurope.org','movementdisorders.org','gov.br','usp.br','who.int','paho.org','nih.gov','nia.nih.gov','ninds.nih.gov','fda.gov','cdc.gov','parkinson.org','michaeljfox.org','parkinsons.org.uk','parkinson.ca','parkinsons.org.au','nature.com','science.org','thelancet.com','nejm.org','bmj.com','jamanetwork.com','eurekalert.org','alzheimers.org.uk','nhs.uk','europa.eu','fiocruz.br','fapesp.br','ebc.com.br','globo.com','abril.com.br','reuters.com','bbc.com','bbc.co.uk','statnews.com','medicalxpress.com','sciencedaily.com','medicalnewstoday.com','health.harvard.edu','mayoclinic.org'];
+const DOMAINS=['franceparkinson.fr','dpv-bundesverband.de','parkinson-gesellschaft.de','parkinson.ch','parkinson.it','parkinson-italia.it','esparkinson.es','parkinson.pt','parkinson.nl','parkinsonnet.nl','parkinsons.org.nz','parkinsonssocietyindia.com','jpda-net.org','parkinson.org.br','apdaparkinson.org','cureparkinsons.org.uk','parkinsonseurope.org','movementdisorders.org','gov.br','usp.br','who.int','paho.org','nih.gov','nia.nih.gov','ninds.nih.gov','fda.gov','cdc.gov','parkinson.org','michaeljfox.org','parkinsons.org.uk','parkinson.ca','parkinsons.org.au','nature.com','science.org','thelancet.com','nejm.org','bmj.com','jamanetwork.com','eurekalert.org','alzheimers.org.uk','nhs.uk','europa.eu','fiocruz.br','fapesp.br','ebc.com.br','globo.com','abril.com.br','reuters.com','bbc.com','bbc.co.uk','statnews.com','medicalxpress.com','sciencedaily.com','medicalnewstoday.com','health.harvard.edu','mayoclinic.org'];
 export function publicSourceUrl(value){
  const u=new URL(value);
  if(u.protocol!=='https:'||u.username||u.password||u.port)throw Error('Source URL is not allowed');
@@ -31,6 +31,10 @@ export function isoDay(value){
  if(typeof value!=='string')return null;
  const m=value.trim().match(/^(\d{4}-\d{2}-\d{2})(?:[T\s]|$)/);
  if(m){const d=new Date(m[1]+'T00:00:00Z');return Number.isFinite(+d)&&d.toISOString().slice(0,10)===m[1]?m[1]:null;}
+ const japanese=value.trim().match(/^(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日$/);if(japanese)return isoDay(`${japanese[1]}-${japanese[2].padStart(2,'0')}-${japanese[3].padStart(2,'0')}`);
+ const dotted=value.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);if(dotted)return isoDay(`${dotted[3]}-${dotted[2].padStart(2,'0')}-${dotted[1].padStart(2,'0')}`);
+ const european=value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().match(/^(\d{1,2})\.?\s+(?:de\s+)?([a-z]+)\s+(?:de\s+)?(\d{4})$/);
+ if(european){const months=[['janvier','januar','januari','enero','gennaio'],['fevrier','februar','februari','febrero','febbraio'],['mars','marz','maart','marzo'],['avril','april','abril','aprile'],['mai','mei','mayo','maggio'],['juin','juni','junio','giugno'],['juillet','juli','julio','luglio'],['aout','august','augustus','agosto'],['septembre','september','septiembre','settembre'],['octobre','oktober','octubre','ottobre'],['novembre','november','noviembre'],['decembre','dezember','december','diciembre','dicembre']];const month=months.findIndex(names=>names.includes(european[2]))+1;if(month)return isoDay(`${european[3]}-${String(month).padStart(2,'0')}-${european[1].padStart(2,'0')}`);}
  const slash=value.match(/^(\d{4})\/(\d{2})\/(\d{2})/);if(slash)return isoDay(`${slash[1]}-${slash[2]}-${slash[3]}`);
  const english=value.trim().match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})$/i);
  if(english){const month=['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(english[1].toLowerCase())+1;return isoDay(`${english[3]}-${String(month).padStart(2,'0')}-${english[2].padStart(2,'0')}`);}
@@ -46,6 +50,8 @@ export function publicationFromHtml(html){
  const gov=html.match(/<span\b[^>]*class=["'][^"']*documentPublished[^"']*["'][^>]*>([\s\S]{0,900})/i);
  if(gov){const day=isoDay(gov[1].replace(/<[^>]*>/g,' '));if(day)found.push({date:day,evidence:'documentPublished'});}
  if(!found.length){const header=html.match(/<\/h1\s*>([\s\S]{0,3000})/i)?.[1]||'';const visible=header.match(/>\s*((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}|\d{1,2} de (?:janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) de \d{4})\s*</i);if(visible){const day=isoDay(visible[1]);if(day)found.push({date:day,evidence:'Dedicated publication date below article heading'});}}
+ // Accept only a dedicated date element near the headline, never dates embedded in event prose.
+ if(!found.length){const header=html.match(/<\/h1\s*>([\s\S]{0,3000})/i)?.[1]||'';for(const match of header.matchAll(/>\s*([^<>]{1,80})\s*</g)){const text=match[1].trim();if(!/^(?:\d{1,2}\.\d{1,2}\.\d{4}|\d{4}年\s*\d{1,2}月\s*\d{1,2}日|\d{1,2}\.?\s+(?:de\s+)?[A-Za-zÀ-ÿ]+\s+(?:de\s+)?\d{4})$/.test(text))continue;const date=isoDay(text);if(date)found.push({date,evidence:'Dedicated international publication date below article heading'});}}
  if(!found.length)throw Error('Publication date could not be verified');
  if(new Set(found.map(x=>x.date)).size!==1)throw Error('Source publication dates conflict');
  return found[0];

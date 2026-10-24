@@ -35,3 +35,19 @@ test('no candidates returns an honest empty preview after both search stages; no
  let calls=0;const result=await generateHealthNewsPreview({OPENAI_API_KEY:'test'},new Date('2026-10-24T12:00:00Z'),async()=>{calls++;return Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[]}},{content:[{type:'output_text',text:'{"items":[]}'}]}]});});
  assert.equal(calls,2);assert.equal(result.items.length,0);assert.equal(result.shortfall,10);assert.equal(NEWS_PREVIEW_POLICY.maxItems,10);
 });
+
+test('international catalogue contains verified sources from fifteen countries plus transnational organisations',async()=>{
+ const {PARKINSON_SOURCE_CATALOG,PARKINSON_SOURCES}=await import('./health-news-preview.mjs');const {publicSourceUrl,isoDay,publicationFromHtml}=await import('./health-news-verification.mjs');
+ assert.equal(PARKINSON_SOURCES.length,23);assert.equal(new Set(PARKINSON_SOURCES).size,23);
+ const countries=new Set(PARKINSON_SOURCE_CATALOG.map(s=>s.country));for(const c of ['Canadá','Austrália','França','Alemanha','Suíça','Itália','Espanha','Portugal','Países Baixos','Nova Zelândia','Índia','Japão'])assert.ok(countries.has(c));
+ for(const source of PARKINSON_SOURCE_CATALOG)assert.equal(publicSourceUrl(source.url).hostname.replace(/^www\./,''),source.domain);
+ for(const date of ['22 octobre 2026','22. Oktober 2026','22 ottobre 2026','22 de octubre de 2026','22 oktober 2026','22.10.2026','2026年10月22日']){assert.equal(isoDay(date),'2026-10-22');assert.equal(publicationFromHtml('<h1>News</h1><p>'+date+'</p>').date,'2026-10-22');}
+ assert.equal(isoDay('31.02.2026'),null);assert.throws(()=>publicationFromHtml('<h1>Event</h1><p>Come on 22 octobre 2026 for our local meeting.</p>'));
+ assert.throws(()=>publicSourceUrl('https://franceparkinson.fr.evil.example/news'));
+});
+test('international official sources retain Parkinson priority, Portuguese summaries and the regional exclusion',()=>{
+ const source=story('fr','www.franceparkinson.fr','Recherche Parkinson. '+evidence);
+ const approved=selectEditorialStories([source],[review(0,{scope:'global'})],day);assert.equal(approved.length,1);assert.equal(approved[0].priority,0);assert.equal(approved[0].language,'pt-BR');
+ assert.equal(selectEditorialStories([source],[review(0,{localFocus:true})],day).length,0);
+ const japan=story('jp','www.jpda-net.org','パーキンソン病の研究。 '+evidence);assert.equal(selectEditorialStories([japan],[review(0,{scope:'global'})],day)[0].priority,0);
+});
