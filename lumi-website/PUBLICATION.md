@@ -39,3 +39,19 @@ Public-router contracts cover language/content/resources, cache headers, origina
 - The first direct-transfer attempt failed with Cloudflare 409 and left/restored the original association. The successful attempt detached the occupied root domain immediately before reattaching it to the new public-site Worker. Rollback procedure above remains available.
 
 The record-only documentation commit does not trigger another publication.
+
+## More visible application access on October 24
+
+Owner-requested enhancement: prominent gold application buttons in the header,
+opening section and final application band, in English and Portuguese. The header
+button is visible without scrolling at desktop and mobile viewport sizes. All
+three links retain the existing development-app destination and use safe new-tab
+navigation. The layout uses larger touch targets and keeps native keyboard focus.
+
+Subsequent website updates use `update-public.mjs` with the explicit update marker.
+It replaces only the existing public website bundle, preserves the router and
+bindings, checks that application Workers and domain routing remain unchanged,
+and restores the previous website if verification fails. This update path does
+not repeat the original domain migration. The public pipeline runs browser and
+accessibility checks; the redundant isolated-preview deployment is skipped for
+these explicitly marked public website updates.

@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   preview:
-    if: github.ref == 'refs/heads/feature/lumi-institutional-refresh-20261017'
+    if: github.ref == 'refs/heads/feature/lumi-institutional-refresh-20261017' && !contains(github.event.head_commit.message, '[update-institutional-owner-approved]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:

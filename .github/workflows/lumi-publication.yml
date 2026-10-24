@@ -2,12 +2,12 @@ name: Lumi authorized public website publication
 on:
   push:
     branches: [feature/lumi-institutional-refresh-20261017]
-    paths: ['lumi-website/inspect-publication.mjs', 'lumi-website/public-worker.mjs', 'lumi-website/public.test.mjs', 'lumi-website/deploy-public.mjs', '.github/workflows/lumi-publication.yml']
+    paths: ['lumi-website/src/**', 'lumi-website/build.mjs', 'lumi-website/tests/**', 'lumi-website/inspect-publication.mjs', 'lumi-website/public-worker.mjs', 'lumi-website/public.test.mjs', 'lumi-website/deploy-public.mjs', 'lumi-website/update-public.mjs', '.github/workflows/lumi-publication.yml']
 permissions:
   contents: read
 jobs:
   publish:
-    if: contains(github.event.head_commit.message, '[publish-institutional-owner-approved]')
+    if: contains(github.event.head_commit.message, '[publish-institutional-owner-approved]') || contains(github.event.head_commit.message, '[update-institutional-owner-approved]')
     concurrency:
       group: lumi-public-website
       cancel-in-progress: false
@@ -22,18 +22,26 @@ jobs:
         run: |
           npm ci --prefix lumi-website --ignore-scripts --no-audit --no-fund
           node lumi-website/build.mjs
-          node --test lumi-website/tests/contracts.test.mjs lumi-website/public.test.mjs
+          node --test lumi-website/tests/contracts.test.mjs lumi-website/tests/update-public.test.mjs lumi-website/public.test.mjs
       - name: Desktop and Android simulations and accessibility
         run: |
           node lumi-website/node_modules/playwright/cli.js install --with-deps chromium
           cd lumi-website
           LUMI_PUBLIC_TEST=1 npm run test:browser
       - name: Publish authorized public site with guarded routing and rollback
+        if: contains(github.event.head_commit.message, '[publish-institutional-owner-approved]')
         env:
           LUMI_PUBLICATION_CONFIRM: PUBLISH_OWNER_AUTHORIZED_20261017
           CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
         run: node lumi-website/deploy-public.mjs
+      - name: Update existing public website without changing apps or domain routing
+        if: contains(github.event.head_commit.message, '[update-institutional-owner-approved]')
+        env:
+          LUMI_WEBSITE_UPDATE_CONFIRM: UPDATE_EXISTING_PUBLIC_WEBSITE_ONLY
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
+        run: node lumi-website/update-public.mjs
       - name: Preserve publication evidence
         if: always()
         uses: actions/upload-artifact@v4
