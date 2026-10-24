@@ -34,14 +34,11 @@ async function lumiShowCalendarWeek(request,base,english=false){
   if(!items.length)section.append(make('p',say('Nenhum compromisso neste dia.','No events on this day.')));
   list.append(section);
  }}
- function connect(message){status.replaceChildren(document.createTextNode(message+' '));const button=make('button',say('Conectar Google Calendar','Connect Google Calendar'));button.type='button';button.style.cssText='padding:10px;font:inherit;min-height:44px';status.append(button);
-  button.onclick=async()=>{button.disabled=true;try{const r=await request(base.replace(/\/?$/,'/')+'auth/google/start',{method:'POST',headers:{'content-type':'application/json','accept-language':english?'en':'pt-BR'},body:'{}',signal:AbortSignal.timeout(20000)}),data=await r.json();if(r.status===401){lumiCalendarSignIn(status,data.error||say('Entre na Lumi para continuar','Sign in to Lumi to continue'));return;}if(!r.ok||!data.url)throw Error(data.error||'Calendar unavailable');const target=new URL(data.url);if(target.origin!=='https://accounts.google.com')throw Error('Invalid OAuth URL');location.assign(target.href);}catch(error){status.textContent=error.message;}finally{button.disabled=false;}};
- }
  async function load(){if(loading||!date.value)return;date.value=monday(date.value);loading=true;for(const item of [previous,next,current,date,reload])item.disabled=true;
   heading.textContent=say('🗓 Sua semana · ','🗓 Your week · ')+short(date.value)+' – '+short(addDays(date.value,6));status.textContent=say('Carregando agenda…','Loading calendar…');list.replaceChildren();
   try{const response=await request(base.replace(/\/?$/,'/')+'calendar/events/week',{method:'POST',headers:{'content-type':'application/json','accept-language':english?'en':'pt-BR'},body:JSON.stringify({date:date.value}),signal:AbortSignal.timeout(20000)}),data=await response.json();
    if(response.status===401){lumiCalendarSignIn(status,data.error||say('Entre na Lumi para continuar','Sign in to Lumi to continue'));return;}
-   if(data.code==='CONNECT'||data.code==='PERMISSION'){connect(data.error||say('Conecte seu Google Calendar.','Connect your Google Calendar.'));return;}
+   if(data.code==='CONNECT'||data.code==='PERMISSION'){await lumiConnectGoogleCalendar(request,base);return;}
    if(!response.ok||!Array.isArray(data.events))throw Error(data.error||say('Não foi possível consultar a agenda.','Could not load the calendar.'));
    render(data.events);status.textContent=data.truncated?say('Mostrando os primeiros 100 compromissos da semana.','Showing the first 100 events of this week.'):say('Agenda semanal atualizada.','Weekly calendar updated.');
   }catch(error){if(/sign.?in|login|entre na lumi/i.test(error.message||''))lumiCalendarSignIn(status,say('Entre na Lumi para continuar','Sign in to Lumi to continue'));else status.textContent=say('Não consegui carregar a agenda. Use Atualizar agenda para tentar novamente. ','Could not load the calendar. Use Refresh calendar to retry. ')+error.message;}
@@ -51,3 +48,4 @@ async function lumiShowCalendarWeek(request,base,english=false){
  await load();
 }
 `;
+

@@ -30,3 +30,19 @@ test('connect command requests a real OAuth URL and rejects redirects outside Go
  await assert.rejects(connect(async()=>Response.json({url:'https://evil.test/'}),'https://lumi.test/'),/inválido/);assert.equal(navigations.length,1);
  await assert.rejects(connect(async()=>Response.json({error:'Serviço indisponível'},{status:503}),'https://lumi.test/'),/indisponível/);assert.equal(navigations.length,1);
 });
+
+test('disconnected day and week open Google automatically without an extra connection button',async()=>{
+ const {runInNewContext}=await import('node:vm');
+ for(const kind of ['Day','Week']){
+  class Node{constructor(tag,text=''){this.tag=tag;this.children=[];this.textContent=text;this.dataset={};this.style={};}append(...nodes){this.children.push(...nodes);}replaceChildren(...nodes){this.children=nodes;}setAttribute(){}remove(){}scrollIntoView(){}}
+  const body=new Node('body'),find=(n,id)=>n.id===id?n:n.children.map(c=>find(c,id)).find(Boolean),navigations=[],calls=[],saved=new Map();
+  const context={document:{body,createElement:tag=>new Node(tag),createTextNode:text=>new Node('text',text),getElementById:id=>find(body,id),querySelector:()=>null},location:{assign:url=>navigations.push(url)},sessionStorage:{setItem:(k,v)=>saved.set(k,v)},URL,AbortSignal};
+  runInNewContext(CALENDAR_FRONTEND,context);
+  const request=async(url,options)=>{calls.push(url);return url.endsWith('/auth/google/start')?Response.json({url:'https://accounts.google.com/o/oauth2/v2/auth?state=test'}):Response.json({code:'CONNECT',error:'Disconnected'},{status:403});};
+  if(kind==='Day')await context.lumiShowCalendarDay(null,request,'https://lumi.test/');else await context.lumiShowCalendarWeek(request,'https://lumi.test/');
+  assert.deepEqual(calls,['https://lumi.test/calendar/events/'+kind.toLowerCase(),'https://lumi.test/auth/google/start']);
+  assert.deepEqual(navigations,['https://accounts.google.com/o/oauth2/v2/auth?state=test']);
+  const buttons=n=>[...(n.tag==='button'?[n]:[]),...n.children.flatMap(buttons)];
+  assert.ok(buttons(body).every(b=>b.textContent!=='Conectar Google Calendar'));
+ }
+});
