@@ -25,7 +25,7 @@ dialog{max-width:calc(100vw - 24px);max-height:calc(var(--lumi-viewport-height,1
  html.lumi-authenticated .header-actions{width:100%}
  #conversationSidebar[aria-hidden=true]{visibility:hidden}
 }
-@media(max-height:500px){.companion-profile{display:none}.app-header{min-height:0;padding:4px 8px}.messages{padding:8px}.composer{padding:4px 8px}}
+@media(max-height:500px){.companion-profile{display:none!important}.app-header{min-height:0;padding:4px 8px}.messages{padding:8px}.composer{padding:4px 8px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 .voice-button{flex:0 0 44px;min-width:44px;min-height:44px;border:0;border-radius:50%;background:var(--surface-2);color:var(--text)}
 #loadEarlierBtn{flex:0 0 auto;min-height:44px;background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
