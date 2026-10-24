@@ -7,6 +7,13 @@ name/phone registration and editing. A saved contact exposes a WhatsApp link
 with the fixed message “Preciso de ajuda. Por favor, entre em contato comigo.”,
 a telephone link, and native sharing when supported.
 
+An independent **Ligar para o SAMU · 192** link (`tel:192`) is visible even before
+registering a caregiver and while editing the contact. It identifies the service
+as a medical emergency service in Brazil and lets the user complete the call in
+the phone app; no automated call or WhatsApp to SAMU is made. The number and
+free 24-hour service were checked on 2026-10-24 at the Ministry of Health:
+https://www.gov.br/saude/pt-br/composicao/saes/samu-192
+
 The user completes sending in the destination app. Lumi does not claim delivery,
 read receipts, completed calls or caregiver acknowledgement. Opening SOS alone
 does not contact anyone. Generic native sharing asks the user to choose the

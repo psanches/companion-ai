@@ -21,7 +21,11 @@ test('SOS hides while signed out, scopes contacts by account, closes on logout/a
  const f=await fixture();try{
   const {w,auth,open,save}=f,doc=w.document;assert.equal(doc.getElementById('lumiSosBtn').hidden,true);
   w.localStorage.setItem('companion-ai-v2','{"messages":[]}');
-  auth('owner-a');await open();save('Contato fictício A','11999990000');
+  auth('owner-a');await open();
+  assert.equal(doc.getElementById('lumiSosSamuCall').getAttribute('href'),'tel:192');
+  assert.equal(doc.getElementById('lumiSosSamu').hidden,false);
+  assert.equal(doc.getElementById('lumiSosActions').hidden,true);
+  save('Contato fictício A','11999990000');
   assert.equal(doc.querySelector('#lumiSosActions h3').textContent,'Contato fictício A');
   assert.equal(doc.querySelector('#lumiSosActions button').hidden,true,'native sharing is hidden when unsupported');
   auth('owner-b');assert.equal(doc.getElementById('lumiSosDialog'),null);await open();

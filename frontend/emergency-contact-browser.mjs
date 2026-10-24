@@ -6,6 +6,8 @@ export async function checkEmergencyContact(page,{mobile=false,screenshotPath}={
  if(mobile)await page.locator('#chatHistoryBtn').click();
  await page.locator('#lumiSosBtn').click();
  const dialog=page.locator('#lumiSosDialog');await dialog.waitFor({state:'visible'});
+ assert.equal(await page.locator('#lumiSosSamuCall').getAttribute('href'),'tel:192');
+ assert.equal(await page.locator('#lumiSosSamuCall').isVisible(),true,'SAMU is available before caregiver registration');
  assert.equal(await page.locator('#lumiSosActions').isVisible(),false);
  await page.locator('#lumiSosName').fill('Cuidador fictício');
  await page.locator('#lumiSosPhone').fill('99999-0000');
@@ -25,6 +27,7 @@ export async function checkEmergencyContact(page,{mobile=false,screenshotPath}={
  assert.ok(rect.left>=0&&rect.right<=rect.width+1&&!rect.overflow,JSON.stringify(rect));
  if(screenshotPath)await page.screenshot({path:screenshotPath,fullPage:true});
  await dialog.getByRole('button',{name:'Editar contato',exact:true}).click();
+ assert.equal(await page.locator('#lumiSosSamuCall').isVisible(),true);
  await page.locator('#lumiSosName').fill('Edição cancelada');
  await dialog.getByRole('button',{name:'Cancelar edição',exact:true}).click();
  assert.equal(await page.locator('#lumiSosActions h3').textContent(),'Cuidador fictício');

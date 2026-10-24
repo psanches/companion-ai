@@ -57,6 +57,10 @@ export function installLumiEmergencyContact(auth) {
    d.append(style,back,heading,make('p','Cadastre quem você quer contatar quando precisar de ajuda.'),make('p','O contato fica salvo somente neste navegador, para sua conta. Não é sincronizado com outros aparelhos.'),editor,actions,status);
    const styleAction=node=>{node.style.cssText='display:block;box-sizing:border-box;width:100%;margin:10px 0;padding:12px;min-height:48px;border:1px solid #a6cce3;border-radius:8px;background:#25344a;color:#fff;font:inherit;text-align:center;text-decoration:none;cursor:pointer';};
    for(const b of [back,save,cancel])styleAction(b);
+   const samu=make('section');samu.id='lumiSosSamu';
+   const samuLink=make('a','Ligar para o SAMU · 192');samuLink.id='lumiSosSamuCall';samuLink.href='tel:192';styleAction(samuLink);samuLink.style.background='#762538';
+   samu.append(make('h3','Emergência médica no Brasil'),samuLink,make('p','Ligação gratuita, 24 horas. Você conclui a ligação no telefone. Se não abrir, disque 192 manualmente.'));
+   d.insertBefore(samu,editor);
    function edit(){editor.hidden=false;actions.hidden=true;name.value=contact?.name||'';phone.value=contact?'+'+contact.phone:'';cancel.hidden=!contact;name.focus();}
    function render(){
     editor.hidden=!!contact;actions.hidden=!contact;cancel.hidden=!contact;actions.replaceChildren();if(!contact)return;
