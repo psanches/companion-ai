@@ -1,5 +1,5 @@
 // Verify public primary-source pages before a story can enter the daily edition.
-const DOMAINS=['gov.br','usp.br','who.int','paho.org','nih.gov','nia.nih.gov','ninds.nih.gov','fda.gov','cdc.gov','parkinson.org','michaeljfox.org','parkinsons.org.uk','parkinson.ca','parkinsons.org.au','nature.com','science.org','thelancet.com','nejm.org','bmj.com','jamanetwork.com','eurekalert.org','alzheimers.org.uk','nhs.uk','europa.eu','fiocruz.br','fapesp.br','ebc.com.br','globo.com','abril.com.br','reuters.com','bbc.com','bbc.co.uk','statnews.com','medicalxpress.com','sciencedaily.com','medicalnewstoday.com','health.harvard.edu','mayoclinic.org'];
+const DOMAINS=['parkinson.org.br','apdaparkinson.org','cureparkinsons.org.uk','parkinsonseurope.org','movementdisorders.org','gov.br','usp.br','who.int','paho.org','nih.gov','nia.nih.gov','ninds.nih.gov','fda.gov','cdc.gov','parkinson.org','michaeljfox.org','parkinsons.org.uk','parkinson.ca','parkinsons.org.au','nature.com','science.org','thelancet.com','nejm.org','bmj.com','jamanetwork.com','eurekalert.org','alzheimers.org.uk','nhs.uk','europa.eu','fiocruz.br','fapesp.br','ebc.com.br','globo.com','abril.com.br','reuters.com','bbc.com','bbc.co.uk','statnews.com','medicalxpress.com','sciencedaily.com','medicalnewstoday.com','health.harvard.edu','mayoclinic.org'];
 export function publicSourceUrl(value){
  const u=new URL(value);
  if(u.protocol!=='https:'||u.username||u.password||u.port)throw Error('Source URL is not allowed');
@@ -125,3 +125,4 @@ export function selectStories(stories,recentUrls=new Set()){
  add(()=>true,5-selected.length);
  return selected.sort((a,b)=>(a.kind==='contexto')-(b.kind==='contexto')||a.ageDays-b.ageDays);
 }
+

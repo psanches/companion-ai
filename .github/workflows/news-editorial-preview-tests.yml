@@ -1,0 +1,17 @@
+name: News editorial preview tests (no deployment)
+on:
+  push:
+    branches: [feature/news-editorial-preview-20261024]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test preview selection and existing source verification without credentials or deployment
+        run: node --test health-news-preview.test.mjs lumi-ativa-integration/tests/health-news-verification.test.mjs

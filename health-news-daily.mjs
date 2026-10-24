@@ -76,3 +76,7 @@ export async function getLatestHealthDigest(env,now=new Date()){
  const current={...digest,date:today,items};if(!validEdition(current,today))return null;
  return {...digest,items,stale:digest.date!==today};
 }
+
+
+// Reuse transport/schema in the isolated, non-published editorial preview.
+export {ask as requestNewsResearch, schema as newsResearchSchema};
