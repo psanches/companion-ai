@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const start=source.indexOf('function appendLumiLinks('),end=source.indexOf('function add(',start);
+function render(text){const document={createTextNode:text=>({textContent:text}),createElement:tag=>({tag})};const append=new Function('document',source.slice(start,end)+';return appendLumiLinks;')(document);const nodes=[];append({appendChild:n=>nodes.push(n)},text);return {nodes,links:nodes.filter(n=>n.tag==='a'),text:nodes.map(n=>n.textContent).join('')};}
+const maps='https://www.google.com/maps/search/?api=1&query=Rua+Amadeu+Sangiovani+4-47+Bauru+SP';
+test('plain Google Maps URL becomes clickable with its complete address and query',()=>{const input='Abra no Maps:\n'+maps+'\nToque para abrir.';const r=render(input);assert.equal(r.links.length,1);assert.equal(r.links[0].href,maps);assert.equal(r.text,input);assert.equal(r.links[0].target,'_blank');assert.equal(r.links[0].rel,'noopener noreferrer');});
+test('titled Markdown links and multiple plain URLs work together',()=>{const r=render('[Abrir mapa]('+maps+') e https://example.com/test.');assert.equal(r.links.length,2);assert.equal(r.links[0].textContent,'Abrir mapa');assert.equal(r.links[0].href,maps);assert.equal(r.links[1].href,'https://example.com/test');assert.equal(r.text,'Abrir mapa e https://example.com/test.');});
+test('sentence punctuation is separate while balanced parentheses and accented addresses are retained',()=>{for(const url of ['https://example.com/wiki/Test_(one)','https://example.com/São+Paulo']){const r=render('('+url+').');assert.equal(r.links[0].href,url);assert.equal(r.text,'('+url+').');}});
+test('reply HTML remains plain text and unsafe credentials or script links never become anchors',()=>{for(const input of ['<img src=x onerror=alert(1)>','[Open](javascript:alert(1))','https://user:password@example.com/','https://example.com\\@evil.test/']){const r=render(input);assert.equal(r.links.length,0);assert.equal(r.text,input);}});
+test('assistant messages use the renderer, including restored history; user text stays plain',()=>{const add=source.slice(source.indexOf('function add('),source.indexOf('function render('));assert.match(add,/role === "assistant"[\s\S]*appendLumiLinks\(el, content\)/);assert.match(add,/else \{\s*el.textContent = content;/);});

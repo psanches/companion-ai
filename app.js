@@ -405,31 +405,52 @@ function save() {
 }
 
 
+// Render only text and validated HTTP(S) anchors. Never interpret reply HTML.
+function appendLumiLinks(container, content) {
+  const text = String(content ?? "");
+  const pattern = /\[([^\]\n]+)\]\((https?:\/\/[^\s<>]+?)\)(?=\s|$|[.,!?;:])|https?:\/\/[^\s<>"\u201c\u201d]+/gi;
+  let position = 0;
+  for (const match of text.matchAll(pattern)) {
+    container.appendChild(document.createTextNode(text.slice(position, match.index)));
+    let url = match[2] || match[0];
+    let suffix = "";
+    if (!match[2]) {
+      // Keep balanced parentheses, which legitimately occur in URLs.
+      while (/[.,!?;:\u2019]$/.test(url) ||
+             (url.endsWith(")") && (url.match(/\)/g)||[]).length > (url.match(/\(/g)||[]).length)) {
+        suffix = url.slice(-1) + suffix;
+        url = url.slice(0, -1);
+      }
+    }
+    let valid = false;
+    try {
+      const parsed = new URL(url);
+      valid = ["https:", "http:"].includes(parsed.protocol) && !!parsed.hostname &&
+        !parsed.username && !parsed.password && !/[\u0000-\u0020\u007f\\]/.test(url);
+    } catch {}
+    if (valid) {
+      const link = document.createElement("a");
+      link.href = url;
+      link.textContent = match[1] || url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      container.appendChild(link);
+      if (suffix) container.appendChild(document.createTextNode(suffix));
+    } else {
+      container.appendChild(document.createTextNode(match[0]));
+    }
+    position = match.index + match[0].length;
+  }
+  container.appendChild(document.createTextNode(text.slice(position)));
+}
+
 function add(role, content, persist = true) {
   const el =
     document.createElement("div");
 
   el.className = `msg ${role}`;
   if (role === "assistant") {
-    const linkPattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
-    let lastIndex = 0;
-
-    for (const match of content.matchAll(linkPattern)) {
-      el.appendChild(
-        document.createTextNode(content.slice(lastIndex, match.index))
-      );
-
-      const link = document.createElement("a");
-      link.href = match[2];
-      link.textContent = match[1];
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-
-      el.appendChild(link);
-      lastIndex = match.index + match[0].length;
-    }
-
-    el.appendChild(document.createTextNode(content.slice(lastIndex)));
+    appendLumiLinks(el, content);
   } else {
     el.textContent = content;
   }
