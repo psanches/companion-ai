@@ -1,3 +1,4 @@
+import {withLocalLocationTest} from './location-test-worker.mjs';
 import {withBetaFeedback} from './beta-feedback-worker.mjs';
 // LUMI_ATIVA_INTEGRATION_VERSION=1
 import baseline from './ativa-baseline-runtime.mjs';
@@ -17,4 +18,4 @@ import institutional from './institutional-bundle.mjs';
 const integrated=createLumiAtivaIntegration(baseline,assets,fetch,createLumiResearchHandler());
 const companion=withCompanionChat(withHealthNews(integrated));
 const application=withBetaFeedback(withConversationSidebar(withCalendar(companion)));
-export default withFrontendVersion(withInstitutional(application,institutional),release,previous);
+export default withLocalLocationTest(withFrontendVersion(withInstitutional(application,institutional),release,previous));

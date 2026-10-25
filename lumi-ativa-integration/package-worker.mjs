@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import {applyRuntimePolicy} from './runtime-policy.mjs';
 const files = {
+  'location-test-worker.mjs': './location-test-worker.mjs',
   'companion-instructions.mjs': './companion-instructions.mjs',
   'companion-chat.mjs': './companion-chat.mjs',
   'beta-feedback-worker.mjs': '../lumi-beta/feedback-worker.mjs',
