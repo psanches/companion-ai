@@ -121,8 +121,8 @@
   "Conversar": "Chat",
   "Cuidador / SOS": "Caregiver / SOS",
   "Ajuda e emergência": "Help and emergency",
-  "Ligar para o SAMU 192": "Call SAMU 192 in Brazil",
-  "Emergência médica no Brasil. Abra o telefone e confirme a ligação.": "Medical emergency service in Brazil. Open your phone app and confirm the call.",
+  "Ligar para o SAMU 192": "Dial 911",
+  "Emergência médica no Brasil. Abra o telefone e confirme a ligação.": "Emergency number 911 (US/Canada). Open your phone app and confirm the call.",
   "Voltar à Lumi": "Back to Lumi",
   "Nome do cuidador ou contato": "Caregiver or contact name",
   "Telefone com DDD": "Phone with area code",
@@ -420,5 +420,6 @@
   "Erro ao conectar à Lumi.": "Error connecting to Lumi.",
   "Erro ao carregar histórico.": "Error loading conversation history.",
   "Agenda de hoje.": "Today's calendar.",
-  "Abrindo o Google para conectar sua agenda.": "Opening Google to connect your calendar."
+  "Abrindo o Google para conectar sua agenda.": "Opening Google to connect your calendar.",
+  "SAMU · 192": "Dial 911"
 }

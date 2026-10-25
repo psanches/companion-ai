@@ -16,7 +16,8 @@ export async function checkAppLanguages(page,{mobile=false,screenshotPath}={}){
  await page.locator('#lumiSosBtn').click();
  await page.getByRole('heading',{name:'Caregiver / SOS',exact:true}).waitFor();
  assert.equal(new URL(await page.locator('#lumiSosWhatsApp').getAttribute('href')).searchParams.get('text'),'I need help. Please contact me.');
- assert.equal(await page.locator('#lumiSosSamuCall').getAttribute('href'),'tel:192');
+ assert.equal(await page.locator('#lumiSosSamuCall').getAttribute('href'),'tel:911');
+ assert.equal(await page.locator('#lumiSosSamuCall').textContent(),'Dial 911');
  await page.getByRole('button',{name:'Back to Lumi',exact:true}).click();
  if(mobile)await page.locator('#chatHistoryBtn').click();
  await page.locator('#lumiAgendaBtn').click();
@@ -29,6 +30,8 @@ export async function checkAppLanguages(page,{mobile=false,screenshotPath}={}){
  if(screenshotPath)await page.screenshot({path:screenshotPath,fullPage:true});
  await page.locator('#lumiLanguageSelect').selectOption('pt-BR');
  await page.waitForFunction(()=>document.documentElement.lang==='pt-BR');
+ assert.equal(await page.locator('#lumiSosSamuCall').getAttribute('href'),'tel:192');
+ assert.equal(await page.locator('#lumiSosSamuCall').textContent(),'SAMU · 192');
  await page.locator('#messageInput').fill(previous);
 }
 

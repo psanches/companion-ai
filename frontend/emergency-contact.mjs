@@ -23,6 +23,8 @@ export function installLumiEmergencyContact(auth) {
  const bar=make('nav');bar.id='lumiEmergencyBar';bar.setAttribute('aria-label','Ajuda e emergência');
  const button=make('button','Cuidador / SOS');button.type='button';button.id='lumiSosBtn';
  const samuLink=make('a','SAMU · 192');samuLink.id='lumiSosSamuCall';samuLink.href='tel:192';samuLink.setAttribute('aria-label','Ligar para o SAMU 192');samuLink.title='Emergência médica no Brasil. Abra o telefone e confirme a ligação.';
+ const syncEmergencyNumber=()=>{let language=window.LumiI18n?.language;if(!language)try{language=localStorage.getItem('lumi-language-v1');}catch{}samuLink.href=language==='en'?'tel:911':'tel:192';};
+ syncEmergencyNumber();window.addEventListener('lumi-language-change',syncEmergencyNumber);
  bar.append(button,samuLink);header.after(bar);
  let owner=null,dialog=null,opening=false;
  const sessionOwner=session=>typeof session?.user?.id==='string'?session.user.id:null;
