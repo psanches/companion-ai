@@ -35,7 +35,7 @@ jobs:
         run: node lumi-ativa-integration/inspect.mjs
   integrate:
     if: github.ref == 'refs/heads/feature/pc-android-permanent-fix-20261016' && ((github.event_name == 'workflow_dispatch' && inputs.confirm == 'DEPLOY_LUMI_DEVELOP_ONLY' && inputs.inspect_only != true) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[pc-android-develop-deploy]') || contains(github.event.head_commit.message, '[calendar-develop-deploy]'))))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
