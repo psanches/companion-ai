@@ -28,6 +28,15 @@ export async function checkEmergencyContact(page,{mobile=false,screenshotPath}={
  assert.equal(whatsapp.pathname,'/5511999990000');assert.equal(whatsapp.searchParams.get('text'),'Preciso de ajuda. Por favor, entre em contato comigo.');
  assert.equal(await page.locator('#lumiSosWhatsApp').getAttribute('rel'),'noopener noreferrer');
  assert.equal(await page.locator('#lumiSosActions').getByText(/não confirma envio, leitura ou atendimento/).count(),1);
+ // Synthetic coordinates only; no device GPS is requested or SOS sent.
+ await page.evaluate(()=>Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition(ok){ok({coords:{latitude:-22,longitude:-49,accuracy:15},timestamp:Date.now()});}}}));
+ await page.locator('#lumiSosLocation').click();
+ const located=new URL(await page.locator('#lumiSosWhatsApp').getAttribute('href')).searchParams.get('text');
+ assert.match(located,/Minha localização/);assert.match(located,/query=-22%2C-49/);assert.match(located,/15 m/);
+ assert.equal(await page.locator('#lumiSosCall').getAttribute('href'),'tel:+5511999990000');
+ assert.equal(await page.locator('#lumiSosSamuCall').getAttribute('href'),'tel:192');
+ await page.locator('#lumiSosRemoveLocation').click();
+ assert.equal(new URL(await page.locator('#lumiSosWhatsApp').getAttribute('href')).searchParams.get('text'),'Preciso de ajuda. Por favor, entre em contato comigo.');
  const rect=await dialog.evaluate(d=>{const r=d.getBoundingClientRect();return {right:r.right,left:r.left,width:innerWidth,overflow:d.scrollWidth>d.clientWidth+1};});
  assert.ok(rect.left>=0&&rect.right<=rect.width+1&&!rect.overflow,JSON.stringify(rect));
  if(screenshotPath)await page.screenshot({path:screenshotPath,fullPage:true});
@@ -41,3 +50,4 @@ export async function checkEmergencyContact(page,{mobile=false,screenshotPath}={
  assert.equal(await page.locator('#lumiSosActions h3').textContent(),'Cuidador fictício');
  await page.keyboard.press('Escape');await page.locator('#lumiSosDialog').waitFor({state:'detached'});
 }
+

@@ -421,5 +421,16 @@
   "Erro ao carregar histórico.": "Error loading conversation history.",
   "Agenda de hoje.": "Today's calendar.",
   "Abrindo o Google para conectar sua agenda.": "Opening Google to connect your calendar.",
-  "SAMU · 192": "Dial 911"
+  "SAMU · 192": "Dial 911",
+  "Incluir minha localização": "Include my location",
+  "Atualizar minha localização": "Update my location",
+  "Remover localização": "Remove location",
+  "Opcional: inclui sua posição e horário na mensagem ao cuidador. A localização será compartilhada ao abrir o WhatsApp ou outro aplicativo. Não acompanha seus deslocamentos.": "Optional: includes your position and time in the message to your caregiver. Your location will be shared when you open WhatsApp or another app. It does not track your movements.",
+  "Localização indisponível. Você pode pedir ajuda sem localização ou ligar para o cuidador.": "Location is unavailable. You can ask for help without location or call your caregiver.",
+  "Aguardando permissão e localização do celular…": "Waiting for permission and your phone's location…",
+  "Permissão de localização negada. Você pode pedir ajuda sem localização ou ligar para o cuidador.": "Location permission denied. You can ask for help without location or call your caregiver.",
+  "Não foi possível obter a localização. Tente novamente ou peça ajuda sem localização.": "Unable to get your location. Try again or ask for help without location.",
+  "A localização expirou. Atualize para incluir uma posição recente ou peça ajuda sem localização.": "Location expired. Update it to include a recent position or ask for help without location.",
+  "Localização incluída na mensagem abaixo. Confira e escolha como pedir ajuda.": "Location included in the message. Review it and choose how to ask for help.",
+  "Mensagem preparada sem localização.": "Message prepared without location."
 }

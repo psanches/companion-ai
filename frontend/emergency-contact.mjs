@@ -10,9 +10,22 @@ export function normalizeEmergencyPhone(value) {
  return /^[1-9]\d{7,14}$/.test(digits)?digits:null;
 }
 
-export function emergencyDestinations(phone,english=false) {
+export function emergencyLocation(position,now=Date.now()) {
+ const {latitude,longitude,accuracy}=position?.coords||{};
+ const timestamp=position?.timestamp;
+ if(!Number.isFinite(latitude)||Math.abs(latitude)>90||!Number.isFinite(longitude)||Math.abs(longitude)>180||!Number.isFinite(accuracy)||accuracy<0||!Number.isFinite(timestamp)||now-timestamp>120000||timestamp-now>30000)throw Error('Invalid or expired location');
+ return {latitude,longitude,accuracy,timestamp};
+}
+
+export function emergencyDestinations(phone,english=false,location=null) {
  if(!/^[1-9]\d{7,14}$/.test(phone))throw Error('Invalid emergency phone');
- const message=english?'I need help. Please contact me.':'Preciso de ajuda. Por favor, entre em contato comigo.';
+ let message=english?'I need help. Please contact me.':'Preciso de ajuda. Por favor, entre em contato comigo.';
+ if(location){
+  const point=emergencyLocation({coords:location,timestamp:location.timestamp});
+  const map='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(point.latitude+','+point.longitude);
+  const time=new Date(point.timestamp).toLocaleString(english?'en-US':'pt-BR');
+  message+='\n\n'+(english?'My location':'Minha localização')+' ('+time+'; '+(english?'approximate accuracy':'precisão aproximada')+': '+Math.round(point.accuracy)+' m):\n'+map+'\n'+(english?'Fixed point recorded at the time above; not live tracking.':'Ponto fixo registrado no horário acima; não é acompanhamento ao vivo.');
+ }
  return {message,whatsapp:'https://wa.me/'+phone+'?text='+encodeURIComponent(message),call:'tel:+'+phone};
 }
 
@@ -41,6 +54,8 @@ export function installLumiEmergencyContact(auth) {
   try{
    const {data,error}=await auth.getSession();if(error)return;sync(data?.session);if(!owner)return;
    const currentOwner=owner;
+   let location=null,locationRequest=0,locationPending=false,locationExpiry=null;
+   const clearLocation=()=>{locationRequest++;locationPending=false;location=null;clearTimeout(locationExpiry);locationExpiry=null;};
    if(typeof setSidebarOpen==='function')setSidebarOpen(false);
    let contact=null,loadFailed=false;
    try{const saved=JSON.parse(localStorage.getItem(key(currentOwner))||'null');if(saved&&typeof saved.name==='string'&&saved.name.trim()&&saved.name.length<=80&&typeof saved.phone==='string'&&/^[1-9]\d{7,14}$/.test(saved.phone))contact={name:saved.name,phone:saved.phone};}catch{loadFailed=true;}
@@ -60,17 +75,36 @@ export function installLumiEmergencyContact(auth) {
    d.append(style,back,heading,make('p','Cadastre quem você quer contatar quando precisar de ajuda.'),make('p','O contato fica salvo somente neste navegador, para sua conta. Não é sincronizado com outros aparelhos.'),editor,actions,status);
    const styleAction=node=>{node.style.cssText='display:block;box-sizing:border-box;width:100%;margin:10px 0;padding:12px;min-height:48px;border:1px solid #a6cce3;border-radius:8px;background:#25344a;color:#fff;font:inherit;text-align:center;text-decoration:none;cursor:pointer';};
    for(const b of [back,save,cancel])styleAction(b);
-   function edit(){editor.hidden=false;actions.hidden=true;name.value=contact?.name||'';phone.value=contact?'+'+contact.phone:'';cancel.hidden=!contact;name.focus();}
+   function edit(){clearLocation();editor.hidden=false;actions.hidden=true;name.value=contact?.name||'';phone.value=contact?'+'+contact.phone:'';cancel.hidden=!contact;name.focus();}
    function render(){
     editor.hidden=!!contact;actions.hidden=!contact;cancel.hidden=!contact;actions.replaceChildren();if(!contact)return;
-    const destinations=emergencyDestinations(contact.phone,window.LumiI18n?.language==='en');
+    if(location&&Date.now()-location.timestamp>=120000)clearLocation();
+    const destinations=emergencyDestinations(contact.phone,window.LumiI18n?.language==='en',location);
     actions.append(make('h3',contact.name),make('p','+'+contact.phone),make('p',destinations.message),make('p','No WhatsApp, confira a conversa e toque em Enviar. Abrir o aplicativo não confirma envio, leitura ou atendimento.'));
     const wa=make('a','Pedir ajuda pelo WhatsApp');wa.id='lumiSosWhatsApp';wa.href=destinations.whatsapp;wa.target='_blank';wa.rel='noopener noreferrer';styleAction(wa);
     const call=make('a','Ligar para o cuidador');call.id='lumiSosCall';call.href=destinations.call;styleAction(call);
     const share=make('button','Outros aplicativos');share.type='button';share.hidden=typeof navigator.share!=='function';styleAction(share);
     share.onclick=async()=>{try{await navigator.share({text:destinations.message});if(dialog===d)status.textContent='Confira o destinatário no aplicativo escolhido. A Lumi não confirma envio ou atendimento.';}catch(e){if(e?.name!=='AbortError'&&dialog===d)status.textContent='Não foi possível compartilhar. Use o WhatsApp ou ligue para o contato.';}};
     const editButton=make('button','Editar contato');editButton.type='button';styleAction(editButton);editButton.onclick=edit;
-    actions.append(wa,call,share,editButton,make('p','Se o aplicativo não abrir, use o telefone acima para ligar manualmente.'));
+    const locate=make('button',location?'Atualizar minha localização':'Incluir minha localização');locate.id='lumiSosLocation';locate.type='button';locate.disabled=locationPending;styleAction(locate);
+    const locationHint=make('p','Opcional: inclui sua posição e horário na mensagem ao cuidador. A localização será compartilhada ao abrir o WhatsApp ou outro aplicativo. Não acompanha seus deslocamentos.');
+    locate.onclick=()=>{
+     if(locationPending)return;
+     clearLocation();
+     if(!navigator.geolocation){render();status.textContent='Localização indisponível. Você pode pedir ajuda sem localização ou ligar para o cuidador.';return;}
+     locationPending=true;const request=locationRequest;render();status.textContent='Aguardando permissão e localização do celular…';
+     const active=()=>dialog===d&&owner===currentOwner&&request===locationRequest;
+     const failed=error=>{if(!active())return;clearLocation();render();status.textContent=error?.code===1?'Permissão de localização negada. Você pode pedir ajuda sem localização ou ligar para o cuidador.':'Não foi possível obter a localização. Tente novamente ou peça ajuda sem localização.';};
+     try{navigator.geolocation.getCurrentPosition(position=>{
+      if(!active())return;
+      try{location=emergencyLocation(position);}catch{return failed();}
+      locationPending=false;
+      locationExpiry=setTimeout(()=>{if(!active())return;clearLocation();render();status.textContent='A localização expirou. Atualize para incluir uma posição recente ou peça ajuda sem localização.';},Math.max(0,120000-(Date.now()-location.timestamp)));
+      render();status.textContent='Localização incluída na mensagem abaixo. Confira e escolha como pedir ajuda.';
+     },failed,{enableHighAccuracy:true,maximumAge:0,timeout:20000});}catch{failed();}
+    };
+    const removeLocation=make('button','Remover localização');removeLocation.id='lumiSosRemoveLocation';removeLocation.type='button';removeLocation.hidden=!location&&!locationPending;styleAction(removeLocation);removeLocation.onclick=()=>{clearLocation();render();status.textContent='Mensagem preparada sem localização.';};
+    actions.append(wa,call,share,locationHint,locate,removeLocation,editButton,make('p','Se o aplicativo não abrir, use o telefone acima para ligar manualmente.'));
    }
    editor.onsubmit=e=>{
     e.preventDefault();if(owner!==currentOwner){close();return;}
@@ -81,11 +115,12 @@ export function installLumiEmergencyContact(auth) {
     try{localStorage.setItem(key(currentOwner),JSON.stringify(next));contact=next;render();status.textContent='Contato salvo. Escolha como pedir ajuda.';heading.focus();}catch{status.textContent='Não foi possível salvar neste navegador. Confira as permissões de armazenamento e tente novamente.';}
    };
    const languageChanged=()=>{if(contact&&editor.hidden)render();};window.addEventListener('lumi-language-change',languageChanged);
-   d.addEventListener('close',()=>{window.removeEventListener('lumi-language-change',languageChanged);d.remove();if(dialog===d)dialog=null;button.focus();},{once:true});
+   d.addEventListener('close',()=>{clearLocation();window.removeEventListener('lumi-language-change',languageChanged);d.remove();if(dialog===d)dialog=null;button.focus();},{once:true});
    document.body.append(d);render();d.showModal();heading.focus();
    if(loadFailed)status.textContent='Não foi possível recuperar o contato. Cadastre-o novamente.';
   }finally{opening=false;}
  };
 }
 
-export const EMERGENCY_CONTACT_FRONTEND='\n'+normalizeEmergencyPhone.toString()+'\n'+emergencyDestinations.toString()+'\n'+installLumiEmergencyContact.toString()+'\ninstallLumiEmergencyContact(supabaseClient.auth);\n';
+export const EMERGENCY_CONTACT_FRONTEND='\n'+normalizeEmergencyPhone.toString()+'\n'+emergencyLocation.toString()+'\n'+emergencyDestinations.toString()+'\n'+installLumiEmergencyContact.toString()+'\ninstallLumiEmergencyContact(supabaseClient.auth);\n';
+

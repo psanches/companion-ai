@@ -40,6 +40,34 @@ test('SOS hides while signed out, scopes contacts by account, closes on logout/a
  }finally{f.dom.window.close();}
 });
 
+test('location is opt-in, included only in message, removable, never stored and cleared after close',async()=>{
+ const f=await fixture();try{
+  const {w,auth,open,save}=f,doc=w.document;let ok,fail,requests=0;
+  Object.defineProperty(w.navigator,'geolocation',{value:{getCurrentPosition(success,error,options){requests++;ok=success;fail=error;assert.equal(options.maximumAge,0);}},configurable:true});
+  auth('owner-a');await open();save('Contato fictício','11999990000');
+  assert.equal(requests,0);
+  doc.getElementById('lumiSosLocation').click();assert.equal(requests,1);
+  ok({coords:{latitude:-22,longitude:-49,accuracy:15},timestamp:Date.now()});
+  const text=new URL(doc.getElementById('lumiSosWhatsApp').href).searchParams.get('text');
+  assert.match(text,/Minha localização/);assert.match(text,/query=-22%2C-49/);
+  assert.match(doc.getElementById('lumiSosActions').textContent,/15 m/);
+  assert.doesNotMatch(w.localStorage.getItem('lumi-emergency-contact-v1:owner-a'),/latitude|longitude|-22|-49/);
+  doc.getElementById('lumiSosRemoveLocation').click();
+  assert.doesNotMatch(new URL(doc.getElementById('lumiSosWhatsApp').href).searchParams.get('text'),/google/);
+  doc.getElementById('lumiSosLocation').click();const late=ok;
+  auth(null);late({coords:{latitude:-22,longitude:-49,accuracy:15},timestamp:Date.now()});
+  assert.equal(doc.getElementById('lumiSosDialog'),null);
+  auth('owner-a');await open();
+  assert.doesNotMatch(new URL(doc.getElementById('lumiSosWhatsApp').href).searchParams.get('text'),/google/);
+  doc.getElementById('lumiSosLocation').click();fail({code:1});
+  assert.match(doc.getElementById('lumiSosStatus').textContent,/Permissão.*negada/);
+  assert.equal(doc.getElementById('lumiSosLocation').disabled,false);
+  assert.equal(doc.getElementById('lumiSosCall').href,'tel:+5511999990000');
+  doc.getElementById('lumiSosLocation').click();fail({code:3});
+  assert.match(doc.getElementById('lumiSosStatus').textContent,/Não foi possível/);
+ }finally{f.dom.window.close();}
+});
+
 test('SOS rejects invalid/blank entries and fails visibly if storage cannot save',async()=>{
  const f=await fixture();try{
   const {w,auth,open,save}=f,doc=w.document;auth('owner-a');await open();
@@ -49,6 +77,26 @@ test('SOS rejects invalid/blank entries and fails visibly if storage cannot save
   w.Storage.prototype.setItem=()=>{throw Error('denied');};
   save('Contato fictício','11999990000');assert.match(doc.getElementById('lumiSosStatus').textContent,/Não foi possível salvar/);
   assert.equal(doc.getElementById('lumiSosActions').hidden,true);
+ }finally{f.dom.window.close();}
+});
+
+test('location expires, can be canceled while pending and native sharing uses the reviewed snapshot',async()=>{
+ const f=await fixture();try{
+  const {w,auth,open,save}=f,doc=w.document;let success,expiry,payload;
+  Object.defineProperty(w.navigator,'geolocation',{value:{getCurrentPosition(ok){success=ok;}},configurable:true});
+  w.navigator.share=async data=>{payload=data;};
+  auth('owner-a');await open();save('Contato fictício','11999990000');
+  w.setTimeout=fn=>{expiry=fn;return 99;};w.clearTimeout=()=>{};
+  doc.getElementById('lumiSosLocation').click();const canceled=success;
+  doc.getElementById('lumiSosRemoveLocation').click();
+  canceled({coords:{latitude:-22,longitude:-49,accuracy:15},timestamp:Date.now()});
+  assert.doesNotMatch(doc.getElementById('lumiSosWhatsApp').href,/google/);
+  doc.getElementById('lumiSosLocation').click();
+  success({coords:{latitude:-22,longitude:-49,accuracy:15},timestamp:Date.now()});
+  doc.querySelector('#lumiSosActions button').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.match(payload.text,/query=-22%2C-49/);
+  expiry();assert.match(doc.getElementById('lumiSosStatus').textContent,/expirou/);
+  assert.doesNotMatch(new URL(doc.getElementById('lumiSosWhatsApp').href).searchParams.get('text'),/google/);
  }finally{f.dom.window.close();}
 });
 
@@ -64,3 +112,4 @@ test('SOS renders a contact as text, does not send messages, and generic sharing
   assert.match(doc.getElementById('lumiSosStatus').textContent,/não confirma envio/);
  }finally{f.dom.window.close();}
 });
+
