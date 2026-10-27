@@ -432,5 +432,11 @@
   "Não foi possível obter a localização. Tente novamente ou peça ajuda sem localização.": "Unable to get your location. Try again or ask for help without location.",
   "A localização expirou. Atualize para incluir uma posição recente ou peça ajuda sem localização.": "Location expired. Update it to include a recent position or ask for help without location.",
   "Localização incluída na mensagem abaixo. Confira e escolha como pedir ajuda.": "Location included in the message. Review it and choose how to ask for help.",
-  "Mensagem preparada sem localização.": "Message prepared without location."
+  "Mensagem preparada sem localização.": "Message prepared without location.",
+  "Enviar SOS com localização pelo WhatsApp": "Send SOS with location via WhatsApp",
+  "Conferir minha localização no mapa": "Check my location on the map",
+  "Copiar SOS com localização": "Copy SOS with location",
+  "SOS com localização copiado. Cole na conversa do cuidador no WhatsApp e envie.": "SOS with location copied. Paste it into your caregiver's WhatsApp chat and send it.",
+  "Não foi possível copiar. Use Enviar SOS com localização pelo WhatsApp.": "Unable to copy. Use Send SOS with location via WhatsApp.",
+  "Envie uma nova mensagem com o mapa. Uma mensagem já enviada não é atualizada. Se o WhatsApp não preencher o texto, copie o SOS e cole na conversa.": "Send a new message with the map. A previously sent message is not updated. If WhatsApp does not fill in the text, copy the SOS and paste it into the chat."
 }

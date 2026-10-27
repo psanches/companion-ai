@@ -33,6 +33,10 @@ export async function checkEmergencyContact(page,{mobile=false,screenshotPath}={
  await page.locator('#lumiSosLocation').click();
  const located=new URL(await page.locator('#lumiSosWhatsApp').getAttribute('href')).searchParams.get('text');
  assert.match(located,/Minha localização/);assert.match(located,/query=-22%2C-49/);assert.match(located,/15 m/);
+ assert.equal(await page.locator('#lumiSosWhatsApp').textContent(),'Enviar SOS com localização pelo WhatsApp');
+ const locationUrl=new URL(await page.locator('#lumiSosWhatsApp').getAttribute('href'));
+ assert.equal(locationUrl.origin,'https://api.whatsapp.com');assert.equal(locationUrl.searchParams.get('phone'),'5511999990000');
+ assert.equal(new URL(await page.locator('#lumiSosMap').getAttribute('href')).searchParams.get('query'),'-22,-49');
  assert.equal(await page.locator('#lumiSosCall').getAttribute('href'),'tel:+5511999990000');
  assert.equal(await page.locator('#lumiSosSamuCall').getAttribute('href'),'tel:192');
  await page.locator('#lumiSosRemoveLocation').click();

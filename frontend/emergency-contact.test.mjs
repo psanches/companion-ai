@@ -29,6 +29,8 @@ test('optional location message includes timestamp, accuracy and fixed map link 
  for(const english of [false,true]){
   const result=emergencyDestinations('5511999990000',english,location);
   assert.equal(new URL(result.whatsapp).searchParams.get('text'),result.message);
+  assert.equal(new URL(result.whatsapp).origin,'https://api.whatsapp.com');
+  assert.equal(new URL(result.whatsapp).searchParams.get('phone'),'5511999990000');
   assert.match(result.message,/query=-22%2C-49/);assert.match(result.message,/15 m/);
   assert.match(result.message,english?/not live tracking/:/não é acompanhamento ao vivo/);
   assert.equal(result.call,'tel:+5511999990000');

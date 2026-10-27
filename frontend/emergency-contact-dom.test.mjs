@@ -42,7 +42,8 @@ test('SOS hides while signed out, scopes contacts by account, closes on logout/a
 
 test('location is opt-in, included only in message, removable, never stored and cleared after close',async()=>{
  const f=await fixture();try{
-  const {w,auth,open,save}=f,doc=w.document;let ok,fail,requests=0;
+  const {w,auth,open,save}=f,doc=w.document;let ok,fail,requests=0,copied=null;
+  Object.defineProperty(w.navigator,'clipboard',{value:{writeText:async text=>{copied=text;}},configurable:true});
   Object.defineProperty(w.navigator,'geolocation',{value:{getCurrentPosition(success,error,options){requests++;ok=success;fail=error;assert.equal(options.maximumAge,0);}},configurable:true});
   auth('owner-a');await open();save('Contato fictício','11999990000');
   assert.equal(requests,0);
@@ -50,9 +51,15 @@ test('location is opt-in, included only in message, removable, never stored and 
   ok({coords:{latitude:-22,longitude:-49,accuracy:15},timestamp:Date.now()});
   const text=new URL(doc.getElementById('lumiSosWhatsApp').href).searchParams.get('text');
   assert.match(text,/Minha localização/);assert.match(text,/query=-22%2C-49/);
+  assert.equal(doc.getElementById('lumiSosWhatsApp').textContent,'Enviar SOS com localização pelo WhatsApp');
+  assert.equal(new URL(doc.getElementById('lumiSosMap').href).searchParams.get('query'),'-22,-49');
+  doc.getElementById('lumiSosCopyLocation').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(copied,text);assert.match(doc.getElementById('lumiSosStatus').textContent,/copiado/);
   assert.match(doc.getElementById('lumiSosActions').textContent,/15 m/);
   assert.doesNotMatch(w.localStorage.getItem('lumi-emergency-contact-v1:owner-a'),/latitude|longitude|-22|-49/);
   doc.getElementById('lumiSosRemoveLocation').click();
+  assert.equal(doc.getElementById('lumiSosMap'),null);
+  assert.equal(doc.getElementById('lumiSosWhatsApp').textContent,'Pedir ajuda pelo WhatsApp');
   assert.doesNotMatch(new URL(doc.getElementById('lumiSosWhatsApp').href).searchParams.get('text'),/google/);
   doc.getElementById('lumiSosLocation').click();const late=ok;
   auth(null);late({coords:{latitude:-22,longitude:-49,accuracy:15},timestamp:Date.now()});

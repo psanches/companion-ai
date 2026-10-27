@@ -26,7 +26,7 @@ export function emergencyDestinations(phone,english=false,location=null) {
   const time=new Date(point.timestamp).toLocaleString(english?'en-US':'pt-BR');
   message+='\n\n'+(english?'My location':'Minha localização')+' ('+time+'; '+(english?'approximate accuracy':'precisão aproximada')+': '+Math.round(point.accuracy)+' m):\n'+map+'\n'+(english?'Fixed point recorded at the time above; not live tracking.':'Ponto fixo registrado no horário acima; não é acompanhamento ao vivo.');
  }
- return {message,whatsapp:'https://wa.me/'+phone+'?text='+encodeURIComponent(message),call:'tel:+'+phone};
+ return {message,whatsapp:location?'https://api.whatsapp.com/send?phone='+phone+'&text='+encodeURIComponent(message):'https://wa.me/'+phone+'?text='+encodeURIComponent(message),call:'tel:+'+phone};
 }
 
 export function installLumiEmergencyContact(auth) {
@@ -81,7 +81,7 @@ export function installLumiEmergencyContact(auth) {
     if(location&&Date.now()-location.timestamp>=120000)clearLocation();
     const destinations=emergencyDestinations(contact.phone,window.LumiI18n?.language==='en',location);
     actions.append(make('h3',contact.name),make('p','+'+contact.phone),make('p',destinations.message),make('p','No WhatsApp, confira a conversa e toque em Enviar. Abrir o aplicativo não confirma envio, leitura ou atendimento.'));
-    const wa=make('a','Pedir ajuda pelo WhatsApp');wa.id='lumiSosWhatsApp';wa.href=destinations.whatsapp;wa.target='_blank';wa.rel='noopener noreferrer';styleAction(wa);
+    const wa=make('a',location?'Enviar SOS com localização pelo WhatsApp':'Pedir ajuda pelo WhatsApp');wa.id='lumiSosWhatsApp';wa.href=destinations.whatsapp;wa.target='_blank';wa.rel='noopener noreferrer';styleAction(wa);
     const call=make('a','Ligar para o cuidador');call.id='lumiSosCall';call.href=destinations.call;styleAction(call);
     const share=make('button','Outros aplicativos');share.type='button';share.hidden=typeof navigator.share!=='function';styleAction(share);
     share.onclick=async()=>{try{await navigator.share({text:destinations.message});if(dialog===d)status.textContent='Confira o destinatário no aplicativo escolhido. A Lumi não confirma envio ou atendimento.';}catch(e){if(e?.name!=='AbortError'&&dialog===d)status.textContent='Não foi possível compartilhar. Use o WhatsApp ou ligue para o contato.';}};
@@ -104,7 +104,14 @@ export function installLumiEmergencyContact(auth) {
      },failed,{enableHighAccuracy:true,maximumAge:0,timeout:20000});}catch{failed();}
     };
     const removeLocation=make('button','Remover localização');removeLocation.id='lumiSosRemoveLocation';removeLocation.type='button';removeLocation.hidden=!location&&!locationPending;styleAction(removeLocation);removeLocation.onclick=()=>{clearLocation();render();status.textContent='Mensagem preparada sem localização.';};
-    actions.append(wa,call,share,locationHint,locate,removeLocation,editButton,make('p','Se o aplicativo não abrir, use o telefone acima para ligar manualmente.'));
+    const locationPreview=make('section');locationPreview.id='lumiSosLocationPreview';locationPreview.hidden=!location;
+    if(location){
+     const map=make('a','Conferir minha localização no mapa');map.id='lumiSosMap';map.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(location.latitude+','+location.longitude);map.target='_blank';map.rel='noopener noreferrer';styleAction(map);
+     const copy=make('button','Copiar SOS com localização');copy.id='lumiSosCopyLocation';copy.type='button';copy.hidden=typeof navigator.clipboard?.writeText!=='function';styleAction(copy);
+     copy.onclick=async()=>{try{await navigator.clipboard.writeText(destinations.message);if(dialog===d)status.textContent='SOS com localização copiado. Cole na conversa do cuidador no WhatsApp e envie.';}catch{if(dialog===d)status.textContent='Não foi possível copiar. Use Enviar SOS com localização pelo WhatsApp.';}};
+     locationPreview.append(map,copy,make('p','Envie uma nova mensagem com o mapa. Uma mensagem já enviada não é atualizada. Se o WhatsApp não preencher o texto, copie o SOS e cole na conversa.'));
+    }
+    actions.append(wa,call,share,locationPreview,locationHint,locate,removeLocation,editButton,make('p','Se o aplicativo não abrir, use o telefone acima para ligar manualmente.'));
    }
    editor.onsubmit=e=>{
     e.preventDefault();if(owner!==currentOwner){close();return;}
