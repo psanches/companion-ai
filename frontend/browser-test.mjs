@@ -74,6 +74,18 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.locator('#voiceButton').click();await page.locator('#voiceButton').click();await page.locator('#messageInput').fill('');
  await page.evaluate(()=>{document.getElementById('lumiVoiceStatus').hidden=true;});
 
+ // The first More view must expose account actions without expanding a section.
+ if(width<=900){
+  await openMobileSection(page);
+  assert.equal(await page.locator('#lumiMobileAccount').evaluate(n=>n.open),true);
+  for(const id of ['inviteBtn','profileBtn','memoryBtn','soundButton','settingsBtn','lumiLanguageSelect','signOutBtn']){
+   const control=page.locator('#'+id);assert.equal(await control.isVisible(),true,id+' available in More');
+   await control.scrollIntoViewIfNeeded();
+   assert.ok(await control.evaluate(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}),id+' reachable by scrolling');
+  }
+  await page.screenshot({path:new URL('./test-results/'+name+'-more-controls.png',import.meta.url).pathname,fullPage:true});
+  await closeMobileMenu(page);
+ }
  // Exercise the real sidebar button with the pre-existing beta demo dialog present.
  await openMobileSection(page,'lumiMobileHelp');
  await page.locator('#lumiBetaFeedbackBtn').click();

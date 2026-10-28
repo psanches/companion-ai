@@ -69,10 +69,10 @@ dialog{max-width:calc(100vw - 24px);max-height:calc(var(--lumi-viewport-height,1
  html.lumi-mobile-light #conversationSidebar .sidebar-top{padding:14px 16px 10px;min-height:60px}
  html.lumi-mobile-light #conversationSidebar .sidebar-top h2{font-size:20px}
  html.lumi-mobile-light #closeSidebarBtn{min-height:48px;min-width:48px}
- html.lumi-mobile-light #lumiMobileMore{display:flex;flex-direction:column;gap:14px;padding:4px 12px 20px}
+ html.lumi-mobile-light #lumiMobileMore{display:flex;flex:0 0 auto;flex-direction:column;gap:14px;padding:4px 12px 20px}
  html.lumi-mobile-light #lumiMobileFeatures,html.lumi-mobile-light #lumiMobileMore details>div{display:flex;flex-direction:column;gap:4px;min-width:0}
  html.lumi-mobile-light #lumiMobileMore details{border-top:1px solid #354256;padding-top:6px}
- html.lumi-mobile-light #lumiMobileMore summary{min-height:48px;padding:12px 4px;font:500 16px/1.4 system-ui;cursor:pointer}
+ html.lumi-mobile-light #lumiMobileMore summary{display:list-item;color:#f0f4fa;min-height:48px;padding:12px 4px;font:500 16px/1.4 system-ui;cursor:pointer}
  html.lumi-mobile-light #lumiMobileMore details:not([open])>div{display:none}
  html.lumi-mobile-light #lumiMobileMore button,html.lumi-mobile-light #lumiMobileMore a{min-height:48px;width:100%;height:auto;margin:0!important;padding:12px!important;border:0!important;border-radius:8px!important;background:transparent!important;color:#f0f4fa!important;font:16px/1.4 system-ui!important;text-align:left;white-space:normal;box-shadow:none!important;text-decoration:none;display:flex!important;align-items:center;gap:12px}
  html.lumi-mobile-light #lumiMobileMore [data-mobile-label]::after{content:attr(data-mobile-label)}
