@@ -15,3 +15,53 @@ jobs:
           node-version: '22'
       - name: Test preview selection and existing source verification without credentials or deployment
         run: node --test health-news-preview.test.mjs lumi-ativa-integration/tests/health-news-verification.test.mjs
+  live_preview:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[news-preview-live-once]')
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate isolated review-only edition using existing research key
+        env:
+          LUMI_RESEARCH_OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
+        run: |
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {generateHealthNewsPreview} from './health-news-preview.mjs';
+          const key=process.env.LUMI_RESEARCH_OPENAI_API_KEY;
+          const safe=value=>String(value).split(key||'NO_SECRET_VALUE').join('[REDACTED]');
+          fs.mkdirSync('news-preview-result',{recursive:true});
+          try {
+            assert.ok(key?.trim(),'Existing LUMI_RESEARCH_OPENAI_API_KEY repository secret is unavailable');
+            const result=await generateHealthNewsPreview({LUMI_RESEARCH_OPENAI_API_KEY:key},new Date());
+            assert.equal(result.mode,'review-only');
+            assert.equal(result.published,false);
+            assert.equal(result.automaticUpdates,false);
+            assert.ok(result.verification.apiRequests<=3);
+            assert.ok(result.verification.sourceRequests<=40);
+            const payload=JSON.stringify(result,null,2);
+            assert.ok(!payload.includes(key),'Result unexpectedly contains credential material');
+            fs.writeFileSync('news-preview-result/edition.json',payload+'\n');
+            const summary={ok:true,date:result.date,items:result.items.length,shortfall:result.shortfall,apiRequests:result.verification.apiRequests,sourceRequests:result.verification.sourceRequests,verified:result.verification.verified,rejected:result.verification.rejected.length,published:false,automaticUpdates:false};
+            console.log(JSON.stringify(summary));
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'Isolated live news preview\n\n'+JSON.stringify(summary,null,2)+'\n\n');
+            for(const item of result.items)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'- '+item.publishedAt+' — '+item.title+'\n');
+          } catch(error) {
+            const failure={ok:false,error:safe(error.message),published:false,automaticUpdates:false};
+            fs.writeFileSync('news-preview-result/failure.json',JSON.stringify(failure,null,2)+'\n');
+            console.error(JSON.stringify(failure));
+            process.exitCode=1;
+          }
+          JS
+      - name: Save public-source edition or sanitized failure report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-news-live-preview-${{ github.run_id }}
+          path: news-preview-result/
+          retention-days: 14
