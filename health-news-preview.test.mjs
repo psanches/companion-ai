@@ -24,7 +24,7 @@ function fixture(){const calls=[],events=[],urls=['https://www.michaeljfox.org/n
   const body=JSON.parse(o.body);api++;if(api<3){events.push('search-'+api);if(api===2)assert.ok(events.includes('verify-pd'));
    const d=payload([{url:urls[api-1]}]);d.output.unshift({type:'web_search_call',action:{sources:[{url:urls[api-1]}]}});assert.ok(body.input.includes('máximo 7 dias'));return Response.json(d);
   }events.push('editor');const inputs=JSON.parse(body.input[1].content);return Response.json(payload(inputs.map((s,id)=>review(id,{scope:'global'}))));
- }events.push(url.includes('michaeljfox')?'verify-pd':'verify-general');return new Response(`<meta property="article:published_time" content="${day}"><h1>${url.includes('michaeljfox')?'Parkinson research':'National prevention guidance'}</h1><p>${evidence.repeat(5)}</p>`,{headers:{'content-type':'text/html'}});};
+ }if(!urls.includes(url))return new Response('<h1>News index</h1>',{headers:{'content-type':'text/html'}});events.push(url.includes('michaeljfox')?'verify-pd':'verify-general');return new Response(`<meta property="article:published_time" content="${day}"><h1>${url.includes('michaeljfox')?'Parkinson research':'National prevention guidance'}</h1><p>${evidence.repeat(5)}</p>`,{headers:{'content-type':'text/html'}});};
  return {events,calls,transport};}
 test('complete preview searches and verifies official Parkinson BEFORE general health, reuses existing key, never writes storage',async()=>{
  const f=fixture(),env={LUMI_RESEARCH_OPENAI_API_KEY:'synthetic-test-key',HEALTH_NEWS_KV:new Proxy({},{get(){throw Error('No preview storage permitted');}})};
@@ -32,7 +32,7 @@ test('complete preview searches and verifies official Parkinson BEFORE general h
  assert.deepEqual(f.events,['search-1','verify-pd','search-2','verify-general','editor']);assert.deepEqual(result.verification.stages,['official-parkinsons','general-health']);assert.equal(result.items.length,2);assert.equal(result.shortfall,8);assert.equal(result.items[0].priority,0);assert.equal(result.published,false);assert.equal(result.automaticUpdates,false);assert.equal(result.verification.apiRequests,3);assert.doesNotMatch(JSON.stringify(result),/synthetic-test-key/);
 });
 test('no candidates returns an honest empty preview after both search stages; no translation call or storage',async()=>{
- let calls=0;const result=await generateHealthNewsPreview({OPENAI_API_KEY:'test'},new Date('2026-10-24T12:00:00Z'),async()=>{calls++;return Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[]}},{content:[{type:'output_text',text:'{"items":[]}'}]}]});});
+ let calls=0;const result=await generateHealthNewsPreview({OPENAI_API_KEY:'test'},new Date('2026-10-24T12:00:00Z'),async(url)=>{if(url!=='https://api.openai.com/v1/responses')return new Response('<h1>Empty</h1>',{headers:{'content-type':'text/html'}});calls++;return Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[]}},{content:[{type:'output_text',text:'{"items":[]}'}]}]});});
  assert.equal(calls,2);assert.equal(result.items.length,0);assert.equal(result.shortfall,10);assert.equal(NEWS_PREVIEW_POLICY.maxItems,10);
 });
 
@@ -50,4 +50,28 @@ test('international official sources retain Parkinson priority, Portuguese summa
  const approved=selectEditorialStories([source],[review(0,{scope:'global'})],day);assert.equal(approved.length,1);assert.equal(approved[0].priority,0);assert.equal(approved[0].language,'pt-BR');
  assert.equal(selectEditorialStories([source],[review(0,{localFocus:true})],day).length,0);
  const japan=story('jp','www.jpda-net.org','パーキンソン病の研究。 '+evidence);assert.equal(selectEditorialStories([japan],[review(0,{scope:'global'})],day)[0].priority,0);
+});
+
+
+
+test('publisher index extraction accepts only live same-publisher article links, removes tracking and ignores local/fundraising navigation',async()=>{
+ const {publisherArticleLinks}=await import('./health-news-preview.mjs');
+ const source={url:'https://www.michaeljfox.org/research-news',match:/^\/news\/[^/]+\/?$/};
+ const html='<a href="/news/navigation">Nav</a><h1>Research</h1><a href="/news/study?utm_source=test">A study</a><a href="https://evil.example/news/fake">Fake</a><a href="https://www.michaeljfox.org.evil.example/news/fake">Fake</a><a href="/news/fundraising">Fundraising</a><a href="/news/study">A study again</a>';
+ assert.deepEqual(publisherArticleLinks(html,source),[{url:'https://www.michaeljfox.org/news/study',discoveredVia:source.url}]);
+});
+test('empty model discovery recovers via fetched official article links; 403 index does not stop other publishers',async()=>{
+ let api=0;const day='2026-10-24',article='https://www.michaeljfox.org/news/recovered';
+ const payload=items=>Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[]}},{content:[{type:'output_text',text:JSON.stringify({items})}]}]});
+ const transport=async(url,options)=>{
+  if(url==='https://api.openai.com/v1/responses'){
+   api++;if(api<=2)return payload([]);
+   return payload([review(0,{scope:'global'})]);
+  }
+  if(url==='https://www.michaeljfox.org/research-news')return new Response('<h1>News</h1><a href="/news/recovered">Research Parkinson</a>',{headers:{'content-type':'text/html'}});
+  if(url===article)return new Response(`<meta property="article:published_time" content="${day}"><h1>Parkinson research</h1><p>${evidence.repeat(5)}</p>`,{headers:{'content-type':'text/html'}});
+  return new Response(null,{status:403});
+ };
+ const result=await generateHealthNewsPreview({OPENAI_API_KEY:'fixture-key'},new Date(day+'T12:00:00Z'),transport);
+ assert.equal(result.items.length,1);assert.equal(result.status,'ready');assert.equal(result.items[0].url,article);assert.equal(result.verification.discovery[0].publisherCandidates,1);assert.ok(result.verification.rejected.some(x=>/403/.test(x.reason)));assert.equal(api,3);assert.equal(result.published,false);
 });

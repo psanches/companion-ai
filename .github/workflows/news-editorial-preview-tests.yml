@@ -47,10 +47,11 @@ jobs:
             const payload=JSON.stringify(result,null,2);
             assert.ok(!payload.includes(key),'Result unexpectedly contains credential material');
             fs.writeFileSync('news-preview-result/edition.json',payload+'\n');
-            const summary={ok:true,date:result.date,items:result.items.length,shortfall:result.shortfall,apiRequests:result.verification.apiRequests,sourceRequests:result.verification.sourceRequests,verified:result.verification.verified,rejected:result.verification.rejected.length,published:false,automaticUpdates:false};
+            const summary={ok:true,date:result.date,items:result.items.length,shortfall:result.shortfall,discovery:result.verification.discovery,apiRequests:result.verification.apiRequests,sourceRequests:result.verification.sourceRequests,verified:result.verification.verified,rejected:result.verification.rejected.length,published:false,automaticUpdates:false};
             console.log(JSON.stringify(summary));
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'Isolated live news preview\n\n'+JSON.stringify(summary,null,2)+'\n\n');
             for(const item of result.items)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'- '+item.publishedAt+' — '+item.title+'\n');
+            assert.ok(result.items.length>0,'Live generator returned no eligible articles; see edition.json diagnostics');
           } catch(error) {
             const failure={ok:false,error:safe(error.message),published:false,automaticUpdates:false};
             fs.writeFileSync('news-preview-result/failure.json',JSON.stringify(failure,null,2)+'\n');
