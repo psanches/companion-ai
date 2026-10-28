@@ -35,11 +35,11 @@ const backend={fetch:async request=>{
 const original=createLumiAtivaIntegration(backend,assets);
 const withNews={fetch:async request=>{const path=new URL(request.url).pathname;if(path==='/noticias')return new Response(NEWS_HTML,{headers:{'content-type':'text/html'}});let r=await original.fetch(request);if(path==='/'){r=new Response((await r.text()).replace('</body>','<script src="/health-news-ui.js" defer></script></body>'),{headers:r.headers});}return r;}};
 const fixture=`(()=>{window.__voiceInstances=[];window.SpeechRecognition=class {constructor(){window.__voiceInstances.push(this);}start(){this.onstart?.();}stop(){this.onend?.();}abort(){}};let signedIn=false;const listeners=[];window.__setAuth=value=>{signedIn=value;for(const cb of listeners)cb(value?'SIGNED_IN':'SIGNED_OUT',value?{access_token:'synthetic-test-token',user:{id:'synthetic-owner'}}:null);};window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:signedIn?{access_token:'synthetic-test-token',user:{id:'synthetic-owner'}}:null}}),onAuthStateChange:cb=>{listeners.push(cb);return {data:{subscription:{unsubscribe(){}}}};},signOut:async()=>{window.__setAuth(false);return {};},signInWithOtp:async options=>{window.__authOptions=options;return {};},signInWithOAuth:async options=>{window.__authOptions=options;return {};}}})};})();`;
-const browser=await chromium.launch({headless:true,...(process.env.LUMI_CHROMIUM_EXECUTABLE?{executablePath:process.env.LUMI_CHROMIUM_EXECUTABLE,args:["--no-sandbox","--disable-dev-shm-usage","--no-zygote"]}:{})});const results=[];
+const browser=await chromium.launch({headless:true,...(process.env.LUMI_CHROMIUM_EXECUTABLE?{executablePath:process.env.LUMI_CHROMIUM_EXECUTABLE,args:["--no-sandbox","--disable-dev-shm-usage","--no-zygote"]}:{})});const results=[];let currentPage;
 try{
 for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360',360,800,true],['android-393',393,851,true],['small-320',320,640,true],['landscape',800,360,true]]){
  resetBackend();
- const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile,serviceWorkers:'block'}),page=await context.newPage();const errors=[];
+ const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile,serviceWorkers:'block'}),page=await context.newPage();currentPage=page;const errors=[];
  page.setDefaultTimeout(15000);console.log('Viewport scenario:',name);
  page.on('pageerror',e=>errors.push(e.message));let newer=false;
  const worker=withFrontendVersion(withInstitutional(withNews,institutional),release);
@@ -159,5 +159,5 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  assert.deepEqual(errors,[],name+' standalone feature runtime errors');
  results.push({name,width,height,passed:true,authentication:'synthetic session and redirect contracts',keyboard:mobile&&height>500?'reduced viewport simulation':'not tested',realAndroidHardware:false});await context.close();
 }
-}finally{await browser.close();fs.writeFileSync(new URL('./test-results/browser-results.json',import.meta.url),JSON.stringify(results,null,2));}
+}catch(error){if(currentPage)await currentPage.screenshot({path:new URL('./test-results/failure.png',import.meta.url).pathname,fullPage:true}).catch(()=>{});throw error;}finally{await browser.close();fs.writeFileSync(new URL('./test-results/browser-results.json',import.meta.url),JSON.stringify(results,null,2));}
 console.log(JSON.stringify({browser:'Playwright Chromium',results},null,2));

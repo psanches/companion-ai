@@ -64,6 +64,7 @@ dialog{max-width:calc(100vw - 24px);max-height:calc(var(--lumi-viewport-height,1
  html.lumi-mobile-light #lumiMobileNav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));flex:0 0 auto;gap:4px;padding:6px 10px max(8px,env(safe-area-inset-bottom));border-top:1px solid #29374b;background:#101827}
  html.lumi-mobile-light #lumiMobileNav>button{display:flex!important;align-items:center;justify-content:center;min-width:0;min-height:48px;width:auto!important;margin:0!important;padding:10px 6px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:#bac7d8!important;font:500 16px/1.2 system-ui!important;text-align:center;box-shadow:none!important}
  html.lumi-mobile-light #lumiMobileNav>button[aria-current=page]{background:#203b5c!important;color:#eef6ff!important}
+ html.lumi-mobile-light #conversationSidebar[aria-hidden=true]{display:none!important}
  html.lumi-mobile-light #conversationSidebar{width:min(360px,94vw);background:#101827;box-shadow:10px 0 28px #0004}
  html.lumi-mobile-light #conversationSidebar .sidebar-top{padding:14px 16px 10px;min-height:60px}
  html.lumi-mobile-light #conversationSidebar .sidebar-top h2{font-size:20px}
