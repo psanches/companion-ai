@@ -91,20 +91,20 @@ export function citedSourceUrls(data){
 }
 
 // Supplement search with links actually present on a primary publisher's current news index.
-export async function discoverPublisherLinks(fetcher=fetch){
+export async function discoverPublisherLinks(fetcher=fetch,stage=null){
  const health=/saude|health|cancer|melanoma|imun|vaccin|vacina|malaria|sono|sleep|aliment|exerc|fisic|nutri|envelhe|parkinson|cogni|cardi|diabet|asma|respir|obes|muscul|radioterap|tomograf|atendimento|sus/;
  const sources=[
   {url:'https://www.michaeljfox.org/research-news',limit:3,match:u=>u.pathname.startsWith('/news/')},
   {url:'https://agencia.fapesp.br/',limit:4,match:u=>/\/[^/]+\/\d+$/.test(u.pathname)&&health.test(u.pathname)},
   {url:'https://www.gov.br/saude/pt-br/assuntos/noticias-ms',limit:4,match:u=>/\/noticias-ms\/\d{4}\/[^/]+\/[^/]+/.test(u.pathname)}
- ];
+ ].filter(source=>!stage||(stage==='parkinson'?source.url.includes('michaeljfox.org'):!source.url.includes('michaeljfox.org')));
  const results=await Promise.allSettled(sources.map(async source=>{
   let url=publicSourceUrl(source.url),response;
   for(let n=0;n<4;n++){response=await fetcher(url.href,{redirect:'manual',signal:AbortSignal.timeout(20000)});if([301,302,303,307,308].includes(response.status)){const next=response.headers.get('location');await response.body?.cancel();url=publicSourceUrl(new URL(next,url).href);response=null;continue;}break;}
   if(!response?.ok)return [];
   const html=await readHtml(response),main=html.slice(Math.max(0,html.search(/<h1\b/i))),urls=[];
   for(const m of main.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi)){
-   try{const candidate=publicSourceUrl(new URL(m[1],url).href);if(candidate.hostname.replace(/^www\./,'')!==url.hostname.replace(/^www\./,''))continue;if(!source.match(candidate)||/school|conference|fundrais|grant-application|estudantes-de-medicina|curso-gratuito/.test(candidate.pathname))continue;if(!urls.includes(candidate.href))urls.push(candidate.href);}catch{}
+   try{const candidate=publicSourceUrl(new URL(m[1],url).href);if(candidate.hostname.replace(/^www\./,'')!==url.hostname.replace(/^www\./,''))continue;if(!source.match(candidate)||/school|fundrais|grant-application|estudantes-de-medicina|curso-gratuito/.test(candidate.pathname))continue;if(!urls.includes(candidate.href))urls.push(candidate.href);}catch{}
   }
   return urls.slice(0,source.limit).map(url=>({url,discoveredVia:source.url}));
  }));

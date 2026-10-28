@@ -20,9 +20,11 @@ test('reject future/older-than-seven-days and duplicate facts/URLs; fewer than t
  assert.equal(selectEditorialStories([research],[review(0,{scope:'global'})],day).length,1);
 });
 function fixture(){const calls=[],events=[],urls=['https://www.michaeljfox.org/news/pd-new','https://www.gov.br/saude/news/national'];let api=0;const payload=items=>({status:'completed',output:[{type:'output_text',content:[{type:'output_text',text:JSON.stringify({items})}]}]});
- const transport=async(url,o)=>{calls.push(url);if(url==='https://api.openai.com/v1/responses'){
+ const transport=async(url,o)=>{calls.push(url);if(['https://www.michaeljfox.org/research-news','https://agencia.fapesp.br/','https://www.gov.br/saude/pt-br/assuntos/noticias-ms'].includes(url))return new Response('',{status:503});if(url==='https://api.openai.com/v1/responses'){
   const body=JSON.parse(o.body);api++;if(api<3){events.push('search-'+api);if(api===2)assert.ok(events.includes('verify-pd'));
-   const d=payload([{url:urls[api-1]}]);d.output.unshift({type:'web_search_call',action:{sources:[{url:urls[api-1]}]}});assert.ok(body.input.includes('máximo 7 dias'));return Response.json(d);
+   const pattern=body.text.format.schema.properties.items.items.properties.url.pattern;
+   assert.equal(new RegExp(pattern).test(urls[api-1]),true);assert.equal(new RegExp(pattern).test(urls[api-1]+' (comentário)'),false);
+   const d=payload([{url:urls[api-1]+' (comentário indevido do provedor)'}]);d.output.unshift({type:'web_search_call',action:{sources:[{url:urls[api-1]}]}});assert.ok(body.input.includes('máximo 7 dias'));return Response.json(d);
   }events.push('editor');const inputs=JSON.parse(body.input[1].content);return Response.json(payload(inputs.map((s,id)=>review(id,{scope:'global'}))));
  }events.push(url.includes('michaeljfox')?'verify-pd':'verify-general');return new Response(`<meta property="article:published_time" content="${day}"><h1>${url.includes('michaeljfox')?'Parkinson research':'National prevention guidance'}</h1><p>${evidence.repeat(5)}</p>`,{headers:{'content-type':'text/html'}});};
  return {events,calls,transport};}
@@ -32,7 +34,7 @@ test('complete preview searches and verifies official Parkinson BEFORE general h
  assert.deepEqual(f.events,['search-1','verify-pd','search-2','verify-general','editor']);assert.deepEqual(result.verification.stages,['official-parkinsons','general-health']);assert.equal(result.items.length,2);assert.equal(result.shortfall,8);assert.equal(result.items[0].priority,0);assert.equal(result.published,false);assert.equal(result.automaticUpdates,false);assert.equal(result.verification.apiRequests,3);assert.doesNotMatch(JSON.stringify(result),/synthetic-test-key/);
 });
 test('no candidates returns an honest empty preview after both search stages; no translation call or storage',async()=>{
- let calls=0;const result=await generateHealthNewsPreview({OPENAI_API_KEY:'test'},new Date('2026-10-24T12:00:00Z'),async()=>{calls++;return Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[]}},{content:[{type:'output_text',text:'{"items":[]}'}]}]});});
+ let calls=0;const result=await generateHealthNewsPreview({OPENAI_API_KEY:'test'},new Date('2026-10-24T12:00:00Z'),async url=>{if(url!=='https://api.openai.com/v1/responses')return new Response('',{status:503});calls++;return Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[]}},{content:[{type:'output_text',text:'{"items":[]}'}]}]});});
  assert.equal(calls,2);assert.equal(result.items.length,0);assert.equal(result.shortfall,10);assert.equal(NEWS_PREVIEW_POLICY.maxItems,10);
 });
 
