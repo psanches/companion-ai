@@ -34,7 +34,7 @@ export function isoDay(value){
  const japanese=value.trim().match(/^(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日$/);if(japanese)return isoDay(`${japanese[1]}-${japanese[2].padStart(2,'0')}-${japanese[3].padStart(2,'0')}`);
  const dotted=value.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);if(dotted)return isoDay(`${dotted[3]}-${dotted[2].padStart(2,'0')}-${dotted[1].padStart(2,'0')}`);
  const european=value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().match(/^(\d{1,2})\.?\s+(?:de\s+)?([a-z]+)\s+(?:de\s+)?(\d{4})$/);
- if(european){const months=[['janvier','januar','januari','enero','gennaio'],['fevrier','februar','februari','febrero','febbraio'],['mars','marz','maart','marzo'],['avril','april','abril','aprile'],['mai','mei','mayo','maggio'],['juin','juni','junio','giugno'],['juillet','juli','julio','luglio'],['aout','august','augustus','agosto'],['septembre','september','septiembre','settembre'],['octobre','oktober','octubre','ottobre'],['novembre','november','noviembre'],['decembre','dezember','december','diciembre','dicembre']];const month=months.findIndex(names=>names.includes(european[2]))+1;if(month)return isoDay(`${european[3]}-${String(month).padStart(2,'0')}-${european[1].padStart(2,'0')}`);}
+ if(european){const months=[['janvier','januar','januari','enero','gennaio','january'],['fevrier','februar','februari','febrero','febbraio','february'],['mars','marz','maart','marzo','march'],['avril','april','abril','aprile','april'],['mai','mei','mayo','maggio','may'],['juin','juni','junio','giugno','june'],['juillet','juli','julio','luglio','july'],['aout','august','augustus','agosto','august'],['septembre','september','septiembre','settembre','september'],['octobre','oktober','octubre','ottobre','october'],['novembre','november','noviembre','november'],['decembre','dezember','december','diciembre','dicembre','december']];const month=months.findIndex(names=>names.includes(european[2]))+1;if(month)return isoDay(`${european[3]}-${String(month).padStart(2,'0')}-${european[1].padStart(2,'0')}`);}
  const slash=value.match(/^(\d{4})\/(\d{2})\/(\d{2})/);if(slash)return isoDay(`${slash[1]}-${slash[2]}-${slash[3]}`);
  const english=value.trim().match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})$/i);
  if(english){const month=['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(english[1].toLowerCase())+1;return isoDay(`${english[3]}-${String(month).padStart(2,'0')}-${english[2].padStart(2,'0')}`);}
@@ -66,6 +66,14 @@ async function readHtml(response){
  for(;;){const {done,value}=await reader.read();if(done)break;bytes+=value.length;if(bytes>1500000){await reader.cancel();throw Error('Source page too large');}chunks.push(value);}
  const all=new Uint8Array(bytes);let at=0;for(const chunk of chunks){all.set(chunk,at);at+=chunk.length;}return new TextDecoder().decode(all);
 }
+function decodeArticleEntities(text){
+ const named={amp:'&',nbsp:' ',quot:'"',apos:"'",lt:'<',gt:'>',rsquo:'’',lsquo:'‘',rdquo:'”',ldquo:'“',ndash:'–',mdash:'—',hellip:'…'};
+ return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi,(match,key)=>{
+  if(key[0]!=='#')return named[key.toLowerCase()]??match;
+  const code=key[1].toLowerCase()==='x'?parseInt(key.slice(2),16):Number(key.slice(1));
+  return code>0&&code<=0x10ffff&&!(code>=0xd800&&code<=0xdfff)?String.fromCodePoint(code):match;
+ });
+}
 export async function verifyStory(candidate,today,citedUrls,fetcher=fetch){
  let url=publicSourceUrl(candidate.url);
  if(!citedUrls.has(url.href))throw Error('URL was not returned by web search');
@@ -79,7 +87,7 @@ export async function verifyStory(candidate,today,citedUrls,fetcher=fetch){
  const html=await readHtml(response);const publication=publicationFromHtml(html);const ageDays=checkPublication(publication.date,today);
  if(candidate.publishedAt&&candidate.publishedAt!==publication.date)throw Error('Search date disagrees with original publication date');
  let body=html.replace(/<(script|style|nav|header|footer)\b[^>]*>[\s\S]*?<\/\1>/gi,' ');
- body=body.slice(Math.max(0,body.search(/<h1\b/i))).replace(/<[^>]*>/g,' ').replace(/&(?:nbsp|amp|quot|lt|gt);/g,' ').replace(/\s+/g,' ').trim().slice(0,14000);
+ body=decodeArticleEntities(body.slice(Math.max(0,body.search(/<h1\b/i))).replace(/<[^>]*>/g,' ')).replace(/\s+/g,' ').trim().slice(0,14000);
  if(ageDays>30&&/dia[- ]d|neste sabado|neste domingo|inscri[çc][õo]es|campanha de multivacina/i.test(body.slice(0,500)))throw Error('Expired event is not an evergreen context reading');
  if(body.length<250)throw Error('Insufficient source text');
  return {url:url.href,publishedAt:publication.date,dateEvidence:publication.evidence,ageDays,region:url.hostname.endsWith('.br')?'Brasil':'Internacional',source:url.hostname,kind:ageDays<=30?'noticia':'contexto',category:classifyStory(body.slice(0,500)),sourceText:body};
@@ -131,4 +139,5 @@ export function selectStories(stories,recentUrls=new Set()){
  add(()=>true,5-selected.length);
  return selected.sort((a,b)=>(a.kind==='contexto')-(b.kind==='contexto')||a.ageDays-b.ageDays);
 }
+
 
