@@ -48,3 +48,16 @@ test('large malformed attribute names remain bounded and preserve real publicati
  assert.ok(performance.now()-start<1000,'Malformed HTML exceeded parsing CPU budget');
  assert.equal(publicationFromHtml('<meta data-note="date=\\\'fake\\\'" name=\'date\' content=\'2026-10-18\'>').date,'2026-10-18');
 });
+
+
+
+test('WHO day-month English publication dates parse without accepting event prose',()=>{
+ assert.equal(publicationFromHtml('<h1>Global framework</h1><div><span>21 October 2026</span></div>').date,'2026-10-21');
+ assert.throws(()=>publicationFromHtml('<h1>Event</h1><p>Join us on 21 October 2026.</p>'));
+});
+test('verified article text decodes typography and entities for literal editorial evidence',async()=>{
+ const url='https://www.nih.gov/news/test';
+ const html='<meta property="article:published_time" content="2026-10-28"><h1>Parkinson&#8217;s &amp; sleep</h1><p>'+('Research &ldquo;findings&rdquo; for Parkinson&rsquo;s disease. ').repeat(10)+'</p>';
+ const story=await verifyStory({url},'2026-10-28',new Set([url]),async()=>new Response(html,{headers:{'content-type':'text/html'}}));
+ assert.ok(story.sourceText.includes('Parkinson’s & sleep'));assert.ok(story.sourceText.includes('Research “findings” for Parkinson’s disease.'));assert.ok(!story.sourceText.includes('&#8217;'));
+});

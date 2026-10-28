@@ -49,3 +49,12 @@ test('packaged news wrapper generates only for its cron inside the window; HTTP 
   assert.equal(worker.scheduled({cron:'other'}),'other');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+
+
+test('a generator revision regenerates an older same-day cache once and then reuses the new edition',async()=>{
+ const f=fixture();f.data.set('health-news:editorial-week:date:2026-10-28',JSON.stringify({...preview,generatorRevision:1}));let calls=0;
+ const editor=async()=>{calls++;return preview;};
+ const first=await generateWeeklyDigest(f.env,now,undefined,editor);assert.equal(first.generatorRevision,2);assert.equal(calls,1);
+ await generateWeeklyDigest(f.env,now,undefined,editor);assert.equal(calls,1);
+});
