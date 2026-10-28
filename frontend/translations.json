@@ -438,5 +438,15 @@
   "Copiar SOS com localização": "Copy SOS with location",
   "SOS com localização copiado. Cole na conversa do cuidador no WhatsApp e envie.": "SOS with location copied. Paste it into your caregiver's WhatsApp chat and send it.",
   "Não foi possível copiar. Use Enviar SOS com localização pelo WhatsApp.": "Unable to copy. Use Send SOS with location via WhatsApp.",
-  "Envie uma nova mensagem com o mapa. Uma mensagem já enviada não é atualizada. Se o WhatsApp não preencher o texto, copie o SOS e cole na conversa.": "Send a new message with the map. A previously sent message is not updated. If WhatsApp does not fill in the text, copy the SOS and paste it into the chat."
+  "Envie uma nova mensagem com o mapa. Uma mensagem já enviada não é atualizada. Se o WhatsApp não preencher o texto, copie o SOS e cole na conversa.": "Send a new message with the map. A previously sent message is not updated. If WhatsApp does not fill in the text, copy the SOS and paste it into the chat.",
+  "Conversa": "Chat",
+  "Mais": "More",
+  "Navegação principal": "Main navigation",
+  "Conversas anteriores": "Previous conversations",
+  "Minha conta": "My account",
+  "Ajuda e testes": "Help and testing",
+  "Perfil": "Profile",
+  "Voz da Lumi": "Lumi voice",
+  "Meu Cuidado — demonstração": "My Care — demo",
+  "Agenda": "Calendar"
 }

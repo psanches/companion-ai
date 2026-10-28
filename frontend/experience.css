@@ -45,3 +45,50 @@ dialog{max-width:calc(100vw - 24px);max-height:calc(var(--lumi-viewport-height,1
 #lumiInstitutionalLink{text-decoration:none;display:block;min-height:44px}
 
 #settingsDialog .dialog-title{flex-wrap:wrap;gap:12px}#settingsDialog .dialog-title form{margin:0}#closeSettingsBtn{min-height:48px;min-width:44px;white-space:normal}
+
+/* Android/narrow-screen presentation only. Desktop nodes return to their original positions. */
+#lumiMobileNav,#lumiMobileMore,#lumiMobileContext{display:none}
+@media(max-width:900px){
+ html.lumi-mobile-light .app-header{min-height:52px;padding:10px 16px;flex-wrap:nowrap;border-bottom:0;backdrop-filter:none}
+ html.lumi-mobile-light .header-actions{display:none!important}
+ html.lumi-mobile-light .companion-avatar,html.lumi-mobile-light .companion-status{display:none!important}
+ html.lumi-mobile-light .companion-info h1{font-size:20px}
+ html.lumi-mobile-light #lumiMobileContext{display:block;color:#b8c6d8;font:14px system-ui}
+ html.lumi-mobile-light #lumiEmergencyBar{padding:0 12px 10px;border-bottom:1px solid #29374b}
+ html.lumi-mobile-light #lumiEmergencyBar>button,html.lumi-mobile-light #lumiEmergencyBar>a{min-height:48px;background:#182536;border-color:#526279;font-weight:500}
+ html.lumi-mobile-light #lumiEmergencyBar>#lumiSosSamuCall{background:#492535;border-color:#a35c70}
+ html.lumi-mobile-light #loadEarlierBtn{align-self:center;background:transparent;border:0;min-height:48px;padding:6px 14px;color:#b8c6d8;font-size:14px;box-shadow:none}
+ html.lumi-mobile-light .messages{padding:14px 12px}
+ html.lumi-mobile-light .messages .msg{box-shadow:none}
+ html.lumi-mobile-light .messages .msg.user{background:#254d7e}
+ html.lumi-mobile-light #lumiMobileNav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));flex:0 0 auto;gap:4px;padding:6px 10px max(8px,env(safe-area-inset-bottom));border-top:1px solid #29374b;background:#101827}
+ html.lumi-mobile-light #lumiMobileNav>button{display:flex!important;align-items:center;justify-content:center;min-width:0;min-height:48px;width:auto!important;margin:0!important;padding:10px 6px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:#bac7d8!important;font:500 16px/1.2 system-ui!important;text-align:center;box-shadow:none!important}
+ html.lumi-mobile-light #lumiMobileNav>button[aria-current=page]{background:#203b5c!important;color:#eef6ff!important}
+ html.lumi-mobile-light #conversationSidebar{width:min(360px,94vw);background:#101827;box-shadow:10px 0 28px #0004}
+ html.lumi-mobile-light #conversationSidebar .sidebar-top{padding:14px 16px 10px;min-height:60px}
+ html.lumi-mobile-light #conversationSidebar .sidebar-top h2{font-size:20px}
+ html.lumi-mobile-light #closeSidebarBtn{min-height:48px;min-width:48px}
+ html.lumi-mobile-light #lumiMobileMore{display:flex;flex-direction:column;gap:14px;padding:4px 12px 20px}
+ html.lumi-mobile-light #lumiMobileFeatures,html.lumi-mobile-light #lumiMobileMore details>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+ html.lumi-mobile-light #lumiMobileMore details{border-top:1px solid #354256;padding-top:6px}
+ html.lumi-mobile-light #lumiMobileMore summary{min-height:48px;padding:12px 4px;font:500 16px/1.4 system-ui;cursor:pointer}
+ html.lumi-mobile-light #lumiMobileMore details:not([open])>div{display:none}
+ html.lumi-mobile-light #lumiMobileMore button,html.lumi-mobile-light #lumiMobileMore a{min-height:48px;width:100%;height:auto;margin:0!important;padding:12px!important;border:0!important;border-radius:8px!important;background:transparent!important;color:#f0f4fa!important;font:16px/1.4 system-ui!important;text-align:left;white-space:normal;box-shadow:none!important;text-decoration:none;display:flex!important;align-items:center;gap:12px}
+ html.lumi-mobile-light #lumiMobileMore [data-mobile-label]::after{content:attr(data-mobile-label)}
+ html.lumi-mobile-light #lumiMobileMore .auth-box{display:block;width:100%}
+ html.lumi-mobile-light #lumiMobileMore [hidden]{display:none!important}
+ html.lumi-mobile-light #lumiLanguageControl{display:flex;width:100%;justify-content:space-between;gap:12px;padding:8px 12px;min-height:48px}
+ html.lumi-mobile-light #lumiLanguageControl .lumi-language-label{position:static;width:auto;height:auto;margin:0;clip-path:none;overflow:visible;font:16px system-ui}
+ html.lumi-mobile-light #lumiLanguageSelect{max-width:140px;border-color:#526279;background:#182536}
+ html.lumi-mobile-light #conversationList{padding:0}
+ html.lumi-mobile-light .sidebar-label{padding:6px 12px;font-size:12px;color:#b4c2d5;min-height:0}
+ html.lumi-mobile-light #sidebarStatus{padding:4px 12px;font-size:14px}
+ html.lumi-mobile-light .lumi-mobile-agenda #chatForm,html.lumi-mobile-light .lumi-mobile-agenda #loadEarlierBtn,html.lumi-mobile-light .lumi-mobile-agenda #messages>.msg:not(#lumiCalendarWeek):not(#lumiCalendarDay){display:none!important}
+ html.lumi-mobile-light #messages>#lumiCalendarWeek,html.lumi-mobile-light #messages>#lumiCalendarDay{max-width:100%;width:100%;margin:0!important;padding:12px!important;box-sizing:border-box}
+}
+@media(max-width:900px) and (max-height:500px){
+ html.lumi-mobile-light .app-header{min-height:40px;padding:6px 12px}
+ html.lumi-mobile-light .companion-profile{display:flex!important}
+ html.lumi-mobile-light #lumiEmergencyBar{padding:0 8px 6px}
+ html.lumi-mobile-light #lumiMobileNav{padding-top:3px;padding-bottom:3px}
+}

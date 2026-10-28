@@ -66,3 +66,70 @@
  const sidebar=document.getElementById('conversationSidebar');
  if(sidebar){const sync=()=>{const closed=matchMedia('(max-width:900px)').matches&&!sidebar.classList.contains('open');sidebar.inert=closed;sidebar.setAttribute('aria-hidden',String(closed));};new MutationObserver(sync).observe(sidebar,{attributes:true,attributeFilter:['class']});window.addEventListener('resize',sync);sync();}
 })();
+
+/* Move existing controls on narrow screens; keep their handlers, values and desktop positions. */
+(() => {
+ function ready(){
+  const root=document.documentElement,app=document.querySelector('.app'),sidebar=document.getElementById('conversationSidebar'),header=document.querySelector('.app-header');
+  if(!app||!sidebar||!header||document.getElementById('lumiMobileNav'))return;
+  const media=matchMedia('(max-width:900px)'),placements=new Map(),t=value=>window.LumiI18n?.t(value)||value;
+  const make=(tag,id,text)=>{const node=document.createElement(tag);if(id)node.id=id;if(text)node.textContent=text;return node;};
+  const nav=make('nav','lumiMobileNav');nav.setAttribute('aria-label',t('Navegação principal'));
+  const chat=make('button','lumiMobileChatBtn','Conversa');chat.type='button';nav.append(chat);app.append(nav);
+  const context=make('span','lumiMobileContext','Conversa');header.append(context);
+  const groups=make('div','lumiMobileMore');sidebar.append(groups);
+  const features=make('div','lumiMobileFeatures');groups.append(features);
+  function group(id,label){const details=make('details',id),summary=make('summary',null,label),body=make('div');details.append(summary,body);groups.append(details);return body;}
+  const conversations=group('lumiMobileConversations','Conversas anteriores'),account=group('lumiMobileAccount','Minha conta'),help=group('lumiMobileHelp','Ajuda e testes');
+  const labels=new Map(),title=sidebar.querySelector('.sidebar-top h2');let active=false;
+  const more=document.getElementById('chatHistoryBtn'),agenda=document.getElementById('lumiAgendaBtn');
+  const originalMore={text:more?.textContent,label:more?.getAttribute('aria-label'),title:more?.getAttribute('title')},originalAgenda=agenda?.textContent;
+  function move(id,target,label){const node=document.getElementById(id);if(!node)return;
+   if(!placements.has(node)){const marker=document.createComment('mobile position: '+id);node.before(marker);placements.set(node,marker);}
+   if(node.parentNode!==target)target.append(node);
+   if(label){labels.set(node,label);node.dataset.mobileLabel=t(label);}
+  }
+  function closeMenu(){if(sidebar.classList.contains('open'))document.getElementById('closeSidebarBtn')?.click();}
+  function update(){
+   if(!active)return;const open=sidebar.classList.contains('open'),calendar=!!document.getElementById('lumiCalendarWeek');
+   app.classList.toggle('lumi-mobile-agenda',calendar);chat.setAttribute('aria-current',!open&&!calendar?'page':'false');
+   agenda?.setAttribute('aria-current',!open&&calendar?'page':'false');more?.setAttribute('aria-current',open?'page':'false');more?.setAttribute('aria-expanded',String(open));
+   const text=t(open?'Mais':calendar?'Agenda':'Conversa');if(context.textContent!==text)context.textContent=text;
+  }
+  function language(){
+   chat.textContent=t('Conversa');nav.setAttribute('aria-label',t('Navegação principal'));
+   for(const [node,label]of labels)node.dataset.mobileLabel=t(label);
+   for(const [id,label]of [['lumiMobileConversations','Conversas anteriores'],['lumiMobileAccount','Minha conta'],['lumiMobileHelp','Ajuda e testes']])document.querySelector('#'+id+' > summary').textContent=t(label);
+   if(active){if(more){more.textContent=t('Mais');more.setAttribute('aria-label',t('Mais'));more.title=t('Mais');}if(agenda)agenda.textContent=t('Agenda');if(title)title.textContent=t('Mais');update();}
+  }
+  function sync(){
+   const next=media.matches&&root.classList.contains('lumi-authenticated');if(next===active)return;
+   active=next;root.classList.toggle('lumi-mobile-light',active);
+   if(active){
+    move('lumiAgendaBtn',nav);move('chatHistoryBtn',nav);more?.setAttribute('aria-controls','conversationSidebar');
+    for(const id of ['lumiHealthNewsBtn','lumiExerciseBtn','lumiImportantLinksBtn'])move(id,features);
+    for(const id of ['sidebarNewChatBtn','conversationList','sidebarStatus'])move(id,conversations);
+    const label=sidebar.querySelector('.sidebar-label');if(label){if(!placements.has(label)){const marker=document.createComment('mobile history label');label.before(marker);placements.set(label,marker);}conversations.insertBefore(label,document.getElementById('conversationList'));}
+    for(const [id,label]of [['profileBtn','Perfil'],['memoryBtn','Minha memória'],['soundButton','Voz da Lumi'],['inviteBtn','Convidar para a Lumi'],['settingsBtn','Configurações']])move(id,account,label);
+    move('lumiLanguageControl',account);move('authBox',account);
+    for(const id of ['lumiGuideBtn','lumiDemoBtn','lumiBetaFeedbackBtn','lumiBetaBtn','healthDemoBtn','lumiInstitutionalLink'])move(id,help,id==='healthDemoBtn'?'Meu Cuidado — demonstração':null);
+    language();
+   }else{
+    closeMenu();for(const [node,marker]of placements)if(marker.parentNode)marker.after(node);
+    app.classList.remove('lumi-mobile-agenda');
+    if(more){more.textContent=t(originalMore.text);for(const [name,value]of [['aria-label',originalMore.label],['title',originalMore.title]])if(value!==null)more.setAttribute(name,t(value));more.removeAttribute('aria-current');more.removeAttribute('aria-expanded');}
+    if(agenda){agenda.textContent=t(originalAgenda);agenda.removeAttribute('aria-current');}if(title)title.textContent=t('Conversas');
+    for(const details of groups.querySelectorAll('details'))details.open=false;
+   }
+  }
+  chat.addEventListener('click',()=>{closeMenu();document.getElementById('lumiCalendarWeek')?.remove();document.getElementById('lumiCalendarDay')?.remove();update();});
+  agenda?.addEventListener('click',()=>{if(active)agenda.focus();});
+  // Close the drawer before the original action opens a dialog or navigates.
+  sidebar.addEventListener('click',event=>{const action=event.target.closest('button,a');if(active&&action&&action.id!=='closeSidebarBtn')closeMenu();},true);
+  new MutationObserver(sync).observe(root,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(update).observe(sidebar,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(update).observe(document.getElementById('messages'),{childList:true});
+  media.addEventListener('change',sync);window.addEventListener('lumi-language-change',language);sync();
+ }
+ if(document.readyState==='complete')ready();else document.addEventListener('DOMContentLoaded',ready,{once:true});
+})();

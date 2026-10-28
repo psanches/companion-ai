@@ -1,0 +1,33 @@
+name: Android clean interface validation
+on:
+  push:
+    branches: [feature/android-clean-20261028]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the actual development frontend package
+        run: node lumi-ativa-integration/build-assets.mjs
+      - name: Install existing test dependencies and check frontend contracts
+        run: |
+          npm ci --prefix ativa-demo --ignore-scripts --no-audit --no-fund
+          npm ci --prefix frontend --ignore-scripts --no-audit --no-fund
+          npm test --prefix frontend
+      - name: Check five viewports, account navigation, keyboard, language, emergency access and desktop restoration
+        run: |
+          node frontend/node_modules/playwright/cli.js install --with-deps chromium
+          mkdir -p frontend/test-results
+          npm run test:browser --prefix frontend
+      - name: Preserve visual and interaction evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-clean-validation-${{ github.sha }}
+          path: frontend/test-results/
