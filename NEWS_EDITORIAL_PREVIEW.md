@@ -72,3 +72,13 @@ A função de prévia não está ligada às rotas, à interface nem ao cron atua
 | Internacional | International Parkinson and Movement Disorder Society | en | https://www.movementdisorders.org/ |
 
 Novos testes cobrem autorização dos domínios, prioridade das fontes internacionais, manutenção do filtro regional, datas internacionais, data inválida e domínio imitador. Correção de normalização Unicode preserva o reconhecimento de Parkinson em japonês.
+
+## Validação real e correções — 28/10/2026
+
+O gerador isolado foi executado com a chave de pesquisa existente, sem publicação, KV de produção ou alteração do cron. A execução final aprovou 22 testes e produziu nove matérias a partir de onze páginas com data verificada, usando três chamadas à API e 29 consultas às fontes. Nenhuma divergência de evidência textual permaneceu nessa saída. Execução: https://github.com/psanches/companion-ai/actions/runs/40669465342 ; commit executado: add2c9be4965acb628a777d298ea43cb676e2706.
+
+Correções implementadas: descoberta complementar a partir de links presentes nos índices oficiais, tolerância a fontes bloqueadas, datas inglesas no formato dia-mês-ano, decodificação da tipografia dos artigos, distinção explícita entre alcance nacional e foco subnacional, seleção de evidência literal por índice e saída estruturada com uma chave obrigatória por URL verificada. O esquema exige uma análise por fonte e impede URLs omitidas, repetidas ou inventadas; o código associa cada resumo pela URL e não pela posição na lista.
+
+A validação real agora falha se a edição estiver vazia. A suíte cobre recuperação de busca vazia/HTTP 403, datas internacionais, equivalência tipográfica sem alteração de sentido, limite dos trechos literais e associação correta mesmo com saída fora de ordem. Os limites permanecem três chamadas à API, quarenta consultas públicas, janela de sete dias e até dez matérias.
+
+Os resumos seguem sujeitos a revisão editorial de clareza e precisão, inclusive critérios de acesso a serviços. A execução não prova disponibilidade futura de todas as fontes ou consistência de toda saída futura do modelo. A pesquisa usa o catálogo de 23 fontes; a leitura direta complementar tem um subconjunto limitado para respeitar o orçamento. A interface estática, o Dev e o agendamento permanecem intactos; ativação continua sendo uma etapa separada.
