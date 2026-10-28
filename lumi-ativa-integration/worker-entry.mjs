@@ -1,3 +1,4 @@
+import {generateWeeklyDigest,getWeeklyDigest,newsWeekActive} from './health-news-week.mjs';
 import {withLocalLocationTest} from './location-test-worker.mjs';
 import {withBetaFeedback} from './beta-feedback-worker.mjs';
 // LUMI_ATIVA_INTEGRATION_VERSION=1
@@ -16,6 +17,7 @@ import {withConversationSidebar} from './conversation-worker.mjs';
 import {withInstitutional} from './institutional-worker.mjs';
 import institutional from './institutional-bundle.mjs';
 const integrated=createLumiAtivaIntegration(baseline,assets,fetch,createLumiResearchHandler());
-const companion=withCompanionChat(withHealthNews(integrated));
+const companion=withCompanionChat(withHealthNews(integrated,generateWeeklyDigest,getWeeklyDigest,{live:true,active:newsWeekActive}));
 const application=withBetaFeedback(withConversationSidebar(withCalendar(companion)));
 export default withLocalLocationTest(withFrontendVersion(withInstitutional(application,institutional),release,previous));
+

@@ -1,4 +1,5 @@
 import {waitForRelease} from '../frontend/wait-for-release.mjs';
+import {newsWeekActive} from '../health-news-week.mjs';
 import {HEALTH_NEWS_CRON_UTC} from '../health-news-daily.mjs';
 import {packageWorker} from './package-worker.mjs';
 import fs from 'node:fs';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
@@ -52,8 +53,8 @@ try{
  let uploadedVersion=uploaded?.result?.version_id||uploaded?.result?.version?.id||null;for(let attempt=0;attempt<12;attempt++){const items=(await (await cf(base+'/versions')).json()).result.items||[];const newer=items.find(v=>!versionBefore.some(previous=>previous.id===v.id));if(newer?.id){uploadedVersion=newer.id;break;}if(uploadedVersion)break;await new Promise(resolve=>setTimeout(resolve,1000));}assert.ok(uploadedVersion&&!versionBefore.some(v=>v.id===uploadedVersion),'Cannot identify uploaded sandbox version after polling; rollback required');
  const versionDetails=(await (await cf(base+'/versions/'+uploadedVersion)).json()).result;assert.ok(versionDetails.resources?.script?.handlers?.includes('scheduled'),'Cloudflare did not register scheduled handler');
  await cf(base+'/deployments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({strategy:'percentage',versions:[{version_id:uploadedVersion,percentage:100}],annotations:{'workers/message':'PC/Android verified commit '+process.env.GITHUB_SHA}})});
- // Static demo: retain unrelated schedules; news cron requires a launch review.
- const expectedCrons=[...new Set(schedulesBefore.map(s=>s.cron).filter(cron=>cron!==HEALTH_NEWS_CRON_UTC))];
+ // Retain unrelated schedules. Enable daily news only during the authorized finite week.
+ const expectedCrons=[...new Set([...schedulesBefore.map(s=>s.cron).filter(cron=>cron!==HEALTH_NEWS_CRON_UTC),...(newsWeekActive()?[HEALTH_NEWS_CRON_UTC]:[])])];
  await cf(base+'/schedules',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(expectedCrons.map(cron=>({cron})))});
  const schedulesAfter=(await (await cf(base+'/schedules')).json()).result.schedules;assert.deepEqual(schedulesAfter.map(s=>s.cron).sort(),expectedCrons.sort(),'Cron configuration mismatch');
  console.log(JSON.stringify({stage:'sandbox-version-activated',version:uploadedVersion,commit:process.env.GITHUB_SHA,crons:expectedCrons}));
@@ -93,3 +94,4 @@ try{
  await (await import('../frontend/return-deployed-check.mjs')).verifyFeatureReturns(sandbox);
  const result={commit:process.env.GITHUB_SHA,cloudflareVersion:uploadedVersion,release:release.release,url:sandbox+'/',medicalUrl:sandbox+'/ativa-medical/',fictional:true,baselineSha256:originalHash,productionSourceUnchanged:true,bindingsPreserved:true,syntheticServiceBinding:true,liveAI:true};console.log(JSON.stringify(result,null,2));if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'## Lumi + Ativa deployed in authorized development sandbox\n\n```json\n'+JSON.stringify(result,null,2)+'\n```\nReal medical routes remain blocked; original code and bindings preserved. No private source/secret values exported.\n');
 }catch(error){if(changed){try{await cf(base,{method:'PUT',body:form(originals)});await cf(base+'/schedules',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(schedulesBefore.map(({cron})=>({cron})))});await cf(base+'/deployments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({strategy:'percentage',versions:rollbackVersions.map(({version_id,percentage})=>({version_id,percentage}))})});console.error('Integration check failed; exact prior development code restored.');}catch{console.error('Automatic restoration failed; development Worker needs immediate review. Production was not deployed.');}}throw error;}
+

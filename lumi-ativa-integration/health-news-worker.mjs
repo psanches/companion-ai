@@ -1,14 +1,14 @@
-import {NEWS_HTML,NEWS_SCRIPT,NEWS_CSS,NEWS_DEMO_DIGEST} from './health-news-ui-assets.mjs';
+import {NEWS_HTML,NEWS_SCRIPT,NEWS_CSS,NEWS_DEMO_DIGEST,NEWS_LIVE_HTML} from './health-news-ui-assets.mjs';
 import {HEALTH_NEWS_CRON_UTC} from './health-news-daily.mjs';
 const HOST = 'lumi-develop.psanchesnle.workers.dev';
 /** Add public-news read access and cron without changing Lumi's existing handlers. */
-export function withHealthNews(original, generate = null, latest = async () => NEWS_DEMO_DIGEST) {
+export function withHealthNews(original, generate = null, latest = async () => NEWS_DEMO_DIGEST, options = {}) {
   return {
     ...original,
     async fetch(request, env, ctx) {
       const url = new URL(request.url);
       if (url.hostname !== HOST)return original.fetch.call(original,request,env,ctx);
-      const ui={'/noticias':[NEWS_HTML,'text/html; charset=utf-8'],'/noticias/':[NEWS_HTML,'text/html; charset=utf-8'],'/health-news-ui.js':[NEWS_SCRIPT,'application/javascript; charset=utf-8'],'/health-news-ui.css':[NEWS_CSS,'text/css; charset=utf-8']}[url.pathname];
+      const ui={'/noticias':[options.live?NEWS_LIVE_HTML:NEWS_HTML,'text/html; charset=utf-8'],'/noticias/':[options.live?NEWS_LIVE_HTML:NEWS_HTML,'text/html; charset=utf-8'],'/health-news-ui.js':[NEWS_SCRIPT,'application/javascript; charset=utf-8'],'/health-news-ui.css':[NEWS_CSS,'text/css; charset=utf-8']}[url.pathname];
       if(ui){if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:405,headers:{allow:'GET, HEAD'}});return new Response(request.method==='HEAD'?null:ui[0],{headers:{'content-type':ui[1],'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"}});}
       if(url.pathname!=='/health-news'){
         const response=await original.fetch.call(original,request,env,ctx);
@@ -32,8 +32,11 @@ export function withHealthNews(original, generate = null, latest = async () => N
       // Other schedules remain owned by the existing Worker.
       if (controller.cron !== HEALTH_NEWS_CRON_UTC)
         return original.scheduled?.call(original, controller, env, ctx);
-      // News generation is paused until an explicitly reviewed production launch.
-      return {status:'demo-static',automaticUpdates:false};
+      if(!options.live||!generate)return {status:'demo-static',automaticUpdates:false};
+      const now=new Date(controller.scheduledTime||Date.now());
+      if(!options.active?.(now))return {status:'news-week-paused',automaticUpdates:false};
+      const task=generate(env,now);ctx?.waitUntil?.(task);return task;
     }
   };
 }
+
