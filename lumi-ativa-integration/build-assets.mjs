@@ -53,7 +53,6 @@ html:not(.lumi-authenticated) #profileBtn,
 html:not(.lumi-authenticated) #healthDemoBtn,
 html:not(.lumi-authenticated) #memoryBtn,
 html:not(.lumi-authenticated) #soundButton,
-html:not(.lumi-authenticated) #settingsBtn,
 html:not(.lumi-authenticated) #newChatBtn,
 html:not(.lumi-authenticated) #loadEarlierBtn,
 html:not(.lumi-authenticated) #messages,
@@ -68,7 +67,6 @@ html.lumi-authenticated #healthDemoBtn,
 html.lumi-authenticated #memoryBtn,
 html.lumi-authenticated #inviteBtn,
 html.lumi-authenticated #soundButton,
-html.lumi-authenticated #settingsBtn,
 html.lumi-authenticated #chatHistoryBtn {display:grid!important;visibility:visible!important}
 /* Restore the development module entry on narrow Android viewports after login. */
 html.lumi-authenticated #lumiExerciseBtn {display:block!important;visibility:visible!important;opacity:1!important;width:calc(100% - 28px)!important;box-sizing:border-box!important}

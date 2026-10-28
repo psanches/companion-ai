@@ -27,7 +27,7 @@ export async function checkAppLanguages(page,{mobile=false,screenshotPath}={}){
  await openMobileSection(page,'lumiMobileAccount');await page.locator('#lumiLanguageSelect').selectOption('pt-BR');await closeMobileMenu(page);
  await page.getByRole('button',{name:'Fechar agenda',exact:true}).waitFor();await page.getByRole('button',{name:'Fechar agenda',exact:true}).click();
  await openMobileSection(page,'lumiMobileAccount');await page.locator('#lumiLanguageSelect').selectOption('en');await closeMobileMenu(page);
- await openMobileSection(page,'lumiMobileAccount');await page.locator('#settingsBtn').click();await page.getByText('Personalize your companion',{exact:true}).waitFor();await page.getByRole('button',{name:'Back to conversation',exact:true}).click();
+ assert.equal(await page.locator('#settingsBtn, #settingsDialog').count(),0);
  if(screenshotPath)await page.screenshot({path:screenshotPath,fullPage:true});
  await openMobileSection(page,'lumiMobileAccount');await page.locator('#lumiLanguageSelect').selectOption('pt-BR');await closeMobileMenu(page);
  await page.waitForFunction(()=>document.documentElement.lang==='pt-BR');

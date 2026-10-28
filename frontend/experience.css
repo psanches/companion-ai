@@ -44,7 +44,6 @@ dialog{max-width:calc(100vw - 24px);max-height:calc(var(--lumi-viewport-height,1
 
 #lumiInstitutionalLink{text-decoration:none;display:block;min-height:44px}
 
-#settingsDialog .dialog-title{flex-wrap:wrap;gap:12px}#settingsDialog .dialog-title form{margin:0}#closeSettingsBtn{min-height:48px;min-width:44px;white-space:normal}
 
 /* Android/narrow-screen presentation only. Desktop nodes return to their original positions. */
 #lumiMobileNav,#lumiMobileMore,#lumiMobileContext{display:none}

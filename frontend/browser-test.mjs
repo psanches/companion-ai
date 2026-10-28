@@ -78,7 +78,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  if(width<=900){
   await openMobileSection(page);
   assert.equal(await page.locator('#lumiMobileAccount').evaluate(n=>n.open),true);
-  for(const id of ['inviteBtn','profileBtn','memoryBtn','soundButton','settingsBtn','lumiLanguageSelect','signOutBtn']){
+  for(const id of ['inviteBtn','profileBtn','memoryBtn','soundButton','lumiLanguageSelect','signOutBtn']){
    const control=page.locator('#'+id);assert.equal(await control.isVisible(),true,id+' available in More');
    await control.scrollIntoViewIfNeeded();
    assert.ok(await control.evaluate(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}),id+' reachable by scrolling');
@@ -101,7 +101,8 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.locator('#lumiBetaFeedbackDialog > button').click();
 
  await openMobileSection(page,'lumiMobileAccount');
- const unchangedSettings=await page.evaluate(()=>localStorage.getItem('companion-ai-v2'));await page.locator('#settingsBtn').click();await page.locator('#userName').fill('Alteração não salva');await page.locator('#closeSettingsBtn').click();assert.equal(await page.locator('#settingsDialog').isVisible(),false);assert.equal(await page.evaluate(()=>localStorage.getItem('companion-ai-v2')),unchangedSettings);
+ assert.equal(await page.locator('#settingsBtn, #settingsDialog').count(),0);
+ await closeMobileMenu(page);
 
  await page.locator('#loadEarlierBtn').click();assert.equal(await page.locator('#messages .msg').count(),12);
  await page.waitForFunction(()=>document.querySelectorAll('#conversationList .conversation-item').length===5);
