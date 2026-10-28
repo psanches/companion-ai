@@ -23,7 +23,7 @@ export async function generateWeeklyDigest(env,now=new Date(),fetcher=fetch,edit
  const freshItems=preview.items?.filter(x=>!oldUrls.has(x.url)&&!oldTopics.has(x.topicKey));
  const digest={...preview,items:freshItems,title:'Notícias de Saúde',mode:'daily-editorial',published:true,automaticUpdates:true,window:NEWS_WEEK,generatedAt:now.toISOString()};
  // An empty or invalid result never replaces the last verified public edition.
- if(!validWeeklyEdition(digest))throw Error('No publishable verified news edition; previous edition preserved');
+ if(!validWeeklyEdition(digest))throw Error('No publishable verified news edition; previous edition preserved. Audit: '+JSON.stringify({date,returned:preview.items?.length,verification:preview.verification}));
  await env.HEALTH_NEWS_KV.put(DATE_PREFIX+date,JSON.stringify(digest),{expirationTtl:60*60*24*45});
  await env.HEALTH_NEWS_KV.put(WEEK_KEY,JSON.stringify(digest));
  await env.HEALTH_NEWS_KV.put(RECENT,JSON.stringify([...recent,...digest.items.map(x=>({url:x.url,topicKey:x.topicKey,date}))]),{expirationTtl:60*60*24*30});
