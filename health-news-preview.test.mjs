@@ -23,7 +23,7 @@ function fixture(){const calls=[],events=[],urls=['https://www.michaeljfox.org/n
  const transport=async(url,o)=>{calls.push(url);if(url==='https://api.openai.com/v1/responses'){
   const body=JSON.parse(o.body);api++;if(api<3){events.push('search-'+api);if(api===2)assert.ok(events.includes('verify-pd'));
    const d=payload([{url:urls[api-1]}]);d.output.unshift({type:'web_search_call',action:{sources:[{url:urls[api-1]}]}});assert.ok(body.input.includes('máximo 7 dias'));return Response.json(d);
-  }events.push('editor');const inputs=JSON.parse(body.input[1].content);return Response.json(payload(inputs.map((s,id)=>review(id,{scope:'global',evidenceId:0}))));
+  }events.push('editor');const inputs=JSON.parse(body.input[1].content);return Response.json(payload(inputs.map((s,id)=>review(id,{scope:'global',evidenceId:0,sourceUrl:s.url}))));
  }if(!urls.includes(url))return new Response('<h1>News index</h1>',{headers:{'content-type':'text/html'}});events.push(url.includes('michaeljfox')?'verify-pd':'verify-general');return new Response(`<meta property="article:published_time" content="${day}"><h1>${url.includes('michaeljfox')?'Parkinson research':'National prevention guidance'}</h1><p>${evidence.repeat(5)}</p>`,{headers:{'content-type':'text/html'}});};
  return {events,calls,transport};}
 test('complete preview searches and verifies official Parkinson BEFORE general health, reuses existing key, never writes storage',async()=>{
@@ -66,7 +66,7 @@ test('empty model discovery recovers via fetched official article links; 403 ind
  const transport=async(url,options)=>{
   if(url==='https://api.openai.com/v1/responses'){
    api++;if(api<=2)return payload([]);
-   return payload([review(0,{scope:'global',evidenceId:0})]);
+   return payload([review(0,{scope:'global',evidenceId:0,sourceUrl:article})]);
   }
   if(url==='https://www.michaeljfox.org/research-news')return new Response('<h1>News</h1><a href="/news/recovered">Research Parkinson</a>',{headers:{'content-type':'text/html'}});
   if(url===article)return new Response(`<meta property="article:published_time" content="${day}"><h1>Parkinson research</h1><p>${evidence.repeat(5)}</p>`,{headers:{'content-type':'text/html'}});
@@ -91,4 +91,14 @@ test('editorial evidence options are literal source spans and remain bounded',as
  const {sourceEvidenceOptions}=await import('./health-news-preview.mjs');
  const text='Headline. '+('National research findings apply across the country. ').repeat(100)+'A final sentence.';
  const options=sourceEvidenceOptions(text);assert.ok(options.length>0&&options.length<=48);assert.ok(options.every(q=>q.length<=360&&text.includes(q)));assert.equal(new Set(options).size,options.length);
+});
+
+
+test('editorial association follows exact publisher URL despite shuffled output and misleading numeric IDs',async()=>{
+ const {bindEditorialReviews}=await import('./health-news-preview.mjs');
+ const a=story('pressure'),b=story('sleep');
+ const reviews=bindEditorialReviews([a,b],[{id:0,sourceUrl:b.url,evidenceId:0,title:'Sleep'},{id:1,sourceUrl:a.url,evidenceId:0,title:'Pressure'}]);
+ assert.equal(reviews.find(r=>r.title==='Sleep').id,1);assert.equal(reviews.find(r=>r.title==='Pressure').id,0);
+ assert.throws(()=>bindEditorialReviews([a,b],[{sourceUrl:a.url},{sourceUrl:a.url}]),/source URLs/);
+ assert.throws(()=>bindEditorialReviews([a,b],[{sourceUrl:a.url},{sourceUrl:'https://www.nih.gov/news/unverified'}]),/source URLs/);
 });
