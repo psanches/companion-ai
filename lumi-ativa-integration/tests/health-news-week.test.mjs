@@ -29,10 +29,10 @@ test('after expiry readers see the real edition date without new API calls',asyn
  const f=fixture();f.data.set(WEEK_KEY,JSON.stringify(preview));
  const result=await getWeeklyDigest(f.env,new Date('2026-11-05T12:00:00Z'));assert.equal(result.date,'2026-10-28');assert.equal(result.mode,'week-complete');assert.equal(result.automaticUpdates,false);assert.equal(result.stale,true);assert.equal(f.writes.length,0);
 });
-test('recent public topics reach discovery exclusions; live page states dates and no quota padding',async()=>{
+test('recent public topics reach discovery exclusions; live page keeps a concise header and no quota padding',async()=>{
  const f=fixture();f.data.set('health-news:editorial-week:recent',JSON.stringify([{url:item.url,topicKey:item.topicKey,date:'2026-10-27'}]));
  const result=await generateWeeklyDigest(f.env,now,undefined,async(env,date,fetcher,options)=>{assert.deepEqual(options.excludeUrls,[item.url]);assert.deepEqual(options.excludeTopics,[item.topicKey]);return {...preview,items:[item,{...item,url:item.url+'-new',topicKey:'new-study'}]};});assert.equal(result.items.length,1);assert.equal(result.items[0].topicKey,'new-study');
- assert.doesNotMatch(NEWS_LIVE_HTML,/DEMONSTRAÇÃO|Demonstração estática|17\/10\/2026/);assert.match(NEWS_LIVE_HTML,/04\/11/);assert.match(NEWS_LIVE_HTML,/sete dias/);
+ assert.doesNotMatch(NEWS_LIVE_HTML,/DEMONSTRAÇÃO|Demonstração estática|17\/10\/2026/);assert.doesNotMatch(NEWS_LIVE_HTML,/Seleção diária verificada|Atualização diária às|Pausa automática|O último boletim verificado permanece disponível/);assert.match(NEWS_LIVE_HTML,/<header class="news-hero"><h1>Notícias de Saúde<\/h1><\/header>/);assert.match(NEWS_LIVE_HTML,/sete dias/);
 });
 test('packaged news wrapper generates only for its cron inside the window; HTTP remains read-only',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'lumi-news-week-'));
