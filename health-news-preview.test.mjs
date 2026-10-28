@@ -75,3 +75,13 @@ test('empty model discovery recovers via fetched official article links; 403 ind
  const result=await generateHealthNewsPreview({OPENAI_API_KEY:'fixture-key'},new Date(day+'T12:00:00Z'),transport);
  assert.equal(result.items.length,1);assert.equal(result.status,'ready');assert.equal(result.items[0].url,article);assert.equal(result.verification.discovery[0].publisherCandidates,1);assert.ok(result.verification.rejected.some(x=>/403/.test(x.reason)));assert.equal(api,3);assert.equal(result.published,false);
 });
+
+
+test('literal source evidence tolerates typography and whitespace but rejects changed meaning',async()=>{
+ const {literalEvidenceMatches}=await import('./health-news-preview.mjs');
+ assert.equal(literalEvidenceMatches('Parkinson’s research across\n the country.',"Parkinson's research across the country."),true);
+ assert.equal(literalEvidenceMatches('The study did not improve symptoms.','The study did improve symptoms.'),false);
+ const st=story('quote','www.nih.gov',"National guidance for Parkinson’s care throughout the country.");
+ assert.equal(selectEditorialStories([st],[review(0,{scopeEvidence:"National guidance for Parkinson's care throughout the country."})],day).length,1);
+ assert.equal(selectEditorialStories([st],[review(0,{localFocus:true,scopeEvidence:"National guidance for Parkinson's care throughout the country."})],day).length,0);
+});
