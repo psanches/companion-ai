@@ -77,6 +77,7 @@
   const nav=make('nav','lumiMobileNav');nav.setAttribute('aria-label',t('Navegação principal'));
   const chat=make('button','lumiMobileChatBtn','Conversa');chat.type='button';nav.append(chat);app.append(nav);
   const context=make('span','lumiMobileContext','Conversa');header.append(context);
+  const playback=make('div','lumiVoicePlaybackControls');document.getElementById('chatForm')?.prepend(playback);
   const groups=make('div','lumiMobileMore');sidebar.append(groups);
   const features=make('div','lumiMobileFeatures');groups.append(features);
   function group(id,label){const details=make('details',id),summary=make('summary',null,label),body=make('div');details.append(summary,body);groups.append(details);return body;}
@@ -111,7 +112,8 @@
     for(const id of ['lumiHealthNewsBtn','lumiExerciseBtn','lumiImportantLinksBtn'])move(id,features);
     for(const id of ['sidebarNewChatBtn','conversationList','sidebarStatus'])move(id,conversations);
     const label=sidebar.querySelector('.sidebar-label');if(label){if(!placements.has(label)){const marker=document.createComment('mobile history label');label.before(marker);placements.set(label,marker);}conversations.insertBefore(label,document.getElementById('conversationList'));}
-    for(const [id,label]of [['inviteBtn','Convidar para a Lumi'],['profileBtn','Perfil'],['memoryBtn','Minha memória'],['soundButton','Voz da Lumi']])move(id,account,label);
+    for(const [id,label]of [['inviteBtn','Convidar para a Lumi'],['profileBtn','Perfil'],['memoryBtn','Minha memória']])move(id,account,label);
+    move('soundButton',playback);
     move('lumiLanguageControl',account);move('authBox',account);
     for(const id of ['lumiGuideBtn','lumiDemoBtn','lumiBetaFeedbackBtn','lumiBetaBtn','healthDemoBtn','lumiInstitutionalLink'])move(id,help,id==='healthDemoBtn'?'Meu Cuidado — demonstração':null);
     language();

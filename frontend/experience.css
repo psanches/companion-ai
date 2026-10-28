@@ -92,3 +92,11 @@ dialog{max-width:calc(100vw - 24px);max-height:calc(var(--lumi-viewport-height,1
  html.lumi-mobile-light #lumiEmergencyBar{padding:0 8px 6px}
  html.lumi-mobile-light #lumiMobileNav{padding-top:3px;padding-bottom:3px}
 }
+
+/* Keep reply speech control next to the mobile message bar. */
+#lumiVoicePlaybackControls{display:none}
+@media(max-width:900px){
+ html.lumi-mobile-light #lumiVoicePlaybackControls{display:flex;justify-content:flex-end;margin-bottom:4px}
+ html.lumi-mobile-light #lumiVoicePlaybackControls #soundButton{display:flex!important;align-items:center;gap:8px;min-height:48px;padding:6px 12px;border:1px solid #526279;border-radius:10px;background:#182536;color:#f0f4fa;font:14px/1.3 system-ui;cursor:pointer}
+ html.lumi-mobile-light #lumiVoicePlaybackControls #soundButton::after{content:attr(aria-label)}
+}
