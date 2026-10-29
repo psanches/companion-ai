@@ -54,7 +54,51 @@ function readLocalState() {
   try { const value=JSON.parse(localStorage.getItem(STORAGE)||"{}"); return value && typeof value==="object" && !Array.isArray(value) ? value : {}; }
   catch { return {}; }
 }
-let state = {...defaults,...readLocalState()};
+let state = {...defaults,...readLocalState(),messages:[]};
+let fullHistory = [];
+let historyEpoch = 0;
+let chatBusy = false;
+let sidebarEpoch = 0;
+let conversationArchives = [];
+const pendingArchives = new Map();
+let lumiSessionOwner;
+let lumiSessionEpoch = 0;
+const lumiPendingRequests = new Set();
+function lumiSessionSnapshot() { return {owner:lumiSessionOwner,epoch:lumiSessionEpoch}; }
+function lumiSessionMatches(scope) { return scope.owner===lumiSessionOwner && scope.epoch===lumiSessionEpoch; }
+function lumiSessionChangedError() { return Object.assign(new Error("Session changed."),{name:"AbortError",code:"LUMI_SESSION_CHANGED"}); }
+function lumiSetSessionOwner(owner,force=false) {
+  owner=owner||null;
+  if(lumiSessionOwner===undefined){lumiSessionOwner=owner;return;}
+  if(!force && owner===lumiSessionOwner)return;
+  lumiSessionOwner=owner;
+  lumiSessionEpoch++;
+  for(const controller of lumiPendingRequests)controller.abort();
+  lumiPendingRequests.clear();
+  state.messages=[];
+  fullHistory=[];historyEpoch++;sidebarEpoch++;
+  conversationArchives=[];pendingArchives.clear();chatBusy=false;
+  document.getElementById("conversationList")?.replaceChildren();
+  const sidebarNote=document.getElementById("sidebarStatus");if(sidebarNote)sidebarNote.textContent="";
+  if(loadEarlierBtn)loadEarlierBtn.hidden=true;
+  for(const id of ["newChatBtn","sidebarNewChatBtn"]) {const node=document.getElementById(id);if(node)node.disabled=false;}
+  const stored=readLocalState();delete stored.messages;
+  try{localStorage.setItem(STORAGE,JSON.stringify(stored));}catch{}
+  messagesEl?.replaceChildren();
+  if(input)input.value="";
+  if(form)delete form.dataset.sending;
+  window.speechSynthesis?.cancel();
+  for(const id of ['memoryDialog','profileDialog']){
+    const dialog=document.getElementById(id);
+    if(dialog?.open)dialog.close();
+  }
+  for(const id of ['memoryText','memoryStatus']){
+    const node=document.getElementById(id);if(node){if('value' in node)node.value='';else node.textContent='';}
+  }
+  for(const key of ['lumiCalendarSignInDraft','lumiCalendarResume','lumiCalendarReadIntent'])sessionStorage.removeItem(key);
+  for(const id of ['lumiCalendarDay','lumiCalendarWeek','lumiCalendarResume','lumiCalendarLoginResume'])document.getElementById(id)?.remove();
+  window.dispatchEvent(new Event('lumi-session-change'));
+}
 
 
 /* =========================================================
@@ -62,11 +106,14 @@ let state = {...defaults,...readLocalState()};
    ========================================================= */
 
 async function getAccessToken() {
+  const epoch=lumiSessionEpoch;
   const {
     data: { session },
     error
   } = await supabaseClient.auth.getSession();
 
+  if(epoch!==lumiSessionEpoch)throw lumiSessionChangedError();
+  lumiSetSessionOwner(error?null:session?.user?.id);
   if (error) {
     console.error(
       "Error getting Supabase session:",
@@ -80,7 +127,9 @@ async function getAccessToken() {
 
 
 async function authFetch(url, options = {}) {
+  const epoch=lumiSessionEpoch;
   const token = await getAccessToken();
+  if(epoch!==lumiSessionEpoch)throw lumiSessionChangedError();
 
   if (!token) {
     throw new Error(
@@ -97,10 +146,23 @@ async function authFetch(url, options = {}) {
   );
   if(window.LumiI18n){headers.set('x-lumi-language',window.LumiI18n.language);headers.set('accept-language',window.LumiI18n.language);}
 
-  return fetch(url, {
-    ...options,
-    headers
-  });
+  const scope=lumiSessionSnapshot(),controller=new AbortController();
+  const relay=()=>controller.abort(options.signal?.reason);
+  if(options.signal?.aborted)relay();
+  else options.signal?.addEventListener('abort',relay,{once:true});
+  lumiPendingRequests.add(controller);
+  const cleanup=()=>{lumiPendingRequests.delete(controller);options.signal?.removeEventListener('abort',relay);};
+  const check=()=>{if(!lumiSessionMatches(scope))throw lumiSessionChangedError();};
+  try {
+    const response=await fetch(url,{...options,headers,signal:controller.signal});
+    check();
+    // Body decoding can finish after logout even when the transport ignores abort.
+    for(const method of ['json','text','arrayBuffer','blob']){
+      const read=response[method].bind(response);
+      response[method]=async(...args)=>{try{check();const value=await read(...args);check();return value;}finally{cleanup();}};
+    }
+    return response;
+  } catch(error){cleanup();throw error;}
 }
 const signInBtn = document.querySelector("#signInBtn");
 const signOutBtn = document.querySelector("#signOutBtn");
@@ -231,7 +293,10 @@ function ensureAuthDialog() {
 }
 
 async function updateAuthUI() {
+  const epoch=lumiSessionEpoch;
   const { data, error } = await supabaseClient.auth.getSession();
+  if(epoch!==lumiSessionEpoch)return;
+  lumiSetSessionOwner(error?null:data?.session?.user?.id);
   if (error) console.error("Erro de sessão:",error);
   const signedIn = !!data?.session && !error;
   if (signInBtn) signInBtn.hidden = signedIn;
@@ -261,6 +326,7 @@ signInBtn?.addEventListener("click", () => {
 
 signOutBtn?.addEventListener("click", async () => {
   signOutBtn.disabled = true;
+  lumiSetSessionOwner(null,true);
   try {
     const { error } = await supabaseClient.auth.signOut();
     if (error) throw error;
@@ -275,7 +341,9 @@ signOutBtn?.addEventListener("click", async () => {
   }
 });
 
-supabaseClient.auth.onAuthStateChange(event => {
+supabaseClient.auth.onAuthStateChange((event,session) => {
+  if(event==="SIGNED_OUT")lumiSetSessionOwner(null,true);
+  else lumiSetSessionOwner(session?.user?.id);
   // Run session reads outside Supabase's auth callback lock.
   setTimeout(async () => {
     await updateAuthUI();
@@ -298,6 +366,7 @@ async function lumiCheckIdle() {
   if (!Number.isFinite(last) || last <= 0) return;
   if (Date.now() - last < LUMI_IDLE_LIMIT_MS) return;
   lumiIdleSigningOut = true;
+  lumiSetSessionOwner(null,true);
   try {
     // Local sign-out avoids unexpectedly revoking sessions on other devices.
     await supabaseClient.auth.signOut({ scope: "local" });
@@ -514,14 +583,17 @@ requestAnimationFrame(() => {
 /* =========================================================
    SHARED HISTORY
    ========================================================= */
-let fullHistory = [];
-let historyEpoch = 0;
 async function loadSharedHistory() {
+  const generation=lumiSessionEpoch;
   const epoch = historyEpoch;
-  const token =
-    await getAccessToken();
+  let token;
+  try{token=await getAccessToken();}catch(error){
+    if(error.code!=="LUMI_SESSION_CHANGED")console.error("Could not read history session:",error);
+    return;
+  }
 
-  if (epoch !== historyEpoch) return;
+  if (epoch !== historyEpoch || generation!==lumiSessionEpoch) return;
+  const scope=lumiSessionSnapshot();
 
   /*
    Do not repeatedly call the Worker before
@@ -542,7 +614,7 @@ async function loadSharedHistory() {
 
     const data =
       await response.json();
-    if (epoch !== historyEpoch) return;
+    if (epoch !== historyEpoch || !lumiSessionMatches(scope)) return;
 
     if (!response.ok) {
       throw new Error(
@@ -580,7 +652,7 @@ async function loadSharedHistory() {
     );
   }
 
-  render();
+  if(lumiSessionMatches(scope))render();
 }
 
 loadEarlierBtn?.addEventListener("click", () => {
@@ -810,6 +882,7 @@ form.onsubmit = async e => {
     return;
   }
 
+  const scope=lumiSessionSnapshot();
   form.dataset.sending = "true";
   setConversationActionsDisabled();
   input.value = "";
@@ -835,6 +908,7 @@ form.onsubmit = async e => {
     const data =
       await getReply(text);
 
+    if(!lumiSessionMatches(scope))return;
     wait.remove();
 
     const reply =
@@ -871,6 +945,7 @@ form.onsubmit = async e => {
     }
 
   } catch (err) {
+    if(!lumiSessionMatches(scope))return;
     wait.remove();
     if (!input.value.trim()) {
       input.value = text;
@@ -882,8 +957,11 @@ form.onsubmit = async e => {
       err.message
     );
   } finally {
-    delete form.dataset.sending;
-    setConversationActionsDisabled();
+    wait.remove();
+    if(lumiSessionMatches(scope)){
+      delete form.dataset.sending;
+      setConversationActionsDisabled();
+    }
   }
 };
 
@@ -894,6 +972,7 @@ form.onsubmit = async e => {
 
 $("#memoryBtn").onclick =
   async () => {
+    const scope=lumiSessionSnapshot();
 
     memoryDialog.showModal();
 
@@ -910,6 +989,7 @@ $("#memoryBtn").onclick =
 
       const data =
         await response.json();
+      if(!lumiSessionMatches(scope))return;
 
       if (!response.ok) {
         throw new Error(
@@ -927,6 +1007,7 @@ $("#memoryBtn").onclick =
           : "Nenhuma memória salva ainda.";
 
     } catch (error) {
+      if(!lumiSessionMatches(scope))return;
       $("#memoryStatus").textContent =
         error.message;
     }
@@ -941,6 +1022,7 @@ $("#closeMemoryBtn").onclick =
 
 $("#saveMemoryBtn").onclick =
   async () => {
+    const scope=lumiSessionSnapshot();
 
     const memory =
       $("#memoryText").value.trim();
@@ -968,6 +1050,7 @@ $("#saveMemoryBtn").onclick =
 
       const data =
         await response.json();
+      if(!lumiSessionMatches(scope))return;
 
       if (!response.ok) {
         throw new Error(
@@ -980,6 +1063,7 @@ $("#saveMemoryBtn").onclick =
         "Memória salva.";
 
     } catch (error) {
+      if(!lumiSessionMatches(scope))return;
       $("#memoryStatus").textContent =
         error.message;
     }
@@ -988,6 +1072,7 @@ $("#saveMemoryBtn").onclick =
 
 $("#deleteMemoryBtn").onclick =
   async () => {
+    const scope=lumiSessionSnapshot();
 
     const confirmed =
       confirm(
@@ -1017,6 +1102,7 @@ $("#deleteMemoryBtn").onclick =
 
       const data =
         await response.json();
+      if(!lumiSessionMatches(scope))return;
 
       if (!response.ok) {
         throw new Error(
@@ -1031,6 +1117,7 @@ $("#deleteMemoryBtn").onclick =
         "Memória apagada.";
 
     } catch (error) {
+      if(!lumiSessionMatches(scope))return;
       $("#memoryStatus").textContent =
         error.message;
     }
@@ -1314,14 +1401,10 @@ const sidebarList = document.getElementById("conversationList");
 const sidebarStatus = document.getElementById("sidebarStatus");
 const closeSidebarBtn = document.getElementById("closeSidebarBtn");
 const sidebarNewChatBtn = document.getElementById("sidebarNewChatBtn");
-let chatBusy = false;
 let sidebarLoading = false;
 let sidebarRefreshAgain = false;
 let sidebarRefreshPromise = null;
-let sidebarEpoch = 0;
 let sidebarOwner = null;
-let conversationArchives = [];
-const pendingArchives = new Map();
 
 function setConversationActionsDisabled() {
   const busy = chatBusy || form.dataset.sending === "true";
@@ -1416,10 +1499,9 @@ async function startNewConversation() {
     input.focus();
     await refreshConversationList();
   } catch (error) {
-    sidebarStatus.textContent = error.message;
+    if(epoch === sidebarEpoch)sidebarStatus.textContent = error.message;
   } finally {
-    chatBusy = false;
-    setConversationActionsDisabled();
+    if(epoch===sidebarEpoch){chatBusy = false;setConversationActionsDisabled();}
   }
 }
 async function restoreConversation(id) {
@@ -1445,10 +1527,9 @@ async function restoreConversation(id) {
     if (window.innerWidth <= 900) setSidebarOpen(false);
     await refreshConversationList();
   } catch (error) {
-    sidebarStatus.textContent = error.message;
+    if(epoch === sidebarEpoch)sidebarStatus.textContent = error.message;
   } finally {
-    chatBusy = false;
-    setConversationActionsDisabled();
+    if(epoch===sidebarEpoch){chatBusy = false;setConversationActionsDisabled();}
   }
 }
 newChatBtn?.addEventListener("click",startNewConversation);
@@ -1463,7 +1544,9 @@ sidebarBackdrop?.addEventListener("click",() => setSidebarOpen(false));
 document.addEventListener("keydown",event => { if (event.key === "Escape" && sidebar?.classList.contains("open")) setSidebarOpen(false); });
 void refreshConversationList();
 supabaseClient.auth.onAuthStateChange((event,session) => {
+  const scope=lumiSessionSnapshot();
   setTimeout(() => {
+    if(!lumiSessionMatches(scope))return;
     const owner = session?.user?.id || null;
     if (event === "SIGNED_OUT" || (event === "SIGNED_IN" && (!owner || owner !== sidebarOwner))) {
       sidebarEpoch++;
