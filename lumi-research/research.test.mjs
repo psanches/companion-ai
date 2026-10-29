@@ -117,3 +117,25 @@ test('valid first result, HTTP failures and incomplete outputs do not trigger an
 test('research explicitly disables Responses application storage',async()=>{
  let body;await researchNow({question:'Search public health news',authorized:true,apiKey:'synthetic',fetcher:async(url,options)=>{body=JSON.parse(options.body);return Response.json({status:'completed',output:[]});}});assert.equal(body.store,false);
 });
+
+test('a Bauru citation never authorizes an unrelated or unverified official warning',async()=>{
+ for(const answer of ['Bauru: 28 °C. A Defesa Civil emitiu alerta para Curitiba.', 'Bauru: sem alertas oficiais hoje.', 'Bauru: INMET confirma risco laranja.', 'Bauru: no official warnings today.']){
+  let calls=0;
+  const result=await researchNow({question:'Tempo em Bauru hoje',authorized:true,apiKey:'synthetic',fetcher:async()=>{
+   calls++;return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:answer,annotations:[{type:'url_citation',url:'https://example.org/forecast/bauru'}]}]}]});
+  }});
+  assert.equal(calls,2);assert.equal(result.status,'unverified');assert.deepEqual(result.citations,[]);assert.doesNotMatch(result.answer,/Curitiba|28|laranja/);
+ }
+});
+
+test('weather requires every cited page to identify the requested city; a clean retry replaces the entire rejected answer',async()=>{
+ for(const recover of [false,true]){
+  let calls=0;
+  const result=await researchNow({question:'Weather Bauru',authorized:true,apiKey:'synthetic',fetcher:async()=>{
+   calls++;const clean=recover&&calls===2;
+   return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:clean?'Bauru: 25 °C.':'Bauru: 25 °C; Curitiba: 15 °C.',annotations:[{type:'url_citation',url:'https://example.org/forecast/bauru'},...clean?[]:[{type:'url_citation',url:'https://example.org/forecast/curitiba'}]]}]}]});
+  }});
+  assert.equal(calls,2);assert.equal(result.status,recover?'complete':'unverified');assert.doesNotMatch(result.answer,/Curitiba/);
+  if(recover)assert.deepEqual(result.citations,[{url:'https://example.org/forecast/bauru',title:'https://example.org/forecast/bauru'}]);
+ }
+});

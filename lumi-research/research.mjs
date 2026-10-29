@@ -5,6 +5,13 @@ import {runtimeCompanionInstructions,removeUnsolicitedOffers} from '../lumi-ativ
  * Inject fetcher, API key, and authorization at the server boundary.
  */
 import {requestedWeatherCity,weatherSearchLocation,mentionsCity,hasCitySource,isWeatherQuestion} from './weather-location.mjs';
+// A forecast citation cannot establish an official warning. Until a dedicated
+// warning verifier checks the bulletin's area and validity, keep warnings out
+// of the forecast answer, including claims that no warning exists.
+export function hasWeatherWarningClaim(text) {
+  const normalized=String(text).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  return /\b(?:alertas?|avisos?|advertencias?|warnings?|watches|alerts?|emergencia|emergency|defesa civil|civil defense|inmet)\b/.test(normalized);
+}
 const MAX_QUESTION = 1200;
 export function validateResearchQuestion(question) {
   if (typeof question !== 'string' || !question.trim() || question.length > MAX_QUESTION) {
@@ -44,7 +51,7 @@ export async function researchNow({ question, apiKey, fetcher, authorized, maxOu
       max_tool_calls: 3,
       max_output_tokens: tokenLimit,
       input: [
-        { role: 'developer', content: runtimeCompanionInstructions(now,language)+'\nAnswer this research question only. Search now and cite supporting web pages inline using URL citation annotations. Keep the answer under 150 words. Report source update dates when present, and explicitly say when those dates could not be verified. Use specific pages supporting each claim; for weather and alerts include the location and validity period supported by the source. Do not infer an official warning from a general forecast or homepage. Never offer reminders, monitoring or future follow-ups.'+(weather?' For weather, search public forecast web pages, not weather cards or widgets. Use Celsius, give a brief forecast, and omit hourly tables. Only mention an official alert when its specific cited page supports its location and validity period.':'')+(city?' The only forecast location is '+city+'. Search specifically for this city. Begin the answer with this city name. Cite a city-specific forecast page whose URL or title identifies this city. Do not list forecasts for other cities or substitute nearby cities.':'' )+(attempt?' The preceding attempt could not be verified. Run a fresh web search for specific supporting pages and include inline URL citations. Do not repeat an uncited answer, create URLs, or use a weather widget.':'') },
+        { role: 'developer', content: runtimeCompanionInstructions(now,language)+'\nAnswer this research question only. Search now and cite supporting web pages inline using URL citation annotations. Keep the answer under 150 words. Report source update dates when present, and explicitly say when those dates could not be verified. Use specific pages supporting each claim; for weather and alerts include the location and validity period supported by the source. Do not infer an official warning from a general forecast or homepage. Never offer reminders, monitoring or future follow-ups.'+(weather?' For weather, search public forecast web pages, not weather cards or widgets. Use Celsius, give a brief forecast, and omit hourly tables. Only use citations identifying the requested city. Do not discuss official alerts, warnings, watches or their absence: this forecast route cannot independently verify warning bulletins. If the user asks about a warning, say only that this route cannot verify it, without asserting whether a warning exists.':'')+(city?' The only forecast location is '+city+'. Search specifically for this city. Begin the answer with this city name. Cite a city-specific forecast page whose URL or title identifies this city. Do not list forecasts for other cities or substitute nearby cities.':'' )+(attempt?' The preceding attempt could not be verified. Run a fresh web search for specific supporting pages and include inline URL citations. Do not repeat an uncited answer, create URLs, or use a weather widget.':'') },
         { role: 'user', content: input }
       ]
     })
@@ -74,6 +81,10 @@ export async function researchNow({ question, apiKey, fetcher, authorized, maxOu
   if(city&&(!mentionsCity(text,city)||!hasCitySource(citations,city)||[...text.matchAll(/^#{1,4}\s*(?:Clima em|Weather (?:in|for))\s+([^\n:]+)/gmi)].some(m=>!mentionsCity(m[1],city)))){
     if(attempt===0)continue;
     return {status:'unverified',answer:(language==='en'?'I could not verify the forecast for ':'Não consegui confirmar a previsão para ')+city+'.',citations:[]};
+  }
+  if(weather&&(hasWeatherWarningClaim(text)||citations.some(c=>!hasCitySource([c],city)))){
+    if(attempt===0)continue;
+    return {status:'unverified',answer:language==='en'?'I could not verify a forecast restricted to the requested city.':'Não consegui verificar uma previsão restrita à cidade solicitada.',citations:[]};
   }
   return { status: 'complete', answer: removeUnsolicitedOffers(text), citations:[...new Map(citations.map(c=>[c.url,c])).values()],researchedAt };
   }
