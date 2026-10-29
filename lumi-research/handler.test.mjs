@@ -12,30 +12,30 @@ const mockFetch=async(url,options)=>{
  throw Error('unexpected upstream');
 };
 test('without limiter, fail closed before any research',async()=>{
- const handler=createLumiResearchHandler({fetcher:mockFetch});
+ const handler=createLumiResearchHandler({reserve:async()=>{},fetcher:mockFetch});
  const r=await handler(req(),{LUMI_RESEARCH_OPENAI_API_KEY:'server-key'});
  assert.equal(r.status,503);
 });
 test('authenticated research uses limiter keyed by verified user ID',async()=>{
  let key;
- const handler=createLumiResearchHandler({fetcher:mockFetch});
+ const handler=createLumiResearchHandler({reserve:async()=>{},fetcher:mockFetch});
  const r=await handler(req(),{LUMI_RESEARCH_OPENAI_API_KEY:'server-key',LUMI_RESEARCH_RATE_LIMIT:{limit:async({key:k})=>{key=k;return {success:true};}}});
  assert.equal(r.status,200);assert.equal(key,'verified-user');
  const body=await r.json();assert.equal(body.status,'complete');assert.equal(body.citations[0].url,'https://www.who.int/');
 });
 test('limit exhaustion blocks API call and returns 429',async()=>{
  let apiCalls=0;
- const handler=createLumiResearchHandler({fetcher:async(url,options)=>{if(url.endsWith('/auth/v1/user'))return Response.json({id:'verified-user'});apiCalls++;throw Error('should not call OpenAI');}});
+ const handler=createLumiResearchHandler({reserve:async()=>{},fetcher:async(url,options)=>{if(url.endsWith('/auth/v1/user'))return Response.json({id:'verified-user'});apiCalls++;throw Error('should not call OpenAI');}});
  const r=await handler(req(),{LUMI_RESEARCH_OPENAI_API_KEY:'server-key',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>({success:false})}});
  assert.equal(r.status,429);assert.equal(apiCalls,0);
 });
 
 
-test('each valid research request verifies identity once; foreign routes and origins do not consume the limiter',async()=>{let verifies=0,limits=0;const handler=createLumiResearchHandler({fetcher:async(url,opts)=>{if(url.endsWith('/auth/v1/user'))verifies++;return mockFetch(url,opts);}});const env={LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>{limits++;return {success:true};}}};assert.equal((await handler(req(),env)).status,200);assert.equal(verifies,1);assert.equal(limits,1);const foreign=new Request(origin+'/research',{method:'POST',headers:{origin:'https://evil.example'},body:'{}'});assert.equal((await handler(foreign,env)).status,403);assert.equal(limits,1);assert.equal(await handler(new Request(origin+'/other'),env),null);});
+test('each valid research request verifies identity once; foreign routes and origins do not consume the limiter',async()=>{let verifies=0,limits=0;const handler=createLumiResearchHandler({reserve:async()=>{},fetcher:async(url,opts)=>{if(url.endsWith('/auth/v1/user'))verifies++;return mockFetch(url,opts);}});const env={LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>{limits++;return {success:true};}}};assert.equal((await handler(req(),env)).status,200);assert.equal(verifies,1);assert.equal(limits,1);const foreign=new Request(origin+'/research',{method:'POST',headers:{origin:'https://evil.example'},body:'{}'});assert.equal((await handler(foreign,env)).status,403);assert.equal(limits,1);assert.equal(await handler(new Request(origin+'/other'),env),null);});
 
 test('Weather today succeeds under Worker redirect constraints after server identity verification',async()=>{
  let verified=0,limited=0,research=0;
- const handler=createLumiResearchHandler({fetcher:async(url,options)=>{
+ const handler=createLumiResearchHandler({reserve:async()=>{},fetcher:async(url,options)=>{
   if(options.redirect==='error')throw new TypeError('Unsupported redirect mode');
   assert.equal(options.redirect,'manual');
   if(url.endsWith('/auth/v1/user')){
@@ -51,7 +51,7 @@ test('Weather today succeeds under Worker redirect constraints after server iden
 
 test('chat recovers an uncited weather response through authenticated research and stores only the cited result',async()=>{
  let apiCalls=0,limits=0,verifies=0,saved;
- const research=createLumiResearchHandler({fetcher:async(url,options)=>{
+ const research=createLumiResearchHandler({reserve:async()=>{},fetcher:async(url,options)=>{
   assert.equal(options.redirect,'manual');
   if(url.endsWith('/auth/v1/user')){verifies++;return Response.json({id:'verified-user'});}
   assert.equal(url,'https://api.openai.com/v1/responses');apiCalls++;
@@ -70,7 +70,7 @@ test('chat recovers an uncited weather response through authenticated research a
 
 test('rain and weather follow-ups search directly using only the owner city from personal memory',async()=>{
  const apiQuestions=[],history=[];
- const research=createLumiResearchHandler({fetcher:async(url,options)=>{
+ const research=createLumiResearchHandler({reserve:async()=>{},fetcher:async(url,options)=>{
   if(url.endsWith('/auth/v1/user'))return Response.json({id:'verified-user'});
   apiQuestions.push(JSON.parse(options.body).input[1].content);
   const city=requestedWeatherCity(apiQuestions.at(-1));
@@ -91,7 +91,7 @@ test('rain and weather follow-ups search directly using only the owner city from
 
 test('missing location asks once without a search; a bare city reply supplies the target and persists as context',async()=>{
  let history=[],apiCalls=0;
- const research=createLumiResearchHandler({fetcher:async(url,options)=>{
+ const research=createLumiResearchHandler({reserve:async()=>{},fetcher:async(url,options)=>{
   if(url.endsWith('/auth/v1/user'))return Response.json({id:'verified-user'});
   apiCalls++;assert.match(JSON.parse(options.body).input[1].content,/Cidade da previsão: Bauru/);
   return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Bauru: previsão confirmada.',annotations:[{type:'url_citation',url:'https://example.org/forecast/bauru'}]}]}]});
@@ -115,8 +115,13 @@ test('the observed weather preference uses the residence memory and does not sea
 
 test('temporary authentication outage is 503 rather than an invalid session and consumes no search quota',async()=>{
  for(const status of [401,503,429]){let apiCalls=0,limits=0;
-  const handler=createLumiResearchHandler({fetcher:async(url)=>{if(url.endsWith('/auth/v1/user'))return new Response(null,{status});apiCalls++;throw Error('No AI calls expected');}});
+  const handler=createLumiResearchHandler({reserve:async()=>{},fetcher:async(url)=>{if(url.endsWith('/auth/v1/user'))return new Response(null,{status});apiCalls++;throw Error('No AI calls expected');}});
   const response=await handler(req(),{LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>{limits++;return {success:true};}}});
   assert.equal(response.status,status===401?401:503);assert.equal(apiCalls,0);assert.equal(limits,0);assert.doesNotMatch(await response.text(),/long-valid-token|sb_publishable/);
  }
+});
+
+test('central model budget denial returns 429 before contacting the model provider',async()=>{
+ let provider=0;const handler=createLumiResearchHandler({reserve:async()=>{throw Object.assign(Error('Limite de uso da IA atingido.'),{code:'LUMI_MODEL_LIMIT',status:429});},fetcher:async url=>{if(url.endsWith('/auth/v1/user'))return Response.json({id:'alice'});provider++;throw Error('No model call expected');}});
+ const response=await handler(req(),{LUMI_RESEARCH_OPENAI_API_KEY:'synthetic',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>({success:true})}});assert.equal(response.status,429);assert.equal(provider,0);assert.equal((await response.json()).status,'limited');
 });

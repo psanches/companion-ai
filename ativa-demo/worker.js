@@ -1,3 +1,4 @@
+import {internalBudget,reserveInteractiveBudget} from './budget-internal.mjs';
 import {records,questions} from './public/data.js';
 const encoder=new TextEncoder();
 const security={'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src blob:; object-src blob:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"};
@@ -10,7 +11,7 @@ export async function issueSession(secret,now=Date.now()){const body=b64(encoder
 export async function validSession(request,secret,now=Date.now()){if(!secret||secret.length<20)return false;try{const value=request.headers.get('cookie')?.match(/(?:^|;\s*)ativa_session=([^;]+)/)?.[1];const parts=value.split('.');if(parts.length!==2)return false;const [body,sig]=parts;const claims=JSON.parse(new TextDecoder().decode(unb64(body)));return Number.isFinite(claims.exp)&&claims.exp>now&&claims.exp<=now+4*3600000&&await crypto.subtle.verify('HMAC',await key(secret),unb64(sig),encoder.encode(body));}catch{return false;}}
 export class DemoBudget {
  constructor(state,env){this.state=state;this.env=env;}
- async fetch(request){const {kind,id,reply}=await request.json();const day=new Date().toISOString().slice(0,10);const configured=Number(this.env.DAILY_REQUEST_LIMIT);const max=Number.isSafeInteger(configured)&&configured>0?Math.min(configured,50):50;const limit=kind==='login'?100:max;let allowed=false;let cached;
+ async fetch(request){const body=await request.json();if(body.kind==='interactive-model')return reserveInteractiveBudget(this.state,body);const {kind,id,reply}=body;const day=new Date().toISOString().slice(0,10);const configured=Number(this.env.DAILY_REQUEST_LIMIT);const max=Number.isSafeInteger(configured)&&configured>0?Math.min(configured,50):50;const limit=kind==='login'?100:max;let allowed=false;let cached;
  await this.state.storage.transaction(async tx=>{
  const previous=await tx.get('budget');const current=previous?.day===day?previous:{day,counters:{},cache:{}};
  if(kind==='cache'){cached=current.cache[id];allowed=true;return;}
@@ -24,6 +25,7 @@ export class DemoBudget {
 async function budget(env,kind,id,reply,partition='synthetic-demo-global'){const stub=env.BUDGET.get(env.BUDGET.idFromName(partition));return stub.fetch(new Request('https://budget.internal',{method:'POST',body:JSON.stringify({kind,id,reply})}));}
 export async function handle(request,env,fetcher=fetch){const url=new URL(request.url);const path=url.pathname;
  if(env.DEMO_MODE!=='synthetic-only')return json({error:'Demonstração indisponível.'},503);
+ if(path==='/internal/lumi-budget')return internalBudget(request,env);
  // No fallthrough to Lumi, medical routes, passkeys or other APIs.
  if(path==='/medical'||path.startsWith('/medical/')||path==='/api'||path.startsWith('/api/')||path.startsWith('/history')||path.startsWith('/memory')||path.startsWith('/chat'))return json({error:'MEDICAL_RECORDS_BLOCKED'},403);
  if(path.startsWith('/demo-api/')){

@@ -65,6 +65,12 @@ jobs:
         with:
           name: frontend-validation-${{ github.sha }}
           path: frontend/test-results/
+      - name: Configure and verify private model budget before enabling it
+        if: contains(github.event.head_commit.message, '[model-budget-setup]')
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
+        run: node lumi-ativa-integration/configure-model-budget.mjs
       - name: Read-only preflight deployment history
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}

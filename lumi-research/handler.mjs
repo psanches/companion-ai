@@ -1,9 +1,10 @@
+import {reserveModelUsage} from '../lumi-ativa-integration/model-budget.mjs';
 import {createResearchRoute} from './route.mjs';
 import {createSupabaseVerifier} from './supabase-auth.mjs';
 
 // Development-only assembly. Import into the preserved Worker wrapper only
 // after deployment bindings and rate limits have been reviewed.
-export function createLumiResearchHandler({fetcher=fetch}={}) {
+export function createLumiResearchHandler({fetcher=fetch,reserve=reserveModelUsage}={}) {
   const verifyToken=createSupabaseVerifier({fetcher});
   const publicAuth={SUPABASE_URL:'https://hjdrnxqvmpwfztlrqknp.supabase.co',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_qfhZHhgXfRq7Z3np65rF2w_WMqFWtfv'};
   const route=createResearchRoute({verifyToken,fetcher});
@@ -24,7 +25,7 @@ export function createLumiResearchHandler({fetcher=fetch}={}) {
       const limit=await env.LUMI_RESEARCH_RATE_LIMIT.limit({key:user.id});
       if (!limit?.success) return Response.json({status:'limited',answer:'Limite de pesquisas atingido. Tente novamente mais tarde.'},{status:429});
     } catch {return Response.json({status:'unavailable',answer:'Pesquisa temporariamente indisponível.'},{status:503});}
-    return createResearchRoute({verifyToken:async()=>user,fetcher})(request,env);
+    return createResearchRoute({verifyToken:async()=>user,fetcher:async(url,options)=>{if(url==='https://api.openai.com/v1/responses')await reserve(env,user.id,options);return fetcher(url,options);}})(request,env);
   };
 }
 

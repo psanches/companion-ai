@@ -32,8 +32,9 @@ export function createResearchRoute({ verifyToken, fetcher = fetch } = {}) {
       const result = await researchNow({question, authorized:true,apiKey:env?.LUMI_RESEARCH_OPENAI_API_KEY,fetcher,maxOutputTokens:600,language});
       return Response.json(result,{status:['complete','needs_location'].includes(result.status)?200:result.status==='unverified'?422:503,
         headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
-    } catch {
-      return Response.json({status:'failed',answer:'Pesquisa indisponível no momento.'},{status:503});
+    } catch(error) {
+      const limited=error?.code==='LUMI_MODEL_LIMIT';
+      return Response.json({status:limited?'limited':'failed',answer:limited?error.message:'Pesquisa indisponível no momento.'},{status:limited?429:error?.status||503});
     }
   };
 }
