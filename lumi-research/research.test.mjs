@@ -58,3 +58,13 @@ test('weather rejects homepage-only evidence, records search time, and distingui
  assert.equal((await researchNow({...options,fetcher:fetcher('https://example.org/')})).status,'unverified');
  const r=await researchNow({...options,fetcher:fetcher('https://example.org/forecast/bauru')});assert.equal(r.status,'complete');assert.equal(r.answer,'Previsão.');assert.equal(r.researchedAt,'2026-10-22T01:00:00.000Z');assert.match(payload.input[0].content,/2026-10-21/);assert.match(payload.input[0].content,/source update dates/);assert.equal(payload.max_output_tokens,600);
 });
+
+test('research refuses upstream redirects without forwarding the API credential',async()=>{
+ let calls=0;
+ const result=await researchNow({question:'Weather today in Bauru',authorized:true,apiKey:'test',fetcher:async(url,options)=>{
+  calls++;assert.equal(url,'https://api.openai.com/v1/responses');
+  assert.equal(options.redirect,'manual');
+  return new Response(null,{status:307,headers:{location:'https://foreign.example/'}});
+ }});
+ assert.equal(result.status,'failed');assert.equal(calls,1);
+});

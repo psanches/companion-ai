@@ -34,9 +34,10 @@ test('each valid research request verifies identity once; foreign routes and ori
 test('Weather today succeeds under Worker redirect constraints after server identity verification',async()=>{
  let verified=0,limited=0,research=0;
  const handler=createLumiResearchHandler({fetcher:async(url,options)=>{
+  if(options.redirect==='error')throw new TypeError('Unsupported redirect mode');
+  assert.equal(options.redirect,'manual');
   if(url.endsWith('/auth/v1/user')){
-   if(options.redirect==='error')throw new TypeError('Unsupported redirect mode');
-   assert.equal(options.redirect,'manual');verified++;
+   verified++;
    return Response.json({id:'verified-user'});
   }
   research++;return Response.json({output:[{type:'web_search_call',status:'completed'},{type:'message',content:[{type:'output_text',text:'Weather result',annotations:[{type:'url_citation',url:'https://www.climatempo.com.br/previsao-do-tempo/cidade/558/bauru-sp',title:'Bauru forecast'}]}]}]});

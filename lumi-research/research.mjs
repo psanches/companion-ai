@@ -27,7 +27,8 @@ export async function researchNow({ question, apiKey, fetcher, authorized, maxOu
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     signal:AbortSignal.timeout(30000),
-    redirect:'error',
+    // Cloudflare Workers requires manual; non-2xx responses fail below.
+    redirect:'manual',
     body: JSON.stringify({
       model: 'gpt-4.1-mini',
       tools: [{ type: 'web_search' }],
