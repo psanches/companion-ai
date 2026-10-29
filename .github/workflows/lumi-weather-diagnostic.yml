@@ -1,0 +1,36 @@
+name: Lumi weather research diagnostic
+on:
+  push:
+    branches: [feature/pc-android-permanent-fix-20261016]
+    paths: [.github/workflows/lumi-weather-diagnostic.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: One bounded public weather query with redacted structural diagnostics
+        run: |
+          node --input-type=module <<'NODE'
+          import {researchNow} from './lumi-research/research.mjs';
+          if (!process.env.OPENAI_API_KEY) throw Error('Missing existing research credential');
+          const result = await researchNow({
+            question:'Qual a previsão do tempo para Bauru, SP, hoje?',
+            authorized:true, apiKey:process.env.OPENAI_API_KEY,
+            fetcher:async(url,options)=>{
+              const response=await fetch(url,options);
+              const data=await response.clone().json();
+              console.log(JSON.stringify({httpStatus:response.status,status:data.status,errorCode:data.error?.code,errorType:data.error?.type,incomplete:data.incomplete_details,output:(data.output||[]).map(item=>({type:item.type,status:item.status,actionType:item.action?.type,sources:item.action?.sources?.length,content:(item.content||[]).map(part=>({type:part.type,textLength:part.text?.length,annotations:(part.annotations||[]).map(a=>({type:a.type,https:typeof a.url==='string'&&a.url.startsWith('https://')}))}))}))}));
+              return response;
+            }
+          });
+          console.log(JSON.stringify({researchStatus:result.status,citationCount:result.citations?.length,answer:result.status==='complete'?result.answer:undefined}));
+          if(result.status!=='complete')process.exitCode=1;
+          NODE
