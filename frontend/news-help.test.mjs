@@ -22,7 +22,7 @@ test('packaged help opens and closes without calling research or changing stored
 });
 test('help matches active editorial policy, source allowlists and finite update window',()=>{
  const dom=fixture();try{const d=dom.window.document,text=d.getElementById('lumiNewsHelpDialog').textContent;
- assert.match(text,new RegExp('até '+NEWS_PREVIEW_POLICY.maxItems+' notícias'));assert.match(text,new RegExp('máximo '+NEWS_PREVIEW_POLICY.maxAgeDays+' dias'));assert.match(text,new RegExp('mínima de '+NEWS_PREVIEW_POLICY.minScore+' em 10'));
+ assert.match(text,new RegExp('de '+NEWS_PREVIEW_POLICY.minItems+' a '+NEWS_PREVIEW_POLICY.maxItems+' matérias completas'));assert.match(text,new RegExp('máximo '+NEWS_PREVIEW_POLICY.maxAgeDays+' dias'));assert.match(text,new RegExp('mínima de '+NEWS_PREVIEW_POLICY.minScore+' em 10'));
  for(const source of [...PARKINSON_SOURCE_CATALOG.map(x=>x.domain),...GENERAL_SOURCES])assert.ok([...d.querySelectorAll('#lumiNewsHelpDialog li')].some(x=>x.textContent.endsWith(source)),source);
  assert.equal(d.querySelectorAll('#lumiNewsHelpDialog li').length,PARKINSON_SOURCE_CATALOG.length+GENERAL_SOURCES.length);
  assert.match(NEWS_WEEK.start,/2026-10-28T00:00:00-03:00/);assert.match(NEWS_WEEK.end,/2026-11-04T00:00:00-03:00/);assert.equal(HEALTH_NEWS_CRON_UTC,'0 9 * * *');assert.match(text,/28\/10\/2026/);assert.match(text,/04\/11\/2026/);assert.match(text,/as 6h/);

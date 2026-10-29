@@ -4,7 +4,7 @@ const day='2026-10-24',evidence='National guidance applies to people throughout 
 const story=(id,host='www.nih.gov',text=evidence,date=day)=>({url:`https://${host}/news/${id}`,publishedAt:date,ageDays:(Date.parse(day)-Date.parse(date))/86400000,source:host,region:host.endsWith('.br')?'Brasil':'Internacional',sourceText:text,kind:'noticia'});
 const review=(id,extra={})=>({id,scope:'national',localFocus:false,scopeEvidence:evidence,importance:8,reason:'Orientação com alcance nacional',topicKey:'unique-'+id,title:'Notícia verificada '+id,summary:'Resumo fiel da matéria. Explica seu alcance.',...extra});
 test('official Parkinson comes first regardless of general-news score, maximum ten, dates visible',()=>{
- const stories=Array.from({length:15},(_,i)=>story(i));stories.push(story('pd','www.michaeljfox.org','Parkinson research. '+evidence));
+ const stories=Array.from({length:15},(_,i)=>story(i,['www.nih.gov','www.who.int','www.paho.org','www.fiocruz.br','www.nature.com','www.bbc.com'][i%6]));stories.push(story('pd','www.michaeljfox.org','Parkinson research. '+evidence));
  const reviews=stories.map((s,i)=>review(i,{importance:i===15?7:10})),items=selectEditorialStories(stories,reviews,day);
  assert.equal(items.length,10);assert.equal(items[0].priority,0);assert.match(items[0].url,/michaeljfox/);assert.ok(items.every(s=>s.dateVerified&&s.publishedAt===day&&!('sourceText'in s)));
 });
@@ -126,4 +126,32 @@ test('daily exclusions prevent opening old URLs and suppress already-covered top
  };
  const result=await generateHealthNewsPreview({OPENAI_API_KEY:'fixture'},new Date(day+'T12:00:00Z'),transport,{excludeUrls:[recent],excludeTopics:['previous-topic']});
  assert.deepEqual(opened,[fresh]);assert.equal(result.items.length,0);assert.equal(api,3);
+});
+
+
+test('candidate balancing gives searched articles first place and interleaves organisations before truncation',async()=>{
+ const {balancedNewsCandidates}=await import('./health-news-preview.mjs');
+ const searched=[{url:'https://www.parkinson.org/news/new'},{url:'https://www.who.int/news/new'}],direct=Array.from({length:15},(_,i)=>({url:'https://www.michaeljfox.org/news/old-'+i}));
+ const selected=balancedNewsCandidates(searched,direct,3);
+ assert.deepEqual(selected.map(x=>x.url),[searched[0].url,searched[1].url,direct[0].url]);
+ assert.equal(new Set(balancedNewsCandidates([searched[0],searched[0]],[],10).map(x=>x.url)).size,1);
+});
+test('selection limits each organisation to two including NIH subdomains',async()=>{
+ const stories=Array.from({length:8},(_,i)=>story(i,i%2?'www.nih.gov':'www.ninds.nih.gov'));
+ const items=selectEditorialStories(stories,stories.map((_,i)=>review(i)),day);assert.equal(items.length,2);
+});
+
+test('publication discovery supplements sparse results using other organisations within a four-call budget',async()=>{
+ const hosts=['www.parkinson.org','www.nih.gov','www.who.int','www.fiocruz.br','www.paho.org','www.nature.com'],urls=hosts.map((host,i)=>'https://'+host+'/news/fresh-'+i);let api=0;const requests=[];
+ const payload=items=>({status:'completed',output:[{type:'web_search_call',action:{sources:urls.map(url=>({url}))}},{content:[{type:'output_text',text:JSON.stringify({items})}]}]});
+ const result=await generateHealthNewsPreview({OPENAI_API_KEY:'synthetic'},new Date(day+'T12:00:00Z'),async(url,options)=>{
+  if(url==='https://api.openai.com/v1/responses'){
+   const body=JSON.parse(options.body);requests.push(body);api++;
+   if(api===1)return Response.json(payload([{url:urls[0]}]));if(api===2)return Response.json(payload([{url:urls[1]}]));if(api===3)return Response.json(payload(urls.slice(2).map(url=>({url}))));
+   assert.equal(api,4);const inputs=JSON.parse(body.input[1].content);return Response.json(payload(Object.fromEntries(inputs.map((s,id)=>[s.url,review(id,{scope:'global',evidenceId:0,summary:Array(90).fill('fictício').join(' ')})]))));
+  }
+  if(!urls.includes(url))return new Response('<h1>Empty index</h1>',{headers:{'content-type':'text/html'}});
+  return new Response('<meta property="article:published_time" content="'+day+'"><h1>Parkinson prevention research</h1><p>'+evidence.repeat(5)+'</p>',{headers:{'content-type':'text/html'}});
+ },{fillMinimum:true});
+ assert.equal(result.items.length,6);assert.equal(result.verification.apiRequests,4);assert.ok(result.verification.sourceRequests<=80);assert.ok(!requests[2].tools[0].filters.allowed_domains.includes('parkinson.org'));assert.ok(!requests[2].tools[0].filters.allowed_domains.includes('nih.gov'));
 });
