@@ -1,11 +1,11 @@
 import {createCalendarVerifier} from '../lumi-calendar/calendar-auth.mjs';
 import {createLumiResearchHandler} from '../lumi-research/handler.mjs';
 import {removeUnsolicitedOffers} from './companion-instructions.mjs';
-import {resolveWeatherCity,isBareCityReply,asksWeatherCity} from '../lumi-research/weather-location.mjs';
+import {resolveWeatherCity,isBareCityReply,asksWeatherCity,isWeatherQuestion} from '../lumi-research/weather-location.mjs';
 export {rememberedCity} from '../lumi-research/weather-location.mjs';
 const HOST='lumi-develop.psanchesnle.workers.dev';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
-export const isWeatherQuestion=text=>/\b(?:clima|weather|forecast|chover|chovendo|rain|raining)\b|previs[aã]o\s+(?:do\s+)?tempo|(?:como (?:est[aá]|vai estar)|qual[^?]{0,30})\s+o tempo|tempo\s+(?:hoje|amanh[aã]|em|para)\b|^(?:e\s+)?(?:o\s+)?tempo\s*\??$|(?:temperatura|temperature)\s+(?:hoje|amanh[aã]|em|para|in|today)\b/i.test(text);
+export {isWeatherQuestion} from '../lumi-research/weather-location.mjs';
 // Scheduling stays with the calendar wrapper; research uses its existing auth,
 // per-user limits and verified-source requirements.
 export function isResearchQuestion(text){

@@ -19,11 +19,11 @@ test('fails closed on invalid config, invalid token, errors, and invalid user',a
  assert.equal(await verify('short',env),null);
  assert.equal(await verify('long-access-token',{...env,SUPABASE_URL:'https://evil.example'}),null);
  assert.equal(calls,0);
- assert.equal(await verify('long-access-token',env),null);
+ await assert.rejects(verify('long-access-token',env),{code:'AUTH_SERVICE'});
  const denied=createSupabaseVerifier({fetcher:async()=>new Response(null,{status:401})});
  assert.equal(await denied('long-access-token',env),null);
  const down=createSupabaseVerifier({fetcher:async()=>{throw Error('private network error');}});
- assert.equal(await down('long-access-token',env),null);
+ await assert.rejects(down('long-access-token',env),{code:'AUTH_SERVICE'});
 });
 
 // Model the deployed Worker transport rather than Node fetch alone.
@@ -33,6 +33,6 @@ test('Worker-compatible validation rejects redirects without forwarding credenti
   calls++;assert.equal(options.redirect,'manual');
   return new Response(null,{status:302,headers:{location:'https://foreign.example/'}});
  }});
- assert.equal(await verify('long-access-token',env),null);
+ await assert.rejects(verify('long-access-token',env),{code:'AUTH_SERVICE'});
  assert.equal(calls,1);
 });

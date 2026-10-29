@@ -12,7 +12,7 @@ export function createResearchRoute({ verifyToken, fetcher = fetch } = {}) {
     const auth = request.headers.get('authorization') || '';
     if (!/^Bearer [^ ]+$/.test(auth)) return Response.json({error:'Sign in required'},{status:401});
     let user;
-    try { user = await verifyToken(auth.slice(7), env); } catch { return Response.json({error:'Sign in required'},{status:401}); }
+    try { user = await verifyToken(auth.slice(7), env); } catch { return Response.json({status:'unavailable',answer:'Não consegui verificar sua sessão agora. Tente novamente mais tarde.'},{status:503}); }
     if (!user?.id) return Response.json({error:'Sign in required'},{status:401});
     const len = Number(request.headers.get('content-length') || 0);
     if (len > 6000) return Response.json({error:'Request too large'},{status:413});

@@ -18,7 +18,7 @@ export function createLumiResearchHandler({fetcher=fetch}={}) {
     const authorization=request.headers.get('authorization')||'';
     if (!authorization.startsWith('Bearer ')) return route(request,env);
     const token=authorization.slice(7);
-    const user=await verifyToken(token,env);
+    let user;try{user=await verifyToken(token,env);}catch{return Response.json({status:'unavailable',answer:'Não consegui verificar sua sessão agora. Tente novamente mais tarde.'},{status:503});}
     if (!user?.id) return Response.json({error:'Sign in required'},{status:401});
     try {
       const limit=await env.LUMI_RESEARCH_RATE_LIMIT.limit({key:user.id});

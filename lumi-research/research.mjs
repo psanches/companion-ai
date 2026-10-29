@@ -4,7 +4,7 @@ import {runtimeCompanionInstructions,removeUnsolicitedOffers} from '../lumi-ativ
  * No credentials or user data are stored by this module.
  * Inject fetcher, API key, and authorization at the server boundary.
  */
-import {requestedWeatherCity,weatherSearchLocation,mentionsCity,hasCitySource} from './weather-location.mjs';
+import {requestedWeatherCity,weatherSearchLocation,mentionsCity,hasCitySource,isWeatherQuestion} from './weather-location.mjs';
 const MAX_QUESTION = 1200;
 export function validateResearchQuestion(question) {
   if (typeof question !== 'string' || !question.trim() || question.length > MAX_QUESTION) {
@@ -24,7 +24,7 @@ export async function researchNow({ question, apiKey, fetcher, authorized, maxOu
   }
   const tokenLimit = Number.isFinite(maxOutputTokens)?Math.min(800, Math.max(100, Math.floor(maxOutputTokens))):600;
   const researchedAt=now.toISOString();
-  const weather=/\b(?:clima|weather|forecast|chover|chovendo|rain|raining)\b|previs[aã]o\s+(?:do\s+)?tempo|(?:como (?:est[aá]|vai estar)|qual[^?]{0,30})\s+o tempo|tempo\s+(?:hoje|amanh[aã]|em|para)\b|(?:temperatura|temperature)\s+(?:hoje|amanh[aã]|em|para|in|today)\b/i.test(input);
+  const weather=isWeatherQuestion(input);
   const city=weather?requestedWeatherCity(input):null;
   if(weather&&!city)return {status:'needs_location',answer:language==='en'?'Which city should I check?':'Qual cidade você quer consultar?',citations:[]};
   // A weather card can contain text without URL annotations. Never display it

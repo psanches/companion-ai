@@ -40,3 +40,15 @@ test('other cities cannot pass as the requested Bauru forecast even with valid H
   assert.equal(calls,2);assert.equal(result.status,'unverified');assert.deepEqual(result.citations,[]);
  }
 });
+
+test('temporary weather city ends after a different user topic while explicit and immediate weather context still work',()=>{
+ const history=[{role:'user',content:'Qual o clima em Santos?'},{role:'assistant',content:'Previsão de Santos.'},{role:'user',content:'Como organizar minha rotina?'},{role:'assistant',content:'Vamos organizar.'}];
+ assert.equal(resolveWeatherCity('Vai chover hoje?',history,'Cidade: Bauru, SP'),'Bauru, SP');
+ assert.equal(resolveWeatherCity('Vai chover em Santos?',history,'Cidade: Bauru, SP'),'Santos');
+ assert.equal(resolveWeatherCity('Vai chover hoje?',history.slice(0,2),'Cidade: Bauru, SP'),'Santos');
+});
+test('weather classifier keeps duration and fever questions out of forecast research',async()=>{
+ const {isWeatherQuestion}=await import('./weather-location.mjs');
+ for(const value of ['Quanto tempo em pé devo ficar?','Quanto tempo em Bauru até a consulta?','Por quanto tempo esperar após Prolopa?','Minha temperatura corporal está alta, é febre?','How long should I stand?'])assert.equal(isWeatherQuestion(value),false,value);
+ for(const value of ['Qual o tempo em Bauru?','Vai chover hoje?','Quanto tempo vai chover?','E o tempo amanhã?','weather today in London'])assert.equal(isWeatherQuestion(value),true,value);
+});

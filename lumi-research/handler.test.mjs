@@ -112,3 +112,11 @@ test('the observed weather preference uses the residence memory and does not sea
  },{});
  const data=await response.json();assert.equal(data.researchStatus,'preference_acknowledged');assert.match(data.reply,/Usarei Bauru, SP/);assert.doesNotMatch(data.reply,/pedida outra cidade/);assert.equal(saved.at(-1).content,data.reply);
 });
+
+test('temporary authentication outage is 503 rather than an invalid session and consumes no search quota',async()=>{
+ for(const status of [401,503,429]){let apiCalls=0,limits=0;
+  const handler=createLumiResearchHandler({fetcher:async(url)=>{if(url.endsWith('/auth/v1/user'))return new Response(null,{status});apiCalls++;throw Error('No AI calls expected');}});
+  const response=await handler(req(),{LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>{limits++;return {success:true};}}});
+  assert.equal(response.status,status===401?401:503);assert.equal(apiCalls,0);assert.equal(limits,0);assert.doesNotMatch(await response.text(),/long-valid-token|sb_publishable/);
+ }
+});

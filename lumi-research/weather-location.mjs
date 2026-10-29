@@ -33,6 +33,12 @@ export function requestedWeatherCity(text){
 }
 export const asksWeatherCity=text=>/qual cidade voc[eê] quer consultar|which city should I check/i.test(String(text||''));
 export const isBareCityReply=text=>Boolean(cleanCity(text))&&!/^(?:hello|hi|hey|ol[aá](?: lumi)?|oi(?: lumi)?|obrigad[oa]|thanks|thank you|bom dia|boa tarde|boa noite|sim|n[aã]o|yes|no)[.!?]*$/iu.test(text.trim());
+export function isWeatherQuestion(text){
+ const value=String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ if(/^cidade da previsao:/m.test(value)||/\b(?:weather|forecast|chover|chovendo|chuva|rain|raining|meteorologia)\b|previsao\s+(?:do\s+)?tempo/.test(value))return true;
+ if(/\b(?:quanto tempo|how long|tempo em pe|tempo de espera|temperatura corporal|body temperature|febre)\b/.test(value))return false;
+ return /\bclima\b|(?:como (?:esta|vai estar)|qual[^?]{0,30})\s+o tempo|tempo\s+(?:hoje|amanha|em|para)\b|^(?:e\s+)?(?:o\s+)?tempo\s*\??$|(?:temperatura|temperature)\s+(?:hoje|amanha|em|para|in|today)\b/.test(value);
+}
 export function resolveWeatherCity(text,history,memory){
  const explicit=requestedWeatherCity(text);if(explicit)return explicit;
  if(asksWeatherCity(history.at(-1)?.content)){const city=cleanCity(text);if(city)return city;}
@@ -41,9 +47,12 @@ export function resolveWeatherCity(text,history,memory){
   if(item?.role!=='user'||typeof item.content!=='string')continue;
   if(asksWeatherCity(history[index-1]?.content)){const city=cleanCity(item.content);if(city)return city;}
   const declared=rememberedCity(item.content);if(declared)return declared;
-  if(/\b(?:clima|tempo|weather|forecast|chover|chovendo|temperatura|rain)\b/iu.test(item.content)){
+  if(isWeatherQuestion(item.content)){
    const city=requestedWeatherCity(item.content);if(city)return city;
+   continue;
   }
+  if(/^(?:e (?:amanh[ãa]|hoje)|sim|yes|aqui|pode(?: pesquisar| verificar| consultar)?)[.!? ]*$/iu.test(item.content.trim()))continue;
+  break; // A different user topic ends a temporary weather-city context.
  }
  return rememberedCity(memory);
 }

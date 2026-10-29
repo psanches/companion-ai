@@ -1,3 +1,4 @@
+export class ResearchAuthUnavailable extends Error {constructor(){super('Authentication service unavailable');this.code='AUTH_SERVICE';}}
 // Development-only Supabase session validation. The browser's claim is never
 // sufficient: each research request is verified against Supabase Auth.
 export function createSupabaseVerifier({fetcher = fetch} = {}) {
@@ -15,9 +16,10 @@ export function createSupabaseVerifier({fetcher = fetch} = {}) {
         redirect:'manual',
         signal:AbortSignal.timeout(7000)
       });
-      if (!response.ok) return null;
+      if (!response.ok) {if([401,403].includes(response.status))return null;throw new ResearchAuthUnavailable();}
       const user = await response.json();
-      return typeof user?.id === 'string' && user.id.length > 0 ? {id:user.id} : null;
-    } catch { return null; }
+      if(typeof user?.id!=='string'||!user.id)throw new ResearchAuthUnavailable();
+      return {id:user.id};
+    } catch { throw new ResearchAuthUnavailable(); }
   };
 }

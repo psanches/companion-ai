@@ -48,3 +48,19 @@ test('today requests and Calendar connection followups use real integration inst
   state.messages=[{role:'assistant',content:'Como está seu sono hoje?'}];calls.length=0;await getReply('Sim');assert.deepEqual(calls,['chat']);
   state.messages=[{role:'assistant',content:'Criar e confirmar evento hoje?'}];calls.length=0;await getReply('Sim');assert.deepEqual(calls,['chat']);
 });
+
+test('book recommendations remain ordinary chat while book an appointment opens event review',async()=>{
+ const source=patchCalendarApp(readFileSync(new URL('../app.js',import.meta.url),'utf8')),start=source.indexOf('async function getReply(text) {'),end=source.indexOf('\n  return data;\n}',start)+'\n  return data;\n}'.length,calls=[];
+ const getReply=new Function('authFetch','WORKER_URL','state','lumiCreateCalendarEvent',source.slice(start,end)+';return getReply;')(
+  async()=>{calls.push('chat');return Response.json({reply:'Chat'});},'https://lumi.test/',{messages:[]},async()=>{calls.push('create');return {reply:'Review'};});
+ for(const text of ['Can you recommend a book about Parkinson?','A book about hospital appointments','What is my schedule like?']){calls.length=0;await getReply(text);assert.deepEqual(calls,['chat'],text);}
+ for(const text of ['Book an appointment tomorrow','Schedule a meeting tomorrow','Agende uma consulta amanhã']){calls.length=0;await getReply(text);assert.deepEqual(calls,['create'],text);}
+});
+test('tomorrow and explicit dates use the exact day reader including year boundaries',async()=>{
+ const source=patchCalendarApp(readFileSync(new URL('../app.js',import.meta.url),'utf8')),start=source.indexOf('async function getReply(text) {'),end=source.indexOf('\n  return data;\n}',start)+'\n  return data;\n}'.length,calls=[];
+ class FixedDate extends Date{constructor(value){super(arguments.length?value:'2026-12-31T23:30:00-03:00');}}
+ const getReply=new Function('Date','authFetch','WORKER_URL','state','lumiShowCalendarDay',source.slice(start,end)+';return getReply;')(
+  FixedDate,async()=>{throw Error('Must not query unfiltered upcoming events');},'https://lumi.test/',{messages:[]},async(...args)=>calls.push(args));
+ for(const [text,day]of [['Minha agenda de amanhã','2027-01-01'],['My calendar tomorrow','2027-01-01'],['Minha agenda de 05/01/2027','2027-01-05']]){await getReply(text);assert.equal(calls.at(-1)[0],null);assert.equal(calls.at(-1)[4],day);}
+ const count=calls.length;assert.match((await getReply('Minha agenda de 31/02/2027')).reply,/Data inválida/);assert.equal(calls.length,count);
+});
