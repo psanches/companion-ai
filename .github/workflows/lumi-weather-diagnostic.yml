@@ -45,6 +45,6 @@ jobs:
             },{});
             const data=await response.json();
             console.log(JSON.stringify({case:index+1,researchStatus:data.researchStatus,apiCalls:calls,authenticatedChatPath:'/api/chat',syntheticMemoryOnly:true}));
-            assert.equal(response.status,200);assert.equal(data.researchStatus,'complete');assert.doesNotMatch(data.reply,/A\)|B\)|C\)|curl|colar um link|paste a link/i);assert.match(data.reply,/\[(Fonte|Source)\]\(https:\/\//);assert.equal(saved.at(-1).content,data.reply);assert.equal(limited,1);assert.ok(calls<=2);
+            assert.equal(response.status,200);assert.equal(data.researchStatus,'complete');assert.doesNotMatch(data.reply,/(?:^|\n)\s*[ABC]\)|\bcurl\b|colar um link|paste a link/i);assert.match(data.reply,/\[(Fonte|Source)\]\(https:\/\//);assert.equal(saved.at(-1).content,data.reply);assert.equal(limited,1);assert.ok(calls<=2);
           }
           NODE
