@@ -67,6 +67,12 @@ export function withCompanionChat(original,{verify=createCalendarVerifier(),rese
       try{await env.Memory.put('history:user:'+user.id,JSON.stringify(cleanedHistory(history)));}catch{return json({error:'Não consegui salvar a conversa agora.'},503);}
       return json({reply,history:cleanedHistory(history),researchStatus:'needs_location'});
      }
+     if(/^(?:s[oó]|somente|apenas)\s+(?:apresentar|mostrar|consultar)[\s\S]{0,80}\b(?:clima|tempo|previs[aã]o)\b[\s\S]{0,80}\bcidade\b/iu.test(text)){
+      const reply=english?'I will use '+city+' for weather unless you ask for another city.':'Usarei '+city+' para o clima, salvo quando você pedir outra cidade.';
+      history.push({role:'user',content:text},{role:'assistant',content:reply});
+      try{await env.Memory.put('history:user:'+user.id,JSON.stringify(cleanedHistory(history)));}catch{return json({error:'Não consegui salvar a conversa agora.'},503);}
+      return json({reply,history:cleanedHistory(history),researchStatus:'preference_acknowledged'});
+     }
      question='Cidade da previsão: '+city+'\n'+question;
     }
     if(question.length>1200)return json({error:'Resuma a pergunta para até 1.200 caracteres.'},400);

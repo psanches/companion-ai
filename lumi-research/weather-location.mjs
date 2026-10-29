@@ -1,8 +1,14 @@
 const states=new Set('AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' '));
 export const normalizedPlace=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const stateNames=Object.fromEntries([
+ ['Acre','AC'],['Alagoas','AL'],['Amapá','AP'],['Amazonas','AM'],['Bahia','BA'],['Ceará','CE'],['Distrito Federal','DF'],['Espírito Santo','ES'],['Goiás','GO'],['Maranhão','MA'],['Mato Grosso','MT'],['Mato Grosso do Sul','MS'],['Minas Gerais','MG'],['Pará','PA'],['Paraíba','PB'],['Paraná','PR'],['Pernambuco','PE'],['Piauí','PI'],['Rio de Janeiro','RJ'],['Rio Grande do Norte','RN'],['Rio Grande do Sul','RS'],['Rondônia','RO'],['Roraima','RR'],['Santa Catarina','SC'],['São Paulo','SP'],['Sergipe','SE'],['Tocantins','TO']
+].map(([name,code])=>[normalizedPlace(name),code]));
 function cleanCity(value){
  if(typeof value!=='string')return null;
  let city=value.trim().replace(/^["'*-]+\s*/, '').replace(/\s+(?:hoje|amanh[aã]|agora|today|tomorrow|esta semana|nesta semana)(?=\s|[?!.,]|$).*$/iu,'').replace(/[, ]+(?:Brasil|Brazil)\s*$/i,'').replace(/[.!?]+$/,'').trim();
+ const namedState=city.match(/^([^,]+),\s*([^,]+)$/u);
+ if(namedState&&stateNames[normalizedPlace(namedState[2])])city=namedState[1].trim()+', '+stateNames[normalizedPlace(namedState[2])];
+ if(/\b(?:outra cidade|outras cidades|esta cidade|essa cidade|pedida|apresentar|consultar|mostre|preferir|caso)\b/iu.test(city))return null;
  if(!/^[\p{L}][\p{L} '-]{1,60}(?:\s*[,/-]\s*[A-Z]{2}|\s*\([A-Z]{2}\))?$/iu.test(city))return null;
  if(/^(?:hoje|amanh[aã]|agora|today|tomorrow|casa|mim|voc[eê]|vez|chuva|tempo|cidade)\b/iu.test(city))return null;
  return city.replace(/\s*\(([A-Z]{2})\)$/iu,', $1').replace(/\s*[,/-]\s*([A-Z]{2})$/iu,', $1');
@@ -10,7 +16,7 @@ function cleanCity(value){
 export function rememberedCity(memory){
  if(typeof memory!=='string')return null;
  const patterns=[
-  /\b(?:cidade|city|localizaç[aã]o|location)(?:\s+(?:atual|registrada|de resid[eê]ncia))?\s*(?::|=|[ée]|como)\s*([^\n;.]{2,100})/giu,
+  /\b(?:local de resid[eê]ncia|local de moradia|resid[eê]ncia|cidade|city|localizaç[aã]o|location)(?:\s+(?:atual|registrada|de resid[eê]ncia))?\s*(?::|=|[ée]|como)\s*([^\n;.]{2,100})/giu,
   /\b(?:moro|mora|resido|reside|vivo|vive)\s+em\s+([^\n;.]{2,100})/giu
  ];
  for(const pattern of patterns)for(const match of memory.slice(0,20000).matchAll(pattern)){const city=cleanCity(match[1]);if(city)return city;}

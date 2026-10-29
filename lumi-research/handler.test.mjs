@@ -103,3 +103,12 @@ test('missing location asks once without a search; a bare city reply supplies th
  assert.equal((await ask('Bauru')).researchStatus,'complete');assert.equal(apiCalls,1);
  assert.equal((await ask('Vai chover amanhã?')).researchStatus,'complete');assert.equal(apiCalls,2);
 });
+
+test('the observed weather preference uses the residence memory and does not search for words as a city',async()=>{
+ let saved;
+ const chat=withCompanionChat({fetch(){throw Error('Preference must not fall through');}},{verify:async()=>({id:'verified-user'}),research:async()=>{throw Error('A preference is not a new weather query');}});
+ const response=await chat.fetch(new Request(origin+'/chat',{method:'POST',headers:{origin,authorization:'Bearer synthetic-session','content-type':'application/json'},body:JSON.stringify({message:'So apresentar clima para esta cidade ou se for pedida outra cidade'})}),{
+  Memory:{get:async key=>key.startsWith('memory:')?'Local de residência: Bauru, São Paulo, Brasil':[],put:async(key,value)=>{saved=JSON.parse(value);}}
+ },{});
+ const data=await response.json();assert.equal(data.researchStatus,'preference_acknowledged');assert.match(data.reply,/Usarei Bauru, SP/);assert.doesNotMatch(data.reply,/pedida outra cidade/);assert.equal(saved.at(-1).content,data.reply);
+});

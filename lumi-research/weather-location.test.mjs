@@ -7,6 +7,14 @@ test('city memory handles natural language and common formats without including 
  for(const memory of ['Cidade: Bauru, SP\nPRIVATE HEALTH','Moro em Bauru, SP. PRIVATE HEALTH','Localização registrada como Bauru, SP.','Location: Bauru, SP, Brazil','Cidade: Bauru (SP)'])assert.equal(rememberedCity(memory),'Bauru, SP',memory);
  assert.equal(rememberedCity('Localização da dor: braço. PRIVATE HEALTH'),null);
 });
+test('the observed residence-memory format resolves Bauru and excludes alternative future destinations',()=>{
+ const memory='Local de residência: Bauru, São Paulo, Brasil\nOutras cidades mencionadas: Santos e Curitiba.';
+ assert.equal(rememberedCity(memory),'Bauru, SP');
+ const preference='So apresentar clima para esta cidade ou se for pedida outra cidade';
+ assert.equal(requestedWeatherCity(preference),null);
+ assert.equal(resolveWeatherCity(preference,[],memory),'Bauru, SP');
+ assert.equal(resolveWeatherCity('Vai chover hoje?',[{role:'user',content:preference}],memory),'Bauru, SP');
+});
 test('the requested city overrides history and memory; user location history beats model suggestions',()=>{
  const history=[{role:'user',content:'Qual o clima em Bauru hoje?'},{role:'assistant',content:'São Paulo, Rio de Janeiro e Curitiba.'}];
  assert.equal(resolveWeatherCity('Vai chover hoje?',history,null),'Bauru');
