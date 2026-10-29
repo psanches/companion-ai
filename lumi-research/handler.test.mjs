@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLumiResearchHandler} from './handler.mjs';
+import {withCompanionChat} from '../lumi-ativa-integration/companion-chat.mjs';
 
 const origin='https://lumi-develop.psanchesnle.workers.dev';
 const req=(token='long-valid-token')=>new Request(origin+'/research',{method:'POST',headers:{origin,authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({question:'What is the latest WHO malaria estimate?'})});
@@ -45,4 +46,23 @@ test('Weather today succeeds under Worker redirect constraints after server iden
  const request=new Request(origin+'/research',{method:'POST',headers:{origin,authorization:'Bearer long-valid-token','content-type':'application/json'},body:JSON.stringify({question:'Weather today in Bauru'})});
  const response=await handler(request,{LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async({key})=>{assert.equal(key,'verified-user');limited++;return {success:true};}}});
  assert.equal(response.status,200);assert.equal(verified,1);assert.equal(limited,1);assert.equal(research,1);
+});
+
+test('chat recovers an uncited weather response through authenticated research and stores only the cited result',async()=>{
+ let apiCalls=0,limits=0,verifies=0,saved;
+ const research=createLumiResearchHandler({fetcher:async(url,options)=>{
+  assert.equal(options.redirect,'manual');
+  if(url.endsWith('/auth/v1/user')){verifies++;return Response.json({id:'verified-user'});}
+  assert.equal(url,'https://api.openai.com/v1/responses');apiCalls++;
+  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:apiCalls===1?'UNVERIFIED FIRST ANSWER':'Previsão recuperada.',annotations:apiCalls===1?[]:[{type:'url_citation',url:'https://example.org/previsao/bauru'}]}]}]});
+ }});
+ const chat=withCompanionChat({fetch(){throw Error('Research must not fall through to ordinary chat');}},{verify:async()=>({id:'verified-user'}),research});
+ const response=await chat.fetch(new Request(origin+'/api/chat',{method:'POST',headers:{origin,authorization:'Bearer synthetic-session','content-type':'application/json'},body:JSON.stringify({message:'Como está o tempo em Bauru?'})}),{
+  Memory:{get:async()=>[],put:async(key,value)=>{assert.equal(key,'history:user:verified-user');saved=JSON.parse(value);}},
+  LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>{limits++;return {success:true};}}
+ },{});
+ const data=await response.json();
+ assert.equal(response.status,200);assert.equal(data.researchStatus,'complete');assert.equal(apiCalls,2);assert.equal(limits,1);assert.equal(verifies,1);
+ assert.match(data.reply,/\[Fonte\]\(https:\/\/example.org\/previsao\/bauru\)/);assert.doesNotMatch(data.reply,/UNVERIFIED/);
+ assert.equal(saved.at(-1).content,data.reply);
 });

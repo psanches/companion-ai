@@ -8,7 +8,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 4
     env:
       OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
     steps:
@@ -16,21 +16,34 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: One bounded public weather query with redacted structural diagnostics
+      - name: Public weather queries through chat and research with synthetic session and memory
         run: |
           node --input-type=module <<'NODE'
-          import {researchNow} from './lumi-research/research.mjs';
+          import assert from 'node:assert/strict';
+          import {withCompanionChat} from './lumi-ativa-integration/companion-chat.mjs';
+          import {createLumiResearchHandler} from './lumi-research/handler.mjs';
           if (!process.env.OPENAI_API_KEY) throw Error('Missing existing research credential');
-          const result = await researchNow({
-            question:'Qual a previsão do tempo para Bauru, SP, hoje?',
-            authorized:true, apiKey:process.env.OPENAI_API_KEY,
-            fetcher:async(url,options)=>{
-              const response=await fetch(url,options);
-              const data=await response.clone().json();
-              console.log(JSON.stringify({httpStatus:response.status,status:data.status,errorCode:data.error?.code,errorType:data.error?.type,incomplete:data.incomplete_details,output:(data.output||[]).map(item=>({type:item.type,status:item.status,actionType:item.action?.type,sources:item.action?.sources?.length,content:(item.content||[]).map(part=>({type:part.type,textLength:part.text?.length,annotations:(part.annotations||[]).map(a=>({type:a.type,https:typeof a.url==='string'&&a.url.startsWith('https://')}))}))}))}));
+          const origin='https://lumi-develop.psanchesnle.workers.dev';
+          for (const [index,question] of ['Como está o tempo em Bauru hoje?','Qual a previsão do tempo para Bauru amanhã?','Weather forecast for Bauru today'].entries()) {
+            let calls=0, saved, limited=0;
+            const research=createLumiResearchHandler({fetcher:async(url,options)=>{
+              if(url.endsWith('/auth/v1/user'))return Response.json({id:'synthetic-weather-check'});
+              assert.equal(url,'https://api.openai.com/v1/responses');
+              calls++;
+              // Reproduce the uncited-card failure before a live recovery query.
+              if(index===0&&calls===1)return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{type:'message',content:[{type:'output_text',text:'Synthetic uncited weather card',annotations:[]}]}]});
+              const response=await fetch(url,options),data=await response.clone().json();
+              console.log(JSON.stringify({case:index+1,attempt:calls,httpStatus:response.status,status:data.status,searches:(data.output||[]).filter(x=>x.type==='web_search_call'&&x.status==='completed').length,citations:(data.output||[]).flatMap(x=>x.content||[]).flatMap(x=>x.annotations||[]).filter(x=>x.type==='url_citation').length}));
               return response;
-            }
-          });
-          console.log(JSON.stringify({researchStatus:result.status,citationCount:result.citations?.length,answer:result.status==='complete'?result.answer:undefined}));
-          if(result.status!=='complete')process.exitCode=1;
+            }});
+            const chat=withCompanionChat({fetch(){throw Error('Research fell through to ordinary chat');}},{verify:async()=>({id:'synthetic-weather-check'}),research});
+            const response=await chat.fetch(new Request(origin+'/api/chat',{method:'POST',headers:{origin,authorization:'Bearer synthetic-session','content-type':'application/json','x-lumi-language':index===2?'en':'pt-BR'},body:JSON.stringify({message:question})}),{
+              LUMI_RESEARCH_OPENAI_API_KEY:process.env.OPENAI_API_KEY,
+              LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>{limited++;return {success:true};}},
+              Memory:{get:async()=>[],put:async(key,value)=>{saved=JSON.parse(value);}}
+            },{});
+            const data=await response.json();
+            console.log(JSON.stringify({case:index+1,researchStatus:data.researchStatus,apiCalls:calls,authenticatedChatPath:'/api/chat',syntheticMemoryOnly:true}));
+            assert.equal(response.status,200);assert.equal(data.researchStatus,'complete');assert.match(data.reply,/\[(Fonte|Source)\]\(https:\/\//);assert.equal(saved.at(-1).content,data.reply);assert.equal(limited,1);assert.ok(calls<=2);
+          }
           NODE
