@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLumiResearchHandler} from './handler.mjs';
+import {requestedWeatherCity} from './weather-location.mjs';
 import {withCompanionChat} from '../lumi-ativa-integration/companion-chat.mjs';
 
 const origin='https://lumi-develop.psanchesnle.workers.dev';
@@ -41,7 +42,7 @@ test('Weather today succeeds under Worker redirect constraints after server iden
    verified++;
    return Response.json({id:'verified-user'});
   }
-  research++;return Response.json({output:[{type:'web_search_call',status:'completed'},{type:'message',content:[{type:'output_text',text:'Weather result',annotations:[{type:'url_citation',url:'https://www.climatempo.com.br/previsao-do-tempo/cidade/558/bauru-sp',title:'Bauru forecast'}]}]}]});
+  research++;return Response.json({output:[{type:'web_search_call',status:'completed'},{type:'message',content:[{type:'output_text',text:'Weather result for Bauru',annotations:[{type:'url_citation',url:'https://www.climatempo.com.br/previsao-do-tempo/cidade/558/bauru-sp',title:'Bauru forecast'}]}]}]});
  }});
  const request=new Request(origin+'/research',{method:'POST',headers:{origin,authorization:'Bearer long-valid-token','content-type':'application/json'},body:JSON.stringify({question:'Weather today in Bauru'})});
  const response=await handler(request,{LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async({key})=>{assert.equal(key,'verified-user');limited++;return {success:true};}}});
@@ -54,7 +55,7 @@ test('chat recovers an uncited weather response through authenticated research a
   assert.equal(options.redirect,'manual');
   if(url.endsWith('/auth/v1/user')){verifies++;return Response.json({id:'verified-user'});}
   assert.equal(url,'https://api.openai.com/v1/responses');apiCalls++;
-  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:apiCalls===1?'UNVERIFIED FIRST ANSWER':'Previsão recuperada.',annotations:apiCalls===1?[]:[{type:'url_citation',url:'https://example.org/previsao/bauru'}]}]}]});
+  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:apiCalls===1?'UNVERIFIED FIRST ANSWER':'Previsão recuperada para Bauru.',annotations:apiCalls===1?[]:[{type:'url_citation',url:'https://example.org/previsao/bauru'}]}]}]});
  }});
  const chat=withCompanionChat({fetch(){throw Error('Research must not fall through to ordinary chat');}},{verify:async()=>({id:'verified-user'}),research});
  const response=await chat.fetch(new Request(origin+'/api/chat',{method:'POST',headers:{origin,authorization:'Bearer synthetic-session','content-type':'application/json'},body:JSON.stringify({message:'Como está o tempo em Bauru?'})}),{
@@ -72,7 +73,8 @@ test('rain and weather follow-ups search directly using only the owner city from
  const research=createLumiResearchHandler({fetcher:async(url,options)=>{
   if(url.endsWith('/auth/v1/user'))return Response.json({id:'verified-user'});
   apiQuestions.push(JSON.parse(options.body).input[1].content);
-  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Previsão consultada diretamente.',annotations:[{type:'url_citation',url:'https://example.org/forecast/bauru'}]}]}]});
+  const city=requestedWeatherCity(apiQuestions.at(-1));
+  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Previsão para '+city,annotations:[{type:'url_citation',url:'https://example.org/forecast/'+city.split(',')[0].toLowerCase()}]}]}]});
  }});
  const chat=withCompanionChat({fetch(){throw Error('Weather must not fall through to the model without search');}},{verify:async()=>({id:'verified-user'}),research});
  const env={LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>({success:true})},Memory:{
@@ -82,7 +84,22 @@ test('rain and weather follow-ups search directly using only the owner city from
  for(const message of ['Vai chover hoje?','Sim','Você sabe minha localização?','Qual a temperatura em Santos hoje?']){
   const response=await chat.fetch(new Request(origin+'/chat',{method:'POST',headers:{origin,authorization:'Bearer synthetic-session','content-type':'application/json'},body:JSON.stringify({message})}),env,{});
   const data=await response.json();assert.equal(data.researchStatus,'complete');assert.match(data.reply,/\[Fonte\]/);assert.doesNotMatch(data.reply,/A\)|B\)|C\)|curl|colar um link/);
-  assert.match(apiQuestions.at(-1),/Cidade registrada.*Bauru, SP/);assert.doesNotMatch(apiQuestions.at(-1),/PRIVATE HEALTH DETAIL/);
+  assert.match(apiQuestions.at(-1),/Cidade da previsão: (?:Bauru, SP|Santos)/);assert.doesNotMatch(apiQuestions.at(-1),/PRIVATE HEALTH DETAIL/);
  }
- assert.equal(apiQuestions.length,4);assert.match(apiQuestions.at(-1),/usar somente se a pergunta não indicar outra cidade/);assert.match(apiQuestions.at(-1),/Santos hoje/);
+ assert.equal(apiQuestions.length,4);assert.match(apiQuestions.at(-1),/Cidade da previsão: Santos/);assert.match(apiQuestions.at(-1),/Santos hoje/);
+});
+
+test('missing location asks once without a search; a bare city reply supplies the target and persists as context',async()=>{
+ let history=[],apiCalls=0;
+ const research=createLumiResearchHandler({fetcher:async(url,options)=>{
+  if(url.endsWith('/auth/v1/user'))return Response.json({id:'verified-user'});
+  apiCalls++;assert.match(JSON.parse(options.body).input[1].content,/Cidade da previsão: Bauru/);
+  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Bauru: previsão confirmada.',annotations:[{type:'url_citation',url:'https://example.org/forecast/bauru'}]}]}]});
+ }});
+ const chat=withCompanionChat({fetch(){throw Error('Weather must stay on the research path');}},{verify:async()=>({id:'verified-user'}),research});
+ const env={LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>({success:true})},Memory:{get:async key=>key.startsWith('memory:')?null:history,put:async(key,value)=>{history=JSON.parse(value);}}};
+ const ask=async message=>(await chat.fetch(new Request(origin+'/chat',{method:'POST',headers:{origin,authorization:'Bearer synthetic-session','content-type':'application/json'},body:JSON.stringify({message})}),env,{})).json();
+ assert.equal((await ask('Vai chover hoje?')).researchStatus,'needs_location');assert.equal(apiCalls,0);
+ assert.equal((await ask('Bauru')).researchStatus,'complete');assert.equal(apiCalls,1);
+ assert.equal((await ask('Vai chover amanhã?')).researchStatus,'complete');assert.equal(apiCalls,2);
 });

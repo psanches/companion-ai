@@ -26,6 +26,7 @@ const files = {
   'lumi-research-handler.mjs': '../lumi-research/handler.mjs',
   'route.mjs': '../lumi-research/route.mjs',
   'research.mjs': '../lumi-research/research.mjs',
+  'weather-location.mjs': '../lumi-research/weather-location.mjs',
   'supabase-auth.mjs': '../lumi-research/supabase-auth.mjs',
   'health-news-worker.mjs': './health-news-worker.mjs',
   'health-news-ui-assets.mjs': './health-news-ui-assets.mjs',

@@ -53,10 +53,10 @@ test('failed, unfinished searches and incomplete answers cannot masquerade as ve
  for(const [searchStatus,status]of [['failed','completed'],['incomplete','completed'],['in_progress','completed'],['completed','incomplete']]){const r=await researchNow({question:'weather Bauru',authorized:true,apiKey:'test',fetcher:async()=>Response.json({status,output:[{type:'web_search_call',status:searchStatus},{content:[{type:'output_text',text:'Claim',annotations:[{type:'url_citation',url:'https://example.org/forecast'}]}]}]})});assert.equal(r.status,'unverified');}
 });
 test('weather rejects homepage-only evidence, records search time, and distinguishes source update date in instructions',async()=>{
- let payload;const fetcher=url=>async(_url,opts)=>{payload=JSON.parse(opts.body);return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Previsão. Quer que eu crie um lembrete?',annotations:[{type:'url_citation',url}]}]}]});};
+ let payload;const fetcher=url=>async(_url,opts)=>{payload=JSON.parse(opts.body);return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Previsão de Bauru. Quer que eu crie um lembrete?',annotations:[{type:'url_citation',url}]}]}]});};
  const options={question:'Previsão do tempo para Bauru hoje',authorized:true,apiKey:'test',now:new Date('2026-10-22T01:00:00Z')};
  assert.equal((await researchNow({...options,fetcher:fetcher('https://example.org/')})).status,'unverified');
- const r=await researchNow({...options,fetcher:fetcher('https://example.org/forecast/bauru')});assert.equal(r.status,'complete');assert.equal(r.answer,'Previsão.');assert.equal(r.researchedAt,'2026-10-22T01:00:00.000Z');assert.match(payload.input[0].content,/2026-10-21/);assert.match(payload.input[0].content,/source update dates/);assert.equal(payload.max_output_tokens,600);
+ const r=await researchNow({...options,fetcher:fetcher('https://example.org/forecast/bauru')});assert.equal(r.status,'complete');assert.equal(r.answer,'Previsão de Bauru.');assert.equal(r.researchedAt,'2026-10-22T01:00:00.000Z');assert.match(payload.input[0].content,/2026-10-21/);assert.match(payload.input[0].content,/source update dates/);assert.equal(payload.max_output_tokens,600);
 });
 
 test('research refuses upstream redirects without forwarding the API credential',async()=>{
@@ -74,14 +74,14 @@ test('an uncited weather card triggers one fresh page search; only its cited ans
  const result=await researchNow({question:'Como está o tempo em Bauru?',authorized:true,apiKey:'test',fetcher:async(url,options)=>{
   assert.equal(url,'https://api.openai.com/v1/responses');
   requests.push(JSON.parse(options.body));
-  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{type:'message',content:[{type:'output_text',text:requests.length===1?'UNSOURCED WEATHER CARD':'Previsão com fonte.',annotations:requests.length===1?[]:[{type:'url_citation',url:'https://example.org/forecast/bauru'}]}]}]});
+  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{type:'message',content:[{type:'output_text',text:requests.length===1?'UNSOURCED WEATHER CARD':'Bauru: previsão com fonte.',annotations:requests.length===1?[]:[{type:'url_citation',url:'https://example.org/forecast/bauru'}]}]}]});
  }});
  assert.equal(requests.length,2);
  assert.match(requests[0].input[0].content,/not weather cards or widgets/);
  assert.match(requests[1].input[0].content,/fresh web search/);
  assert.equal(requests[1].input[1].content,'Como está o tempo em Bauru?');
  assert.equal(result.status,'complete');
- assert.equal(result.answer,'Previsão com fonte.');
+ assert.equal(result.answer,'Bauru: previsão com fonte.');
  assert.equal(result.citations.length,1);
 });
 
@@ -98,7 +98,7 @@ test('weather homepage-only citations recover using a specific forecast page',as
  let calls=0;
  const result=await researchNow({question:'Weather Bauru',authorized:true,apiKey:'test',fetcher:async()=>{
   calls++;
-  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Forecast',annotations:[{type:'url_citation',url:calls===1?'https://example.org/':'https://example.org/forecast/bauru'}]}]}]});
+  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Forecast for Bauru',annotations:[{type:'url_citation',url:calls===1?'https://example.org/':'https://example.org/forecast/bauru'}]}]}]});
  }});
  assert.equal(calls,2);assert.equal(result.status,'complete');assert.equal(result.citations[0].url,'https://example.org/forecast/bauru');
 });
@@ -108,7 +108,7 @@ test('valid first result, HTTP failures and incomplete outputs do not trigger an
   let calls=0;
   const result=await researchNow({question:'Weather Bauru',authorized:true,apiKey:'test',fetcher:async()=>{
    calls++;if(mode==='http-error')return new Response(null,{status:429});
-   return Response.json({status:mode==='complete'?'completed':mode,output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Forecast',annotations:[{type:'url_citation',url:'https://example.org/forecast/bauru'}]}]}]});
+   return Response.json({status:mode==='complete'?'completed':mode,output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Forecast for Bauru',annotations:[{type:'url_citation',url:'https://example.org/forecast/bauru'}]}]}]});
   }});
   assert.equal(calls,1);assert.equal(result.status,mode==='complete'?'complete':mode==='http-error'?'failed':'unverified');
  }

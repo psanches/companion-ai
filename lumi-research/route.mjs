@@ -30,7 +30,7 @@ export function createResearchRoute({ verifyToken, fetcher = fetch } = {}) {
     try {
       const selected=request.headers.get('x-lumi-language'),language=['en','pt-BR'].includes(selected)?selected:null;
       const result = await researchNow({question, authorized:true,apiKey:env?.LUMI_RESEARCH_OPENAI_API_KEY,fetcher,maxOutputTokens:600,language});
-      return Response.json(result,{status:result.status==='complete'?200:result.status==='unverified'?422:503,
+      return Response.json(result,{status:['complete','needs_location'].includes(result.status)?200:result.status==='unverified'?422:503,
         headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
     } catch {
       return Response.json({status:'failed',answer:'Pesquisa indisponível no momento.'},{status:503});

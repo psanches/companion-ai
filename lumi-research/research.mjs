@@ -4,6 +4,7 @@ import {runtimeCompanionInstructions,removeUnsolicitedOffers} from '../lumi-ativ
  * No credentials or user data are stored by this module.
  * Inject fetcher, API key, and authorization at the server boundary.
  */
+import {requestedWeatherCity,weatherSearchLocation,mentionsCity,hasCitySource} from './weather-location.mjs';
 const MAX_QUESTION = 1200;
 export function validateResearchQuestion(question) {
   if (typeof question !== 'string' || !question.trim() || question.length > MAX_QUESTION) {
@@ -24,6 +25,8 @@ export async function researchNow({ question, apiKey, fetcher, authorized, maxOu
   const tokenLimit = Number.isFinite(maxOutputTokens)?Math.min(800, Math.max(100, Math.floor(maxOutputTokens))):600;
   const researchedAt=now.toISOString();
   const weather=/\b(?:clima|weather|forecast|chover|chovendo|rain|raining)\b|previs[aã]o\s+(?:do\s+)?tempo|(?:como (?:est[aá]|vai estar)|qual[^?]{0,30})\s+o tempo|tempo\s+(?:hoje|amanh[aã]|em|para)\b|(?:temperatura|temperature)\s+(?:hoje|amanh[aã]|em|para|in|today)\b/i.test(input);
+  const city=weather?requestedWeatherCity(input):null;
+  if(weather&&!city)return {status:'needs_location',answer:language==='en'?'Which city should I check?':'Qual cidade você quer consultar?',citations:[]};
   // A weather card can contain text without URL annotations. Never display it
   // as sourced research: make at most one new, page-based search instead.
   const deadline=Date.now()+45000;
@@ -36,12 +39,12 @@ export async function researchNow({ question, apiKey, fetcher, authorized, maxOu
     redirect:'manual',
     body: JSON.stringify({
       model: 'gpt-4.1-mini',
-      tools: [{ type: 'web_search' }],
+      tools: [{ type: 'web_search',...(city?{user_location:weatherSearchLocation(city)}:{}) }],
       tool_choice: 'required',
       max_tool_calls: 3,
       max_output_tokens: tokenLimit,
       input: [
-        { role: 'developer', content: runtimeCompanionInstructions(now,language)+'\nAnswer this research question only. Search now and cite supporting web pages inline using URL citation annotations. Keep the answer under 150 words. Report source update dates when present, and explicitly say when those dates could not be verified. Use specific pages supporting each claim; for weather and alerts include the location and validity period supported by the source. Do not infer an official warning from a general forecast or homepage. Never offer reminders, monitoring or future follow-ups.'+(weather?' For weather, search public forecast web pages, not weather cards or widgets. Use Celsius, give a brief forecast, and omit hourly tables. Only mention an official alert when its specific cited page supports its location and validity period.':'')+(attempt?' The preceding attempt could not be verified. Run a fresh web search for specific supporting pages and include inline URL citations. Do not repeat an uncited answer, create URLs, or use a weather widget.':'') },
+        { role: 'developer', content: runtimeCompanionInstructions(now,language)+'\nAnswer this research question only. Search now and cite supporting web pages inline using URL citation annotations. Keep the answer under 150 words. Report source update dates when present, and explicitly say when those dates could not be verified. Use specific pages supporting each claim; for weather and alerts include the location and validity period supported by the source. Do not infer an official warning from a general forecast or homepage. Never offer reminders, monitoring or future follow-ups.'+(weather?' For weather, search public forecast web pages, not weather cards or widgets. Use Celsius, give a brief forecast, and omit hourly tables. Only mention an official alert when its specific cited page supports its location and validity period.':'')+(city?' The only forecast location is '+city+'. Search specifically for this city. Begin the answer with this city name. Cite a city-specific forecast page whose URL or title identifies this city. Do not list forecasts for other cities or substitute nearby cities.':'' )+(attempt?' The preceding attempt could not be verified. Run a fresh web search for specific supporting pages and include inline URL citations. Do not repeat an uncited answer, create URLs, or use a weather widget.':'') },
         { role: 'user', content: input }
       ]
     })
@@ -67,6 +70,10 @@ export async function researchNow({ question, apiKey, fetcher, authorized, maxOu
   if(weather&&!citations.some(c=>{const u=new URL(c.url);return u.pathname!=='/'&&u.pathname!=='';})){
     if(attempt===0)continue;
     return {status:'unverified',answer:'Não encontrei uma página específica que confirme a previsão ou o alerta atual.',citations:[]};
+  }
+  if(city&&(!mentionsCity(text,city)||!hasCitySource(citations,city)||[...text.matchAll(/^#{1,4}\s*(?:Clima em|Weather (?:in|for))\s+([^\n:]+)/gmi)].some(m=>!mentionsCity(m[1],city)))){
+    if(attempt===0)continue;
+    return {status:'unverified',answer:(language==='en'?'I could not verify the forecast for ':'Não consegui confirmar a previsão para ')+city+'.',citations:[]};
   }
   return { status: 'complete', answer: removeUnsolicitedOffers(text), citations:[...new Map(citations.map(c=>[c.url,c])).values()],researchedAt };
   }
