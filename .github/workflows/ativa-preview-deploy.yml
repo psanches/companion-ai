@@ -37,7 +37,7 @@ jobs:
       - name: Verify existing medical security tests
         if: steps.credentials.outputs.ready == 'true'
         working-directory: medical
-        run: npm install --ignore-scripts --no-audit --no-fund && npm test
+        run: npm ci --ignore-scripts --no-audit --no-fund && npm test
       - name: Verify isolated demo tests and bundle
         if: steps.credentials.outputs.ready == 'true'
         working-directory: ativa-demo

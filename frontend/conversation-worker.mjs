@@ -30,6 +30,26 @@ export function withConversationSidebar(original){
    }});
    forwardEnv={...env,Memory:proxy};
   }
+  if(path==='/history/archives'&&request.method==='GET'&&typeof env?.Memory?.list==='function'){
+   const memory=env.Memory;
+   const proxy=new Proxy(memory,{get(target,name){
+    if(name==='list')return async(options={})=>{
+     if(!/^archive:user:[^:]+:$/.test(options.prefix||''))return target.list(options);
+     let cursor,latest=[];const seen=new Set();
+     do{
+      const result=await target.list({...options,limit:100,...(cursor?{cursor}:{})});
+      const keys=(result.keys||[]).filter(item=>item?.name?.startsWith(options.prefix)&&/^\d{13}$/.test(item.name.slice(options.prefix.length)));
+      latest=[...new Map([...latest,...keys].map(item=>[item.name,item])).values()].sort((a,b)=>Number(b.name.slice(options.prefix.length))-Number(a.name.slice(options.prefix.length))).slice(0,5);
+      if(result.list_complete)break;
+      if(!result.cursor||seen.has(result.cursor))throw Error('Invalid archive cursor');
+      cursor=result.cursor;seen.add(cursor);
+     }while(cursor);
+     return {keys:latest,list_complete:true,cursor:''};
+    };
+    const value=Reflect.get(target,name,target);return typeof value==='function'?value.bind(target):value;
+   }});
+   forwardEnv={...env,Memory:proxy};
+  }
   const response=await original.fetch.call(original,request,forwardEnv,ctx);
   if(!response.ok||!response.headers.get('content-type')?.includes('application/json'))return response;
   const data=await response.json(),headers=new Headers(response.headers);
