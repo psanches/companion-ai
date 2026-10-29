@@ -18,6 +18,25 @@ export function publishableWeeklyEdition(digest){
  for(const item of digest.items){const key=newsOrganization(item.url),count=(counts.get(key)||0)+1;counts.set(key,count);if(count>NEWS_PREVIEW_POLICY.maxPerSource)return false;const words=item.summary.trim().split(/\s+/).length;if(words<NEWS_PREVIEW_POLICY.minSummaryWords||words>NEWS_PREVIEW_POLICY.maxSummaryWords)return false;}
  return true;
 }
+export function mergeDailyReadings(fresh,previous,date){
+ const items=[],urls=new Set(),topics=new Set(),organizations=new Map();
+ function append(item,repeated=false){
+  if(!item)return;const candidate={...item};
+  if(!validWeeklyEdition({policyVersion:4,date,items:[candidate]}))return;
+  const words=candidate.summary.trim().split(/\s+/).length;if(words<NEWS_PREVIEW_POLICY.minSummaryWords||words>NEWS_PREVIEW_POLICY.maxSummaryWords)return;
+  const organization=newsOrganization(candidate.url);if(urls.has(candidate.url)||topics.has(candidate.topicKey)||(organizations.get(organization)||0)>=NEWS_PREVIEW_POLICY.maxPerSource)return;
+  urls.add(candidate.url);topics.add(candidate.topicKey);organizations.set(organization,(organizations.get(organization)||0)+1);
+  candidate.repeated=repeated;
+  if(repeated)candidate.repeatedFromEdition=previous.date;else delete candidate.repeatedFromEdition;
+  items.push(candidate);
+ }
+ const newest=(a,b)=>b.publishedAt.localeCompare(a.publishedAt);
+ for(const item of (Array.isArray(fresh)?fresh:[]).filter(x=>x&&typeof x.publishedAt==='string').sort(newest)){append(item);if(items.length===NEWS_PREVIEW_POLICY.maxItems)break;}
+ if(items.length<NEWS_PREVIEW_POLICY.minItems&&validWeeklyEdition(previous)){
+  for(const item of [...previous.items].sort(newest)){append(item,true);if(items.length>=NEWS_PREVIEW_POLICY.minItems)break;}
+ }
+ return items;
+}
 export async function generateWeeklyDigest(env,now=new Date(),fetcher=fetch,editor=generateHealthNewsPreview){
  if(!newsWeekActive(now))return {status:'news-week-paused',automaticUpdates:false,endsAt:NEWS_WEEK.end};
  if(!env?.HEALTH_NEWS_KV)throw Error('Public news storage is required');
@@ -25,12 +44,15 @@ export async function generateWeeklyDigest(env,now=new Date(),fetcher=fetch,edit
  if(publishableWeeklyEdition(cached)&&cached.date===date&&cached.generatorRevision===NEWS_GENERATOR_REVISION){await env.HEALTH_NEWS_KV.put(WEEK_KEY,JSON.stringify(cached));return cached;}
  const recentValue=await env.HEALTH_NEWS_KV.get(RECENT,'json');
  const recent=Array.isArray(recentValue)?recentValue.filter(x=>typeof x?.url==='string'&&x.date<date&&Date.parse(date)-Date.parse(x.date)<=7*86400000):[];
- const preview=await editor(env,now,fetcher,{fillMinimum:true,excludeUrls:recent.map(x=>x.url),excludeTopics:recent.map(x=>x.topicKey).filter(Boolean)});
+ const previous=await env.HEALTH_NEWS_KV.get(WEEK_KEY,'json');
+ let preview,collectionError=null;
+ try{preview=await editor(env,now,fetcher,{fillMinimum:true,excludeUrls:recent.map(x=>x.url),excludeTopics:recent.map(x=>x.topicKey).filter(Boolean)});}catch(error){collectionError=String(error.message||'Collection unavailable').slice(0,500);preview={policyVersion:4,date,items:[]};}
  const oldUrls=new Set(recent.map(x=>x.url)),oldTopics=new Set(recent.map(x=>x.topicKey).filter(Boolean));
- const freshItems=preview.items?.filter(x=>!oldUrls.has(x.url)&&!oldTopics.has(x.topicKey));
- const digest={...preview,generatorRevision:NEWS_GENERATOR_REVISION,items:freshItems,title:'Notícias de Saúde',mode:'daily-editorial',published:true,automaticUpdates:true,window:NEWS_WEEK,generatedAt:now.toISOString()};
- // Fewer than six complete, diverse readings never replace the last verified public edition.
- if(!publishableWeeklyEdition(digest))throw Error('No publishable verified news edition; previous edition preserved. Audit: '+JSON.stringify({date,returned:preview.items?.length,verification:preview.verification}));
+ const freshItems=Array.isArray(preview?.items)?preview.items.filter(x=>x&&!oldUrls.has(x.url)&&!oldTopics.has(x.topicKey)):[];
+ const items=mergeDailyReadings(freshItems,previous,date);
+ const digest={...preview,date,shortfall:Math.max(0,NEWS_PREVIEW_POLICY.maxItems-items.length),verification:{...preview?.verification,newItems:items.filter(x=>!x.repeated).length,repeatedItems:items.filter(x=>x.repeated).length,...(collectionError?{collectionError}:{})},generatorRevision:NEWS_GENERATOR_REVISION,items,title:'Notícias de Saúde',mode:'daily-editorial',published:true,automaticUpdates:true,window:NEWS_WEEK,generatedAt:now.toISOString()};
+ // New readings first; prior verified readings fill the minimum without changing publication dates.
+ if(!publishableWeeklyEdition(digest))throw Error('No publishable verified news edition; previous edition preserved. Audit: '+JSON.stringify({date,returned:preview?.items?.length,verification:preview?.verification}));
  await env.HEALTH_NEWS_KV.put(DATE_PREFIX+date,JSON.stringify(digest),{expirationTtl:60*60*24*45});
  await env.HEALTH_NEWS_KV.put(WEEK_KEY,JSON.stringify(digest));
  await env.HEALTH_NEWS_KV.put(RECENT,JSON.stringify([...recent,...digest.items.map(x=>({url:x.url,topicKey:x.topicKey,date}))]),{expirationTtl:60*60*24*30});

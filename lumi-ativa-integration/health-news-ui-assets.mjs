@@ -31,7 +31,7 @@ function card(item){
  if(item.dateVerified!==true||!item.publishedAt||!item.title||!item.summary)return null;
  const article=el('article','news-card'),meta=el('div','news-meta');
  meta.append(el('span','news-region',(item.kind==='contexto'?'Leitura de contexto':'Notícia')+' · '+(item.region==='Brasil'?'Brasil':'Internacional')));const categories={'saude-geral':'Saúde geral','qualidade-de-vida':'Qualidade de vida','exercicios':'Exercícios e movimento','parkinson-envelhecimento':'Parkinson e envelhecimento'};if(categories[item.category])meta.append(el('span','',categories[item.category]));
- const published=el('time','','Publicado em '+date(item.publishedAt));published.dateTime=item.publishedAt;meta.append(published);
+ const published=el('time','','Publicado em '+date(item.publishedAt));published.dateTime=item.publishedAt;meta.append(published);if(item.repeated===true)meta.append(el('span','news-repeat','Reapresentada'));
  article.append(meta,el('h2','',item.title),el('p','news-summary',item.summary));
  const footer=el('div','news-source');footer.append(el('span','','Fonte: '+(item.source||url.hostname)));
  const link=el('a','','Ler na fonte original ↗');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';footer.append(link);article.append(footer);return article;

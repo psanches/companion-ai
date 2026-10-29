@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {generateWeeklyDigest,getWeeklyDigest,newsWeekActive,NEWS_WEEK,WEEK_KEY,validWeeklyEdition,publishableWeeklyEdition,NEWS_GENERATOR_REVISION} from '../../health-news-week.mjs';
+import {generateWeeklyDigest,getWeeklyDigest,newsWeekActive,NEWS_WEEK,WEEK_KEY,validWeeklyEdition,publishableWeeklyEdition,NEWS_GENERATOR_REVISION,mergeDailyReadings} from '../../health-news-week.mjs';
 import {NEWS_LIVE_HTML} from '../health-news-ui-assets.mjs';
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {pathToFileURL} from 'node:url';
 const now=new Date('2026-10-28T12:00:00Z');
@@ -18,7 +18,7 @@ test('one shared collection per date, accepting fewer than ten rather than paddi
  assert.equal(calls,1);assert.equal(a.items.length,6);assert.equal(b.date,a.date);assert.equal(a.published,true);assert.equal(f.writes.length,4);
 });
 test('empty or low-quality edition never overwrites latest verified edition',async()=>{
- const f=fixture();f.data.set(WEEK_KEY,JSON.stringify(preview));
+ const f=fixture();f.data.set(WEEK_KEY,JSON.stringify({...preview,items:preview.items.slice(0,1)}));
  await assert.rejects(generateWeeklyDigest(f.env,now,undefined,async()=>({...preview,items:[]})),/No publishable/);assert.equal(f.writes.length,0);
  assert.equal(validWeeklyEdition({...preview,items:[{...item,importance:6}]}),false);
  assert.equal(validWeeklyEdition({...preview,items:[{...item,scope:'regional'}]}),false);
@@ -61,11 +61,31 @@ test('a generator revision regenerates an older same-day cache once and then reu
 
 
 test('publication requires six complete readings and rejects a single-source edition without deleting the last good one',async()=>{
- const f=fixture();f.data.set(WEEK_KEY,JSON.stringify(preview));
+ const f=fixture(),legacy={...preview,items:preview.items.slice(0,1)};f.data.set(WEEK_KEY,JSON.stringify(legacy));
  assert.equal(publishableWeeklyEdition(preview),true);
  for(const items of [preview.items.slice(0,5),preview.items.map((x,i)=>({...x,url:'https://www.who.int/news/'+i})),preview.items.map(x=>({...x,summary:'Uma frase muito curta.'}))]){
   assert.equal(publishableWeeklyEdition({...preview,items}),false);
   await assert.rejects(generateWeeklyDigest(f.env,now,undefined,async()=>({...preview,items})),/No publishable/);
-  assert.equal(f.writes.length,0);assert.deepEqual(JSON.parse(f.data.get(WEEK_KEY)),preview);
+  assert.equal(f.writes.length,0);assert.deepEqual(JSON.parse(f.data.get(WEEK_KEY)),legacy);
  }
+});
+
+
+test('two new readings lead the edition and four prior readings fill six, with original dates and no duplicates',async()=>{
+ const f=fixture(),previous={...preview,date:'2026-10-27'};f.data.set(WEEK_KEY,JSON.stringify(previous));
+ const fresh=preview.items.slice(0,2).map((x,i)=>({...x,url:x.url+'-new',topicKey:'fresh-'+i,publishedAt:'2026-10-28'}));
+ const result=await generateWeeklyDigest(f.env,now,undefined,async()=>({...preview,items:fresh}));
+ assert.equal(result.items.length,6);assert.deepEqual(result.items.slice(0,2).map(x=>x.topicKey),['fresh-0','fresh-1']);assert.equal(result.verification.newItems,2);assert.equal(result.verification.repeatedItems,4);
+ for(const x of result.items.slice(2)){assert.equal(x.repeated,true);assert.equal(x.repeatedFromEdition,'2026-10-27');assert.equal(x.publishedAt,'2026-10-27');}
+ assert.equal(new Set(result.items.map(x=>x.url)).size,6);assert.equal(new Set(result.items.map(x=>x.topicKey)).size,6);assert.equal(publishableWeeklyEdition(result),true);
+});
+test('failed collection can reuse six verified readings but never relabels publication dates as today',async()=>{
+ const f=fixture();f.data.set(WEEK_KEY,JSON.stringify({...preview,date:'2026-10-27'}));
+ const result=await generateWeeklyDigest(f.env,now,undefined,async()=>{throw Error('Search unavailable');});
+ assert.equal(result.date,'2026-10-28');assert.equal(result.items.length,6);assert.equal(result.verification.newItems,0);assert.equal(result.verification.repeatedItems,6);assert.ok(result.items.every(x=>x.repeated&&x.publishedAt==='2026-10-27'));
+});
+test('fallback skips old and duplicate topics and never displaces new readings',()=>{
+ const previous={...preview,date:'2026-10-27'},fresh=[{...preview.items[0],publishedAt:'2026-10-28'}];
+ const items=mergeDailyReadings(fresh,previous,'2026-10-28');assert.equal(items.length,6);assert.equal(items[0].repeated,false);assert.equal(items.filter(x=>x.url===fresh[0].url).length,1);
+ assert.equal(mergeDailyReadings([],previous,'2026-11-05').length,0);
 });

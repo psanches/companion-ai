@@ -21,3 +21,9 @@ test('unavailable edition has a retry action and never initiates paid generation
  w.eval(NEWS_SCRIPT);await tick();assert.match(w.document.getElementById('newsItems').textContent,/Não consegui carregar/);assert.equal(w.document.getElementById('newsReload').disabled,false);
  w.document.getElementById('newsReload').click();await tick();assert.equal(calls.length,2);assert.ok(calls.every(c=>c.url==='/health-news'&&!c.options.method));w.close();
 });
+
+test('reused reading is visibly labelled and retains its original publication date',async()=>{
+ const dom=setup(),w=dom.window;
+ w.fetch=async()=>Response.json({policyVersion:4,date:'2026-10-29',items:[{title:'Matéria anterior',summary:'Resumo verificado.',publishedAt:'2026-10-27',region:'Internacional',source:'www.parkinson.org',url:'https://www.parkinson.org/blog/test/example',dateVerified:true,repeated:true}]});
+ w.eval(NEWS_SCRIPT);await tick();assert.equal(w.document.querySelector('.news-repeat').textContent,'Reapresentada');assert.equal(w.document.querySelector('time').dateTime,'2026-10-27');assert.match(w.document.getElementById('newsEdition').textContent,/29\/10\/2026/);w.close();
+});
