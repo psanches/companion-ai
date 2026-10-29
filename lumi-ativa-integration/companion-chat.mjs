@@ -1,3 +1,4 @@
+import {personalMemoryRequest,updatePersonalMemory} from './personal-memory.mjs';
 import {createCalendarVerifier} from '../lumi-calendar/calendar-auth.mjs';
 import {createLumiResearchHandler} from '../lumi-research/handler.mjs';
 import {removeUnsolicitedOffers} from './companion-instructions.mjs';
@@ -35,7 +36,7 @@ async function boundedBody(request){
  for(;;){const {done,value}=await reader.read();if(done)break;count+=value.length;if(count>65536){void reader.cancel().catch(()=>{});throw Error();}raw+=decoder.decode(value,{stream:true});}
  const body=JSON.parse(raw+decoder.decode());if(!body||typeof body.message!=='string'||!body.message.trim())throw Error();return body;
 }
-function cleanedHistory(items){return (Array.isArray(items)?items:[]).filter(x=>['user','assistant'].includes(x?.role)&&typeof x.content==='string').map(x=>({role:x.role,content:x.content.slice(0,12000)})).slice(-40);}
+function cleanedHistory(items){return (Array.isArray(items)?items:[]).filter(x=>['user','assistant'].includes(x?.role)&&typeof x.content==='string').map(x=>({role:x.role,content:x.content}));}
 function sanitizeResponse(data){
  if(typeof data.reply==='string')data.reply=removeUnsolicitedOffers(data.reply);
  if(Array.isArray(data.history)){const last=data.history.at(-1);if(last?.role==='assistant')last.content=removeUnsolicitedOffers(last.content);}
@@ -48,6 +49,21 @@ export function withCompanionChat(original,{verify=createCalendarVerifier(),rese
   let body;try{body=await boundedBody(request.clone());}catch{return json({error:'Confira sua mensagem. O pedido deve ter até 64 KB.'},400);}
   const text=body.message.trim();
   const selected=request.headers.get('x-lumi-language');const language=['en','pt-BR'].includes(selected)?selected:null;const english=language==='en';
+  const memoryRequest=personalMemoryRequest(text);
+  if(memoryRequest){
+   if(request.headers.get('origin')!==url.origin)return json({error:'Origem não autorizada.'},403);
+   let user;try{const token=request.headers.get('authorization')?.match(/^Bearer (\S+)$/i)?.[1];user=token&&await verify(token,env);}catch{return json({error:'Não consegui verificar sua sessão agora.'},503);}
+   if(!user?.id)return json({error:'Entre na Lumi para continuar.'},401);
+   if(memoryRequest.error)return json({error:memoryRequest.error,reply:memoryRequest.error,memorySaved:false},400);
+   if(!env?.Memory)return json({error:'Memória temporariamente indisponível.'},503);
+   let history,next;
+   try{const current=await env.Memory.get('memory:user:'+user.id);history=cleanedHistory(await env.Memory.get('history:user:'+user.id,'json'));next=updatePersonalMemory(current,memoryRequest);if(next.length>64000)return json({error:'A memória está cheia. Revise-a antes de adicionar informações.'},413);await env.Memory.put('memory:user:'+user.id,next);}
+   catch{return json({reply:english?'I could not save this to your memory. Please try again.':'Não consegui salvar isso na sua memória. Tente novamente.',memorySaved:false},503);}
+   let reply=english?'Saved to your personal memory.':'Salvo na sua memória pessoal.';
+   history.push({role:'user',content:text},{role:'assistant',content:reply});
+   try{await env.Memory.put('history:user:'+user.id,JSON.stringify(history));}catch{return json({reply:reply+(english?' I could not update this conversation.':' Não consegui atualizar esta conversa.'),memorySaved:true});}
+   return json({reply,history,memorySaved:true});
+  }
   if(isResearchQuestion(text)||isResearchFollowup(text)||isWeatherFollowup(text)||isBareCityReply(text)){
    if(request.headers.get('origin')!==url.origin)return json({error:'Origem não autorizada.'},403);
    let user;try{const token=request.headers.get('authorization')?.match(/^Bearer (\S+)$/i)?.[1];user=token&&await verify(token,env);}catch{return json({error:'Não consegui verificar sua sessão agora.'},503);}

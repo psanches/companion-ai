@@ -64,3 +64,34 @@ test('research forwards the selected language while preserving the question, sou
  const f=fixture(),data=await(await f.w.fetch(req('Latest Parkinson news',{'x-lumi-language':'en'}),f.env,{})).json();
  assert.match(data.reply,/Sources:/);assert.match(data.reply,/\[Source\]\(https:\/\//);assert.match(data.reply,/Searched on /);assert.equal(data.history.at(-2).content,'Latest Parkinson news');assert.equal(f.calls[0].question,'Latest Parkinson news');
 });
+
+test('runtime retains complete chat/archive history while model receives only twelve context messages with bounded output and explicit non-storage',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'lumi-retention-')),oldFetch=globalThis.fetch,values=new Map();let payload,signal;
+ try{
+  let source=applyRuntimePolicy(fs.readFileSync(new URL('../../medical/recovered-development-baseline.js',import.meta.url),'utf8'));source=source.replace("'./companion-instructions.mjs'",JSON.stringify(new URL('../companion-instructions.mjs',import.meta.url).href));fs.writeFileSync(path.join(root,'runtime.mjs'),source);const {default:worker}=await import(pathToFileURL(path.join(root,'runtime.mjs')));
+  const history=Array.from({length:80},(_,i)=>({role:i%2?'assistant':'user',content:'Stored message '+i}));values.set('history:user:alice',JSON.stringify(history));
+  globalThis.fetch=async(url,options)=>{if(String(url).endsWith('/auth/v1/user'))return Response.json({id:'alice'});payload=JSON.parse(options.body);signal=options.signal;return Response.json({output:[{type:'message',content:[{type:'output_text',text:'A new answer.'}]}]});};
+  const env={Memory:{get:async(k,t)=>t==='json'?JSON.parse(values.get(k)||'null'):values.get(k)||null,put:async(k,v)=>values.set(k,v),delete:async k=>values.delete(k)},SUPABASE_URL:'https://test.supabase.co',SUPABASE_PUBLISHABLE_KEY:'test',OPENAI_API_KEY:'synthetic'},headers={authorization:'Bearer synthetic-session','content-type':'application/json'};
+  const response=await worker.fetch(new Request(origin+'/chat',{method:'POST',headers,body:JSON.stringify({message:'New question'})}),env,{});assert.equal(response.status,200);assert.equal(JSON.parse(values.get('history:user:alice')).length,82);assert.equal(payload.input.length,12);assert.ok(!JSON.stringify(payload.input).includes('Stored message 0"'));assert.equal(payload.store,false);assert.equal(payload.max_output_tokens,3200);assert.ok(signal instanceof AbortSignal);
+  const archived=await worker.fetch(new Request(origin+'/history/archive',{method:'POST',headers}),env,{});assert.equal(archived.status,200);const key=[...values.keys()].find(k=>k.startsWith('archive:user:alice:'));assert.ok(key);assert.equal(JSON.parse(values.get(key)).length,82);
+  const restored=await worker.fetch(new Request(origin+'/history/restore',{method:'POST',headers,body:JSON.stringify({id:key.split(':').at(-1)})}),env,{});assert.equal(restored.status,200);assert.equal(JSON.parse(values.get('history:user:alice')).length,82);
+ }finally{globalThis.fetch=oldFetch;fs.rmSync(root,{recursive:true,force:true});}
+});
+test('research appends to the existing full history instead of truncating it to forty messages',async()=>{
+ const f=fixture(),history=Array.from({length:80},(_,i)=>({role:i%2?'assistant':'user',content:'Preserved '+i}));f.map.set('history:user:alice',JSON.stringify(history));const data=await(await f.w.fetch(req('Notícias de hoje'),f.env,{})).json();assert.equal(data.history.length,82);assert.equal(data.history[0].content,'Preserved 0');assert.equal(JSON.parse(f.map.get('history:user:alice')).length,82);
+});
+
+test('explicit personal memory is truly saved and updates residence without erasing unrelated memory',async()=>{
+ const f=fixture();f.map.set('memory:user:alice','Local de residência: Bauru, SP\nPreferência antiga preservada');
+ const response=await f.w.fetch(req('Lembre que moro em Campinas, SP.'),f.env,{}),data=await response.json();assert.equal(response.status,200);assert.equal(data.memorySaved,true);assert.match(f.map.get('memory:user:alice'),/Local de residência: Campinas, SP/);assert.doesNotMatch(f.map.get('memory:user:alice'),/Bauru/);assert.match(f.map.get('memory:user:alice'),/Preferência antiga preservada/);assert.equal(f.calls.length,0);
+ const next=await f.w.fetch(req('Meu nome é Pedro'),f.env,{});assert.equal((await next.json()).memorySaved,true);assert.match(f.map.get('memory:user:alice'),/Nome: Pedro/);assert.match(f.map.get('memory:user:alice'),/Campinas/);
+ f.map.delete('history:user:alice');assert.match(f.map.get('memory:user:alice'),/Nome: Pedro/);assert.match(f.map.get('memory:user:alice'),/Campinas/);
+});
+test('weather visits do not change residence and arbitrary explicitly requested preferences can persist',async()=>{
+ const f=fixture();f.map.set('memory:user:alice','Local de residência: Bauru, SP');await f.w.fetch(req('Qual o clima em Santos?'),f.env,{});assert.equal(f.map.get('memory:user:alice'),'Local de residência: Bauru, SP');
+ const data=await(await f.w.fetch(req('Lembre que prefiro respostas curtas.'),f.env,{})).json();assert.equal(data.memorySaved,true);assert.match(f.map.get('memory:user:alice'),/prefiro respostas curtas/);
+});
+test('unauthenticated memory never touches storage and failed writes never claim successful saving',async()=>{
+ const f=fixture();assert.equal((await f.w.fetch(req('Lembre que moro em Santos.',{authorization:'Bearer invalid'}),f.env,{})).status,401);assert.equal(f.map.size,0);
+ const memory={get:async()=>null,put:async()=>{throw Error('Storage unavailable');}};const response=await f.w.fetch(req('Lembre que moro em Campinas, SP.'),{Memory:memory},{});assert.equal(response.status,503);assert.equal((await response.json()).memorySaved,false);
+});

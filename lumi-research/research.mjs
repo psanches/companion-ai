@@ -38,7 +38,7 @@ export async function researchNow({ question, apiKey, fetcher, authorized, maxOu
     // Cloudflare Workers requires manual; non-2xx responses fail below.
     redirect:'manual',
     body: JSON.stringify({
-      model: 'gpt-4.1-mini',
+      model: 'gpt-4.1-mini', store:false,
       tools: [{ type: 'web_search',...(city?{user_location:weatherSearchLocation(city)}:{}) }],
       tool_choice: 'required',
       max_tool_calls: 3,

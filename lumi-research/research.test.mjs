@@ -113,3 +113,7 @@ test('valid first result, HTTP failures and incomplete outputs do not trigger an
   assert.equal(calls,1);assert.equal(result.status,mode==='complete'?'complete':mode==='http-error'?'failed':'unverified');
  }
 });
+
+test('research explicitly disables Responses application storage',async()=>{
+ let body;await researchNow({question:'Search public health news',authorized:true,apiKey:'synthetic',fetcher:async(url,options)=>{body=JSON.parse(options.body);return Response.json({status:'completed',output:[]});}});assert.equal(body.store,false);
+});
