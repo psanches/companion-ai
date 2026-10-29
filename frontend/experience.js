@@ -115,7 +115,7 @@
     for(const [id,label]of [['inviteBtn','Convidar para a Lumi'],['profileBtn','Perfil'],['memoryBtn','Minha memória']])move(id,account,label);
     move('soundButton',playback);
     move('lumiLanguageControl',account);move('authBox',account);
-    for(const id of ['lumiGuideBtn','lumiDemoBtn','lumiBetaFeedbackBtn','lumiBetaBtn','healthDemoBtn','lumiInstitutionalLink'])move(id,help,id==='healthDemoBtn'?'Meu Cuidado — demonstração':null);
+    for(const id of ['lumiGuideBtn','lumiNewsHelpBtn','lumiDemoBtn','lumiBetaFeedbackBtn','lumiBetaBtn','healthDemoBtn','lumiInstitutionalLink'])move(id,help,id==='healthDemoBtn'?'Meu Cuidado — demonstração':null);
     language();
    }else{
     closeMenu();for(const [node,marker]of placements)if(marker.parentNode)marker.after(node);

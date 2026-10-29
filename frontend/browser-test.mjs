@@ -63,6 +63,15 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.evaluate(()=>window.__setAuth(true));await page.locator('#chatForm').waitFor({state:'visible'});if(width<=900)await page.locator('#lumiMobileNav').waitFor({state:'visible'});else await page.locator('#signOutBtn').waitFor({state:'visible'});
  await page.locator('#lumiGuideDialog').waitFor({state:'visible'});await page.locator('#lumiGuideDontShow').check();await page.getByRole('button',{name:'Começar a conversar',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('#messages .msg').length===6);
+ // News criteria are reachable from Help on mobile and the sidebar on desktop.
+ if(width<=900)await openMobileSection(page,'lumiMobileHelp');
+ await page.locator('#lumiNewsHelpBtn').click();
+ await page.locator('#lumiNewsHelpDialog').waitFor({state:'visible'});
+ assert.equal(await page.locator('#lumiNewsHelpDialog').evaluate(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.height<=innerHeight;}),true);
+ assert.ok((await page.locator('#lumiNewsHelpDialog').textContent()).includes('mínima de 7 em 10'));
+ await page.locator('#lumiNewsHelpClose').click();
+ await page.locator('#lumiNewsHelpDialog').waitFor({state:'hidden'});
+
  await checkEmergencyContact(page,{mobile:width<=900,screenshotPath:new URL('./test-results/'+name+'-sos.png',import.meta.url).pathname});
  // Browser speech events are simulated; this checks the live DOM contract, not hardware.
  await page.locator('#voiceButton').click();await page.getByText('Ouvindo… Você pode pausar até 30 segundos. Toque para parar (máximo 2 minutos).',{exact:true}).waitFor();
