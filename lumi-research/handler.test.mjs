@@ -30,3 +30,18 @@ test('limit exhaustion blocks API call and returns 429',async()=>{
 
 
 test('each valid research request verifies identity once; foreign routes and origins do not consume the limiter',async()=>{let verifies=0,limits=0;const handler=createLumiResearchHandler({fetcher:async(url,opts)=>{if(url.endsWith('/auth/v1/user'))verifies++;return mockFetch(url,opts);}});const env={LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>{limits++;return {success:true};}}};assert.equal((await handler(req(),env)).status,200);assert.equal(verifies,1);assert.equal(limits,1);const foreign=new Request(origin+'/research',{method:'POST',headers:{origin:'https://evil.example'},body:'{}'});assert.equal((await handler(foreign,env)).status,403);assert.equal(limits,1);assert.equal(await handler(new Request(origin+'/other'),env),null);});
+
+test('Weather today succeeds under Worker redirect constraints after server identity verification',async()=>{
+ let verified=0,limited=0,research=0;
+ const handler=createLumiResearchHandler({fetcher:async(url,options)=>{
+  if(url.endsWith('/auth/v1/user')){
+   if(options.redirect==='error')throw new TypeError('Unsupported redirect mode');
+   assert.equal(options.redirect,'manual');verified++;
+   return Response.json({id:'verified-user'});
+  }
+  research++;return Response.json({output:[{type:'web_search_call',status:'completed'},{type:'message',content:[{type:'output_text',text:'Weather result',annotations:[{type:'url_citation',url:'https://www.climatempo.com.br/previsao-do-tempo/cidade/558/bauru-sp',title:'Bauru forecast'}]}]}]});
+ }});
+ const request=new Request(origin+'/research',{method:'POST',headers:{origin,authorization:'Bearer long-valid-token','content-type':'application/json'},body:JSON.stringify({question:'Weather today in Bauru'})});
+ const response=await handler(request,{LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async({key})=>{assert.equal(key,'verified-user');limited++;return {success:true};}}});
+ assert.equal(response.status,200);assert.equal(verified,1);assert.equal(limited,1);assert.equal(research,1);
+});

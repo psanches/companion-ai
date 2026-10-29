@@ -11,7 +11,8 @@ export function createSupabaseVerifier({fetcher = fetch} = {}) {
       const response = await fetcher(url + '/auth/v1/user', {
         method: 'GET',
         headers: {apikey:key,authorization:'Bearer '+token},
-        redirect:'error',
+        // Cloudflare Workers supports manual redirects; reject 3xx below.
+        redirect:'manual',
         signal:AbortSignal.timeout(7000)
       });
       if (!response.ok) return null;
