@@ -155,3 +155,12 @@ test('publication discovery supplements sparse results using other organisations
  },{fillMinimum:true});
  assert.equal(result.items.length,6);assert.equal(result.verification.apiRequests,4);assert.ok(result.verification.sourceRequests<=80);assert.ok(!requests[2].tools[0].filters.allowed_domains.includes('parkinson.org'));assert.ok(!requests[2].tools[0].filters.allowed_domains.includes('nih.gov'));
 });
+
+test('discovery skips known index pages and extracts current Parkinson Foundation and FAPESP article links',async()=>{
+ const {balancedNewsCandidates,publisherArticleLinks,GENERAL_SOURCES}=await import('./health-news-preview.mjs');
+ assert.ok(GENERAL_SOURCES.includes('agencia.fapesp.br'));
+ assert.equal(balancedNewsCandidates([{url:'https://www.nature.com/subjects/parkinsons-disease'},{url:'https://www.parkinson.org/resources-support/blog'},{url:'https://www.franceparkinson.fr/espace-presse/'}]).length,0);
+ for(const [url,match,article]of [['https://www.parkinson.org/resources-support/blog',/^\/blog\/[^/]+\/[^/]+\/?$/,'/blog/awareness/new-study'],['https://agencia.fapesp.br/',/^\/(?:index\.php\/)?[^/]+\/\d+\/?$/,'/pesquisa-saude/12345']]){
+  const links=publisherArticleLinks('<h1>News</h1><a href="'+article+'">Research</a>',{url,match});assert.equal(links.length,1);assert.equal(links[0].url,new URL(article,url).href);
+ }
+});

@@ -61,3 +61,10 @@ test('verified article text decodes typography and entities for literal editoria
  const story=await verifyStory({url},'2026-10-28',new Set([url]),async()=>new Response(html,{headers:{'content-type':'text/html'}}));
  assert.ok(story.sourceText.includes('Parkinson’s & sleep'));assert.ok(story.sourceText.includes('Research “findings” for Parkinson’s disease.'));assert.ok(!story.sourceText.includes('&#8217;'));
 });
+
+test('Parkinson Foundation header time supplies publication date without treating an event time as publication',()=>{
+ const article='<article><header><h1>Hospital medication safety</h1><div class="meta"><time class="date" datetime="2026-10-27">Oct 27, 2026</time></div></header><p>Findings</p></article>';
+ assert.equal(publicationFromHtml(article).date,'2026-10-27');
+ assert.throws(()=>publicationFromHtml('<h1>Event</h1><time datetime="2026-10-27">Meeting starts</time>'));
+ assert.throws(()=>publicationFromHtml('<h1>Research</h1></header><section><time class="date" datetime="2026-10-27">Related event</time></section>'));
+});
