@@ -21,7 +21,7 @@ export class DemoBudget {
  return json({allowed,cached},allowed?200:429);
  }
 }
-async function budget(env,kind,id,reply){const stub=env.BUDGET.get(env.BUDGET.idFromName('synthetic-demo-global'));return stub.fetch(new Request('https://budget.internal',{method:'POST',body:JSON.stringify({kind,id,reply})}));}
+async function budget(env,kind,id,reply,partition='synthetic-demo-global'){const stub=env.BUDGET.get(env.BUDGET.idFromName(partition));return stub.fetch(new Request('https://budget.internal',{method:'POST',body:JSON.stringify({kind,id,reply})}));}
 export async function handle(request,env,fetcher=fetch){const url=new URL(request.url);const path=url.pathname;
  if(env.DEMO_MODE!=='synthetic-only')return json({error:'Demonstração indisponível.'},503);
  // No fallthrough to Lumi, medical routes, passkeys or other APIs.
@@ -32,7 +32,10 @@ export async function handle(request,env,fetcher=fetch){const url=new URL(reques
  if(path==='/demo-api/session'&&request.method==='GET')return json({authenticated:await validSession(request,env.DEMO_ACCESS_CODE),aiConfigured:Boolean(env.OPENAI_API_KEY)});
  if(path==='/demo-api/session'&&request.method==='DELETE')return json({ok:true},200,{'set-cookie':'ativa_session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0'});
  if(path==='/demo-api/session'&&request.method==='POST'){
- if(!(await budget(env,'login')).ok)return json({error:'Limite de tentativas atingido. Tente amanhã.'},429);
+ // Trusted Cloudflare client address is pseudonymised; failed logins cannot spend another network's quota.
+ const client=request.headers.get('cf-connecting-ip')||'unidentified-client';
+ const fingerprint=b64(await crypto.subtle.sign('HMAC',await key(env.DEMO_ACCESS_CODE),encoder.encode(client)));
+ if(!(await budget(env,'login',undefined,undefined,'synthetic-demo-login:'+fingerprint)).ok)return json({error:'Limite de tentativas desta conexão atingido. Tente amanhã.'},429);
  let body;try{body=await readJson(request);}catch{return json({error:'Pedido inválido.'},400);}
  const supplied=await crypto.subtle.digest('SHA-256',encoder.encode(String(body.code||'')));const expected=await crypto.subtle.digest('SHA-256',encoder.encode(env.DEMO_ACCESS_CODE));let diff=0;const a=new Uint8Array(supplied),b=new Uint8Array(expected);for(let i=0;i<a.length;i++)diff|=a[i]^b[i];if(diff)return json({error:'Código de acesso incorreto.'},401);
  return json({ok:true},200,{'set-cookie':`ativa_session=${await issueSession(env.DEMO_ACCESS_CODE)}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=14400`});

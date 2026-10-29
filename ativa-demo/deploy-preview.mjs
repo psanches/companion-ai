@@ -8,8 +8,17 @@ const secrets=['OPENAI_API_KEY','DEMO_ACCESS_CODE'];
 for(const name of ['CLOUDFLARE_API_TOKEN','CLOUDFLARE_ACCOUNT_ID',...secrets])assert.ok(process.env[name]?.trim(),`Missing ${name}`);
 assert.ok(process.env.DEMO_ACCESS_CODE.length>=20,'Access code must be at least 20 characters');
 function wrangler(args,input){return new Promise((resolve,reject)=>{let output='';const child=spawn(process.execPath,['node_modules/wrangler/bin/wrangler.js',...args,'--config','wrangler.jsonc'],{cwd:root,env:{...process.env,WRANGLER_SEND_METRICS:'false'},stdio:['pipe','pipe','pipe']});child.stdout.on('data',b=>output+=b);child.stderr.on('data',b=>output+=b);child.on('error',()=>reject(Error('Unable to start isolated deployment tool.')));child.on('exit',code=>{if(code!==0)return reject(Error(`Isolated Cloudflare operation failed (${code}); check token permissions/account configuration. No credential values logged.`));resolve(output);});child.stdin.end(input);});}
+// Preserve the existing demo's global AI cap; this correction changes login isolation only.
+const config=JSON.parse(fs.readFileSync(new URL('./wrangler.jsonc',import.meta.url)));
+const settingsResponse=await fetch('https://api.cloudflare.com/client/v4/accounts/'+process.env.CLOUDFLARE_ACCOUNT_ID+'/workers/scripts/lumi-ativa-medical-demo/settings',{headers:{authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN},signal:AbortSignal.timeout(30000)});
+let deployVars=[];
+if(settingsResponse.ok){const settings=(await settingsResponse.json()).result,bindings=settings.bindings||[];const currentLimit=bindings.find(x=>x.name==='DAILY_REQUEST_LIMIT')?.text;
+ if(currentLimit!==undefined){const parsed=Number(currentLimit);assert.ok(Number.isInteger(parsed)&&parsed>0&&parsed<=50,'Unreviewed current demo budget; refusing to increase or change it');deployVars=['--var','DAILY_REQUEST_LIMIT:'+parsed];}
+ const mode=bindings.find(x=>x.name==='DEMO_MODE')?.text;assert.ok(!mode||mode==='synthetic-only','Unreviewed current demo mode');
+}else assert.equal(settingsResponse.status,404,'Cannot inspect current isolated demo configuration');
+
 // The first deployment fails closed for AI until the new Worker secrets exist.
-const output=await wrangler(['deploy']);
+const output=await wrangler(['deploy',...deployVars]);
 const match=output.match(/https:\/\/lumi-ativa-medical-demo\.[a-z0-9-]+\.workers\.dev\b/);
 assert.ok(match,'Cloudflare deployment did not return the exact demo Worker URL');
 const url=match[0];
