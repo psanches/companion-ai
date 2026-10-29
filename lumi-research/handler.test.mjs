@@ -66,3 +66,23 @@ test('chat recovers an uncited weather response through authenticated research a
  assert.match(data.reply,/\[Fonte\]\(https:\/\/example.org\/previsao\/bauru\)/);assert.doesNotMatch(data.reply,/UNVERIFIED/);
  assert.equal(saved.at(-1).content,data.reply);
 });
+
+test('rain and weather follow-ups search directly using only the owner city from personal memory',async()=>{
+ const apiQuestions=[],history=[];
+ const research=createLumiResearchHandler({fetcher:async(url,options)=>{
+  if(url.endsWith('/auth/v1/user'))return Response.json({id:'verified-user'});
+  apiQuestions.push(JSON.parse(options.body).input[1].content);
+  return Response.json({status:'completed',output:[{type:'web_search_call',status:'completed'},{content:[{type:'output_text',text:'Previsão consultada diretamente.',annotations:[{type:'url_citation',url:'https://example.org/forecast/bauru'}]}]}]});
+ }});
+ const chat=withCompanionChat({fetch(){throw Error('Weather must not fall through to the model without search');}},{verify:async()=>({id:'verified-user'}),research});
+ const env={LUMI_RESEARCH_OPENAI_API_KEY:'test',LUMI_RESEARCH_RATE_LIMIT:{limit:async()=>({success:true})},Memory:{
+  get:async(key)=>key==='memory:user:verified-user'?'Cidade: Bauru, SP\nCondição de saúde: PRIVATE HEALTH DETAIL':history,
+  put:async(key,value)=>{assert.equal(key,'history:user:verified-user');history.splice(0,history.length,...JSON.parse(value));}
+ }};
+ for(const message of ['Vai chover hoje?','Sim','Você sabe minha localização?','Qual a temperatura em Santos hoje?']){
+  const response=await chat.fetch(new Request(origin+'/chat',{method:'POST',headers:{origin,authorization:'Bearer synthetic-session','content-type':'application/json'},body:JSON.stringify({message})}),env,{});
+  const data=await response.json();assert.equal(data.researchStatus,'complete');assert.match(data.reply,/\[Fonte\]/);assert.doesNotMatch(data.reply,/A\)|B\)|C\)|curl|colar um link/);
+  assert.match(apiQuestions.at(-1),/Cidade registrada.*Bauru, SP/);assert.doesNotMatch(apiQuestions.at(-1),/PRIVATE HEALTH DETAIL/);
+ }
+ assert.equal(apiQuestions.length,4);assert.match(apiQuestions.at(-1),/usar somente se a pergunta não indicar outra cidade/);assert.match(apiQuestions.at(-1),/Santos hoje/);
+});

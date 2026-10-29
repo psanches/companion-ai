@@ -23,7 +23,7 @@ export async function researchNow({ question, apiKey, fetcher, authorized, maxOu
   }
   const tokenLimit = Number.isFinite(maxOutputTokens)?Math.min(800, Math.max(100, Math.floor(maxOutputTokens))):600;
   const researchedAt=now.toISOString();
-  const weather=/\b(?:clima|weather|forecast)\b|previs[aã]o\s+(?:do\s+)?tempo|(?:como (?:est[aá]|vai estar)|qual[^?]{0,30})\s+o tempo|tempo\s+(?:hoje|amanh[aã]|em|para)\b/i.test(input);
+  const weather=/\b(?:clima|weather|forecast|chover|chovendo|rain|raining)\b|previs[aã]o\s+(?:do\s+)?tempo|(?:como (?:est[aá]|vai estar)|qual[^?]{0,30})\s+o tempo|tempo\s+(?:hoje|amanh[aã]|em|para)\b|(?:temperatura|temperature)\s+(?:hoje|amanh[aã]|em|para|in|today)\b/i.test(input);
   // A weather card can contain text without URL annotations. Never display it
   // as sourced research: make at most one new, page-based search instead.
   const deadline=Date.now()+45000;

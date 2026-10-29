@@ -3,7 +3,7 @@ import {createLumiResearchHandler} from '../lumi-research/handler.mjs';
 import {removeUnsolicitedOffers} from './companion-instructions.mjs';
 const HOST='lumi-develop.psanchesnle.workers.dev';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
-export const isWeatherQuestion=text=>/\b(?:clima|weather|forecast)\b|previs[aã]o\s+(?:do\s+)?tempo|(?:como (?:est[aá]|vai estar)|qual[^?]{0,30})\s+o tempo|tempo\s+(?:hoje|amanh[aã]|em|para)\b/i.test(text);
+export const isWeatherQuestion=text=>/\b(?:clima|weather|forecast|chover|chovendo|rain|raining)\b|previs[aã]o\s+(?:do\s+)?tempo|(?:como (?:est[aá]|vai estar)|qual[^?]{0,30})\s+o tempo|tempo\s+(?:hoje|amanh[aã]|em|para)\b|^(?:e\s+)?(?:o\s+)?tempo\s*\??$|(?:temperatura|temperature)\s+(?:hoje|amanh[aã]|em|para|in|today)\b/i.test(text);
 // Scheduling stays with the calendar wrapper; research uses its existing auth,
 // per-user limits and verified-source requirements.
 export function isResearchQuestion(text){
@@ -18,13 +18,20 @@ export function isResearchQuestion(text){
   /\b(?:quem e|who is)\b[^?]{0,50}\b(?:presidente|president|ceo|governador|prefeito)\b/.test(value);
 }
 const isResearchFollowup=text=>/^(?:(?:se eu quiser lembrete[^.!?]*[.!?]?|n[aã]o (?:quero|ofereça)[^.!?]*[.!?]?)\s*)?(?:essa|esta|a|isso|foi|voc[eê]|e as?|qual|de|[ée])[^\n]{0,250}(?:informaç|hoje|fonte|atualiz|verific|data|confi[aá]vel|previs[aã]o|alerta)/i.test(text.trim());
+const isWeatherFollowup=text=>/^(?:sim|yes|pode(?: pesquisar| verificar| consultar)?|pode sim|verifique|consulte|aqui|minha (?:cidade|localizaç[aã]o)|(?:voc[eê] )?(?:sabe|tem|lembra)[^\n]{0,60}(?:cidade|localizaç[aã]o)|(?:em|para|in) [\p{L} .'-]{2,60}(?:,?\s*[A-Z]{2})?|[\p{L} .'-]{2,60},\s*[A-Z]{2})[.!?]*$/iu.test(text.trim());
 function researchContext(history){
  for(const item of [...history].reverse()){
   if(item?.role!=='user'||typeof item.content!=='string')continue;
   if(isResearchQuestion(item.content))return item.content;
-  if(!isResearchFollowup(item.content))return null;
+  if(!isResearchFollowup(item.content)&&!isWeatherFollowup(item.content))return null;
  }
  return null;
+}
+// Extract only a city-level default, never unrelated personal or health memory.
+export function rememberedCity(memory){
+ if(typeof memory!=='string')return null;
+ const match=memory.slice(0,20000).match(/(?:\b(?:cidade|city|localizaç[aã]o|location)\s*[:=]\s*|\b(?:mora|reside|vive)\s+em\s+)([\p{L}][\p{L} '-]{1,60}(?:\s*,\s*[A-Z]{2})?)(?=[.\n;]|$)/iu);
+ return match?.[1]?.trim()||null;
 }
 async function boundedBody(request){
  const reader=request.body?.getReader();if(!reader)throw Error();let count=0,raw='';const decoder=new TextDecoder();
@@ -44,15 +51,19 @@ export function withCompanionChat(original,{verify=createCalendarVerifier(),rese
   let body;try{body=await boundedBody(request.clone());}catch{return json({error:'Confira sua mensagem. O pedido deve ter até 64 KB.'},400);}
   const text=body.message.trim();
   const selected=request.headers.get('x-lumi-language');const language=['en','pt-BR'].includes(selected)?selected:null;const english=language==='en';
-  if(isResearchQuestion(text)||isResearchFollowup(text)){
+  if(isResearchQuestion(text)||isResearchFollowup(text)||isWeatherFollowup(text)){
    if(request.headers.get('origin')!==url.origin)return json({error:'Origem não autorizada.'},403);
    let user;try{const token=request.headers.get('authorization')?.match(/^Bearer (\S+)$/i)?.[1];user=token&&await verify(token,env);}catch{return json({error:'Não consegui verificar sua sessão agora.'},503);}
    if(!user?.id)return json({error:'Entre na Lumi para continuar.'},401);
    if(!env?.Memory)return json({error:'Histórico temporariamente indisponível.'},503);
    let history;try{history=cleanedHistory(await env.Memory.get('history:user:'+user.id,'json'));}catch{return json({error:'Não consegui recuperar a conversa agora.'},503);}
    const context=isResearchQuestion(text)?null:researchContext(history);
-   if(isResearchQuestion(text)||context){
-    const question=context?'Pergunta anterior: '+context+'\nPergunta atual: '+text:text;
+   if(isResearchQuestion(text)||(context&&(!isWeatherFollowup(text)||isWeatherQuestion(context)))){
+    let question=context?'Pergunta anterior: '+context+'\nPergunta atual: '+text:text;
+    if(isWeatherQuestion(text)||isWeatherQuestion(context||'')){
+     let city;try{city=rememberedCity(await env.Memory.get('memory:user:'+user.id));}catch{return json({error:'Não consegui consultar sua cidade agora.'},503);}
+     if(city)question='Cidade registrada (usar somente se a pergunta não indicar outra cidade): '+city+'\n'+question;
+    }
     if(question.length>1200)return json({error:'Resuma a pergunta para até 1.200 caracteres.'},400);
     const upstream=await research(new Request(url.origin+'/research',{method:'POST',headers:{origin:url.origin,authorization:request.headers.get('authorization')||'','content-type':'application/json',...(language?{'x-lumi-language':language}:{})},body:JSON.stringify({question})}),env);
     const data=await upstream.json();
