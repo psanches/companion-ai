@@ -95,7 +95,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  if(width<=900){
   await openMobileSection(page);
   assert.equal(await page.locator('#lumiMobileAccount').evaluate(n=>n.open),true);
-  for(const id of ['inviteBtn','profileBtn','memoryBtn','lumiLanguageSelect','signOutBtn']){
+  for(const id of ['inviteBtn','profileBtn','memoryBtn','lumiPrivacyBtn','lumiLanguageSelect','signOutBtn']){
    const control=page.locator('#'+id);assert.equal(await control.isVisible(),true,id+' available in More');
    await control.scrollIntoViewIfNeeded();
    assert.ok(await control.evaluate(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}),id+' reachable by scrolling');
@@ -103,6 +103,16 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
   await page.screenshot({path:new URL('./test-results/'+name+'-more-controls.png',import.meta.url).pathname,fullPage:true});
   await closeMobileMenu(page);
  }
+ // Data protection information remains reachable in More and returns focus safely.
+ await openMobileSection(page,'lumiMobileAccount');
+ await page.locator('#lumiPrivacyBtn').click();
+ await page.locator('#lumiPrivacyDialog').waitFor({state:'visible'});
+ assert.equal(await page.locator('#lumiPrivacyDialog').evaluate(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.height<=innerHeight&&n.scrollHeight>n.clientHeight;}),true);
+ assert.ok((await page.locator('#lumiPrivacyDialog').textContent()).includes('não tem criptografia de ponta a ponta'));
+ await page.screenshot({path:new URL('./test-results/'+name+'-privacy.png',import.meta.url).pathname,fullPage:true});
+ await page.locator('#lumiPrivacyClose').click();
+ await page.locator('#lumiPrivacyDialog').waitFor({state:'hidden'});
+ assert.equal(await page.evaluate(()=>document.activeElement.id),width<=900?'chatHistoryBtn':'lumiPrivacyBtn');
  // Exercise the real sidebar button with the pre-existing beta demo dialog present.
  await openMobileSection(page,'lumiMobileHelp');
  await page.locator('#lumiBetaFeedbackBtn').click();

@@ -114,7 +114,7 @@
     const label=sidebar.querySelector('.sidebar-label');if(label){if(!placements.has(label)){const marker=document.createComment('mobile history label');label.before(marker);placements.set(label,marker);}conversations.insertBefore(label,document.getElementById('conversationList'));}
     for(const [id,label]of [['inviteBtn','Convidar para a Lumi'],['profileBtn','Perfil'],['memoryBtn','Minha memória']])move(id,account,label);
     move('soundButton',playback);
-    move('lumiLanguageControl',account);move('authBox',account);
+    move('lumiPrivacyBtn',account);move('lumiLanguageControl',account);move('authBox',account);
     for(const id of ['lumiGuideBtn','lumiNewsHelpBtn','lumiDemoBtn','lumiBetaFeedbackBtn','lumiBetaBtn','healthDemoBtn','lumiInstitutionalLink'])move(id,help,id==='healthDemoBtn'?'Meu Cuidado — demonstração':null);
     language();
    }else{

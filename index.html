@@ -52,6 +52,7 @@
   <button id="lumiDemoBtn" type="button" style="margin:0 14px 16px;padding:14px;border-radius:12px;background:#215574;color:#fff;border:2px solid #9bd6f5;font-size:17px;cursor:pointer;text-align:left">✨ Conheça a Lumi</button>
   <button id="lumiGuideBtn" type="button" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:16px;cursor:pointer;text-align:left">❔ Como usar a Lumi</button>
   <button id="lumiNewsHelpBtn" type="button" aria-haspopup="dialog" aria-controls="lumiNewsHelpDialog" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:16px;cursor:pointer;text-align:left">🔎 Como pesquisamos notícias</button>
+  <button id="lumiPrivacyBtn" type="button" aria-haspopup="dialog" aria-controls="lumiPrivacyDialog" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:16px;cursor:pointer;text-align:left">🛡️ Proteção dos meus dados</button>
   <button id="lumiAgendaBtn" type="button">📅 Agenda</button>
   <button id="lumiExerciseBtn" type="button" style="margin:0 14px 12px;padding:12px;border-radius:12px;background:#25344a;color:#fff;border:1px solid #9bd6f5;font-size:17px;cursor:pointer;text-align:left">🏠 Exercícios em Casa</button>
   <button id="lumiImportantLinksBtn" type="button">🔗 Links importantes</button>
@@ -231,6 +232,39 @@
  trigger.addEventListener('click',()=>dialog.showModal());
  document.getElementById('lumiNewsHelpClose').addEventListener('click',()=>dialog.close());
  dialog.addEventListener('close',()=>trigger.focus());
+})();
+</script>
+
+<!-- Data protection information: no personal data or network calls. -->
+<dialog id="lumiPrivacyDialog" aria-labelledby="lumiPrivacyTitle" style="box-sizing:border-box;width:min(94vw,720px);max-height:88dvh;overflow:auto;overflow-wrap:anywhere;background:#111827;color:#fff;border:2px solid #9bd6f5;border-radius:16px;padding:22px;font:18px/1.5 system-ui">
+<button id="lumiPrivacyClose" type="button" style="padding:12px;border-radius:9px;background:#25344a;color:white;border:1px solid #9bd6f5;font:inherit">Fechar proteção dos dados</button>
+<h2 id="lumiPrivacyTitle">Proteção dos meus dados</h2>
+<p><strong>Proteções ativas; validação em andamento.</strong></p>
+<p>A Lumi ainda está em desenvolvimento. Há controles técnicos de acesso e privacidade, mas o serviço não tem uma certificação independente de segurança apresentada aqui. Não atribuímos uma nota de segurança nem garantimos proteção absoluta.</p>
+<h3>Quem pode acessar</h3>
+<p>Histórico e memória são vinculados à sua conta, com identidade verificada no servidor. Ao sair ou trocar de conta, a interface limpa a conversa e a memória exibidas, descarta respostas antigas e remove rascunhos de agenda. Esses controles foram testados; não significam que todos os riscos foram eliminados.</p>
+<h3>Como seus dados são processados</h3>
+<p>A conexão usa HTTPS. A conversa não tem criptografia de ponta a ponta: o servidor e os serviços de IA precisam processar o conteúdo. Histórico e memória são armazenados no servidor; informações da memória e mensagens recentes podem ser enviadas à IA para responder.</p>
+<p>Cloudflare hospeda a aplicação e o armazenamento; Supabase verifica o acesso à conta; OpenAI processa solicitações de IA. Ao usar a pesquisa, a pergunta também pode ser processada por serviços de busca. Com o Google Calendar conectado, dados dos eventos são processados pelo Google e pela Lumi. O ditado pode usar o serviço de voz do navegador.</p>
+<p>Preferências, dados de sessão, rascunhos e o contato de SOS podem ficar no navegador deste aparelho. Quem tem acesso ao navegador pode acessar dados salvos localmente. Sair da conta não remove automaticamente todas essas informações.</p>
+<h3>Retenção e controle</h3>
+<p>As chamadas de IA estão configuradas para não salvar respostas como estado de aplicação na API. Isso não equivale a retenção zero: os controles da organização/projeto e outros registros do provedor ainda não foram confirmados. Não há prazo geral de exclusão validado apresentado nesta tela.</p>
+<p>Em Minha memória, você pode consultar, editar ou apagar a memória pessoal. Apagar a memória não apaga automaticamente conversas, dados do Google ou registros de serviços externos. Sair da conta não exclui os dados armazenados.</p>
+<h3>Confiabilidade e limites atuais</h3>
+<p>Ainda existe uma pendência de integridade do histórico: envios simultâneos em abas ou aparelhos diferentes podem sobrescrever mensagens. A revisão completa das afirmações da pesquisa também está pendente; uma fonte citada não comprova, sozinha, toda a resposta. Confira informações importantes na fonte original.</p>
+<p>A área de saúde em demonstração aceita apenas os exemplos fictícios previstos. Não envie prontuários reais, senhas ou credenciais. Esta explicação se refere ao ambiente de desenvolvimento da Lumi e deve acompanhar a evolução das correções.</p>
+<p>Revisado em 29/10/2026.</p>
+</dialog>
+<script>
+(() => {
+ const dialog=document.getElementById('lumiPrivacyDialog');
+ const trigger=document.getElementById('lumiPrivacyBtn');
+ trigger.addEventListener('click',()=>dialog.showModal());
+ document.getElementById('lumiPrivacyClose').addEventListener('click',()=>dialog.close());
+ dialog.addEventListener('close',()=>{
+  const target=trigger.closest('[inert]')?document.getElementById('chatHistoryBtn'):trigger;
+  target?.focus();
+ });
 })();
 </script>
 
