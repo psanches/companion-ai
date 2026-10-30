@@ -92,6 +92,8 @@ jobs:
         run: node frontend/voice-deployed-check.mjs
       - name: Verify beta feedback UI and access boundaries (no reports submitted)
         run: node lumi-beta/deployed-check.mjs
+      - name: Verify shared scientific knowledge catalog (read-only, no AI)
+        run: node companion-science/deployed-check.mjs
       - name: Verify existing public health-news edition (read-only)
         run: node frontend/health-news-check.mjs
       - name: Refresh verified public news after the development UI is published

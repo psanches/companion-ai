@@ -29,9 +29,11 @@ test('local science navigation never sends a request, preserves drafts and clear
  const tabs=d.querySelectorAll('#companionTabs button');tabs[1].click();assert.equal(d.getElementById('companionScience').hidden,false);
  const input=d.getElementById('companionScienceSearch');input.value='proteínas';input.dispatchEvent(new w.Event('input'));
  assert.equal(d.querySelectorAll('#companionScienceResults details').length,1);
- const draft=d.getElementById('messageInput');draft.value='Mensagem ainda não enviada';
- d.querySelector('.science-record button').click();assert.equal(draft.value,'Mensagem ainda não enviada');
- draft.value='';d.querySelector('.science-record button').click();assert.match(draft.value,/Proteínas e levodopa/);assert.equal(d.getElementById('companionScience').hidden,true);assert.equal(calls,0);
+ const draft=d.getElementById('messageInput');
+ d.querySelector('.science-direct').click();assert.match(draft.value,/^Companion: Proteínas e levodopa$/);assert.equal(calls,0);draft.value='';tabs[1].click();
+ draft.value='Mensagem ainda não enviada';
+ d.querySelector('.science-record button:not(.science-direct)').click();assert.equal(draft.value,'Mensagem ainda não enviada');
+ draft.value='';d.querySelector('.science-record button:not(.science-direct)').click();assert.match(draft.value,/Proteínas e levodopa/);assert.equal(d.getElementById('companionScience').hidden,true);assert.equal(calls,0);
  tabs[1].click();d.getElementById('sidebarNewChatBtn').click();assert.equal(d.getElementById('companionScience').hidden,true);
  tabs[1].click();const q=d.getElementById('companionScienceSearch');q.value='desconhecidox';q.dispatchEvent(new w.Event('input'));assert.match(d.getElementById('companionScienceResults').textContent,/Nenhum assunto/);
  w.LumiI18n.language='en';w.dispatchEvent(new w.Event('lumi-language-change'));assert.match(tabs[1].textContent,/Science/);

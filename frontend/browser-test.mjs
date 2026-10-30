@@ -82,6 +82,16 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  assert.equal(await page.locator('#chatForm').isVisible(),false);
  assert.equal(await page.locator('#companionScience').evaluate(n=>n.scrollWidth<=n.clientWidth),true,'science has no horizontal overflow');
  await page.screenshot({path:new URL('./test-results/'+name+'-science.png',import.meta.url).pathname,fullPage:true});
+ await page.locator('#companionScienceSearch').fill('');
+ for(const [category,count]of [['Fonoaudiologia',5],['Psicologia e saúde emocional',4]]){
+  await page.locator('#companionScienceCategory').selectOption({label:category});
+  assert.equal(await page.locator('#companionScienceResults details').count(),count);
+  await page.locator('#companionScienceResults summary').first().click();
+  assert.equal(await page.locator('#companionScience').evaluate(n=>n.scrollWidth<=n.clientWidth),true);
+ }
+ await page.locator('.science-direct').first().click();
+ assert.ok((await page.locator('#messageInput').inputValue()).startsWith('Companion: '));
+ await page.locator('#messageInput').fill('');
  await page.locator('#companionTabs button').nth(0).click();
  assert.equal(await page.locator('#chatForm').isVisible(),true);
 

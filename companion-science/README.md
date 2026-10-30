@@ -1,6 +1,6 @@
 # Companion = Ciência
 
-Public, versioned educational knowledge for Lumi Develop. The initial edition has 21 topics, including eight exercise/reabilitation topics. It is a bounded curated collection, not an exhaustive literature review or a clinically certified product.
+Public, versioned educational knowledge for Lumi Develop. The current edition has 28 topics, including eight exercise/rehabilitation topics. It is a bounded curated collection, not an exhaustive literature review or a clinically certified product.
 
 ## Evidence and editorial rules
 
@@ -10,9 +10,15 @@ Every record needs sources, applicability limits and general practice implicatio
 
 To update: verify original sources and newer guidelines, edit catalog.mjs, update VERSION and CHECKED, and run the frontend and integration suites. Content is bundled once for all users. There is no background scientific search, subscription service or per-reader model call. Reading/searching the base does not use API credits.
 
+## Shared general knowledge
+
+The catalog is persisted in the versioned repository and bundled into the development Worker as the same read-only scientific content for every user. GET /companion-science/catalog exposes only that public catalog; writes are rejected. No conversation or private personal-memory content can enter the shared catalog.
+
+An explicit chat message `Companion: <topic title or ID>` retrieves the canonical record with sources, without a model call or live search. It requires the same origin and a verified account; only that user’s conversation history is updated. General chat, individual medical questions and new-research requests retain the existing behavior.
+
 ## Interface and chat
 
-Lumi and Companion have separate top-level buttons on PC/Android/PWA. Companion uses local accent-insensitive search and category filters. No-match queries do not generate an answer. Opening science preserves chat history and drafts. Taking a topic into Lumi inserts its summary, limits and source URLs into an empty composer, without sending; existing drafts are preserved. Sending that message uses Lumi's existing AI flow and billing. No API credentials or model configuration are introduced or changed.
+Lumi and Companion have separate top-level buttons on PC/Android/PWA. Companion uses local accent-insensitive search and category filters. No-match queries do not generate an answer. Opening science preserves chat history and drafts. Taking a topic into Lumi inserts its summary, limits and source URLs into an empty composer, without sending; existing drafts are preserved. Sending that message uses Lumi's existing AI flow and billing. The direct lookup button prepares a canonical Companion message, again without sending automatically. No API credentials or model configuration are introduced or changed.
 
 Science content is Portuguese; the surrounding interface follows PT/EN and explains the content language. Transient search is cleared on sign-out. No personal data, query history or clinical records are stored by this feature.
 

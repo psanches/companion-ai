@@ -21,7 +21,7 @@ export function installScience({topics,sources,version,checked},search){
    const focus=panel.contains(document.activeElement)?document.activeElement?.id:null;
    panel.replaceChildren();
    const heading=make('h2',label('Companion = Ciência','Companion = Science'));heading.id='companionScienceHeading';panel.append(heading);
-   panel.append(make('p',label('Conhecimento sobre Parkinson com fontes identificadas. Consulte medicamentos, sintomas, cuidados e exercícios.','Parkinson’s knowledge with identified sources. Browse medicines, symptoms, care and exercise.')));
+   panel.append(make('p',label('Memória geral da Lumi: conhecimento científico compartilhado. Consulte medicamentos, exercícios, fonoaudiologia e psicologia.','Lumi shared knowledge: scientific content for everyone. Browse medicines, exercise, speech therapy and psychology.')));
    const note=make('p',label('Consulta direta à base, sem chamada de IA. Conteúdo científico em português; fontes originais disponíveis.','Direct knowledge lookup, without an AI call. Scientific content is in Portuguese; original sources are available.'));note.className='science-note';panel.append(note);
    const controls=make('div');controls.className='science-controls';
    const searchLabel=make('label',label('Pesquisar na base','Search the knowledge base')),input=make('input');input.id='companionScienceSearch';input.type='search';input.placeholder=label('Ex.: proteínas, ON/OFF, equilíbrio','E.g. proteínas, ON/OFF, equilíbrio');input.value=query;searchLabel.append(input);
@@ -42,6 +42,11 @@ export function installScience({topics,sources,version,checked},search){
      content.append(make('h3',label('Fontes e evidência','Sources and evidence')));
      const refs=make('ul');for(const id of t.sources){const s=sources[id],li=make('li'),link=make('a',s.name);link.href=s.url;link.target='_blank';link.rel='noopener noreferrer';li.append(link,make('small',s.kind+' · '+s.year+(s.doi?' · DOI '+s.doi:'')));refs.append(li);}content.append(refs);
      content.append(make('small',label('Fontes consultadas em 30/10/2026.','Sources consulted on 30 October 2026.')));
+     const direct=make('button',label('Levar resposta ao chat · sem IA','Take answer to chat · no AI'));direct.type='button';direct.className='science-direct';direct.onclick=()=>{
+      const draft=document.getElementById('messageInput');
+      if(draft?.value.trim()){direct.textContent=label('Conclua sua mensagem na Lumi antes de continuar.','Finish your draft in Lumi before continuing.');return;}
+      if(draft){draft.value='Companion: '+t.title;draft.dispatchEvent(new Event('input',{bubbles:true}));switchTo(false);draft.focus();}
+     };content.append(direct,make('small',label('Prepara a consulta à memória geral; toque em enviar para receber a resposta com fontes.','Prepares a shared-knowledge lookup; press Send to receive the sourced answer.')));
      const use=make('button',label('Conversar com a Lumi sobre este assunto','Discuss this topic with Lumi'));use.type='button';use.onclick=()=>{
       const draft=document.getElementById('messageInput');
       // A filled draft must remain intact. Context is inserted only into an empty composer.
