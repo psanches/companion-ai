@@ -52,7 +52,7 @@ export async function generateWeeklyDigest(env,now=new Date(),fetcher=fetch,edit
  const items=mergeDailyReadings(freshItems,previous,date);
  const digest={...preview,date,shortfall:Math.max(0,NEWS_PREVIEW_POLICY.maxItems-items.length),verification:{...preview?.verification,newItems:items.filter(x=>!x.repeated).length,repeatedItems:items.filter(x=>x.repeated).length,...(collectionError?{collectionError}:{})},generatorRevision:NEWS_GENERATOR_REVISION,items,title:'Notícias de Saúde',mode:'daily-editorial',published:true,automaticUpdates:true,window:NEWS_WEEK,generatedAt:now.toISOString()};
  // New readings first; prior verified readings fill the minimum without changing publication dates.
- if(!publishableWeeklyEdition(digest))throw Error('No publishable verified news edition; previous edition preserved. Audit: '+JSON.stringify({date,returned:preview?.items?.length,verification:preview?.verification}));
+ if(!publishableWeeklyEdition(digest))throw Error('No publishable verified news edition; previous edition preserved. Audit: '+JSON.stringify({date,returned:preview?.items?.length,verification:preview?.verification,collectionError}));
  await env.HEALTH_NEWS_KV.put(DATE_PREFIX+date,JSON.stringify(digest),{expirationTtl:60*60*24*45});
  await env.HEALTH_NEWS_KV.put(WEEK_KEY,JSON.stringify(digest));
  await env.HEALTH_NEWS_KV.put(RECENT,JSON.stringify([...recent,...digest.items.map(x=>({url:x.url,topicKey:x.topicKey,date}))]),{expirationTtl:60*60*24*30});
