@@ -1,5 +1,6 @@
+import {DAILY_ROUTINE,dailyRoutineText} from './daily-routine.mjs';
 // Shared, versioned public knowledge. No personal or clinical records.
-export const VERSION='2026-10-30.4';
+export const VERSION='2026-10-30.5';
 export const CHECKED='2026-10-30';
 export const SOURCES={
  ativa2015:{name:'Moretto et al. — Ativa Parkinson: atividade física e qualidade de vida',url:'https://acervodigital.unesp.br/handle/11449/142101',kind:'Trabalho em congresso de extensão universitária',year:'2015',country:'Brasil',about:'Trabalho da Universidade Estadual Paulista (Unesp), em Bauru, apresentado no 8º Congresso de Extensão Universitária; o resumo descreve dez participantes.'},
@@ -34,6 +35,7 @@ export const SOURCES={
 };
 // evidence describes the cited finding; institutional advice is not assigned a formal GRADE rating.
 export const TOPICS=[
+ {...DAILY_ROUTINE,text:dailyRoutineText()},
  {id:'on-off',category:'Medicamentos e flutuações',title:'Ciclos ON/OFF',tags:'on off ciclos flutuacoes efeito remedio prolopa levodopa',evidence:'Orientação institucional',text:'ON é o período de melhor controle dos sintomas com o tratamento. No OFF, sintomas retornam ou pioram. A mudança pode ser gradual ou imprevisível e incluir sintomas motores e não motores.',practice:'Anotar sintomas, horários das doses e refeições ajuda a reconhecer padrões para discutir na consulta.',limits:'OFF não explica automaticamente toda piora. Ajustes de dose e horário precisam da equipe assistente.',sources:['off','mjff']},
  {id:'wearing-off',category:'Medicamentos e flutuações',title:'Wearing-off: fim do efeito da dose',tags:'wearing off fim dose dura pouco volta rigidez',evidence:'Orientação institucional',text:'Wearing-off é o retorno de sintomas antes da próxima dose. Doses que demoram a agir ou falham também podem ocorrer; alimentação e digestão podem interferir.',practice:'Levar o registro dos episódios ao neurologista ajuda a avaliar alternativas de tratamento.',limits:'Não antecipar doses nem aumentar a quantidade por conta própria.',sources:['off','mjff']},
  {id:'protein',category:'Alimentação e digestão',title:'Proteínas e levodopa',tags:'proteina proteinas carne leite feijao alimentacao prolopa levodopa dieta',evidence:'Recomendação de diretriz',text:'Em algumas pessoas, proteínas interferem na resposta à levodopa. Para quem tem flutuações, pode ser discutida a redistribuição de proteínas ao longo do dia.',practice:'Avaliar a relação entre refeições e sintomas com neurologista e nutricionista.',limits:'Não reduzir a proteína total diária. Nem todas as pessoas precisam mudar a alimentação.',sources:['diet','nice']},

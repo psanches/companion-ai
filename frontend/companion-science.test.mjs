@@ -31,7 +31,7 @@ test('local science navigation never sends a request, preserves drafts and clear
  assert.equal(d.querySelectorAll('#companionDoctoralResearch [data-research]').length,6);assert.match(d.getElementById('companionDoctoralResearch').textContent,/não equivale/);
  assert.ok(d.getElementById('companionScience').classList.contains('science-research-view'));tabs[1].click();assert.equal(d.getElementById('companionScience').classList.contains('science-research-view'),false);
  const input=d.getElementById('companionScienceSearch');input.value='proteínas';input.dispatchEvent(new w.Event('input'));
- assert.equal(d.querySelectorAll('#companionScienceResults > details').length,1);
+ assert.equal(d.querySelectorAll('#companionScienceResults > details').length,2);
  const draft=d.getElementById('messageInput');
  d.querySelector('.science-direct').click();assert.match(draft.value,/^Companion: Proteínas e levodopa$/);assert.equal(calls,0);draft.value='';tabs[1].click();
  draft.value='Mensagem ainda não enviada';

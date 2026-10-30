@@ -12,15 +12,17 @@ section{background:#1e293b;border-radius:16px;padding:20px;margin:16px 0}
 small{color:#cbd5e1}input{font:inherit;min-height:48px;width:min(100%,280px);border-radius:8px}
  .movement-art{width:min(100%,440px);margin:18px auto;padding:12px;background:#f1f5f9;border-radius:16px;color:#172554}.movement-art img{display:block;width:100%;height:auto;border-radius:10px}.movement-art svg *{vector-effect:non-scaling-stroke}.movement-art figcaption{color:#334155;text-align:center;font-size:.95rem;margin-top:8px}</style></head><body>
 <header><h1>💙 Lumi — Mente, Corpo e Psicologia</h1><p>Protótipo educativo, inspirado em boas práticas para Parkinson. Não substitui fisioterapia ou avaliação individual.</p></header>
-<nav><button id="mindTab">🧠 Mente</button><button id="bodyTab">🚶 Corpo</button><button id="psychTab">💙 Psicologia</button></nav>
-<section id="mind"><h2>Jogo de memória e atenção</h2><p>Observe as três palavras. Depois escolha qual delas apareceu.</p><div id="study"><p id="words" style="font-size:1.5rem;font-weight:bold"></p><button id="ready">Já memorizei</button></div><div id="quiz" hidden><p>Qual palavra estava na lista?</p><div id="options" class="choices"></div></div><p id="mindFeedback" class="status" aria-live="polite"></p><button id="nextMind" hidden>Próxima rodada</button><p><small>Sem cronômetro e sem penalidade por erros.</small></p></section>
+<nav><button id="routineTab" aria-controls="routine">☀️ Rotina diária</button><button id="mindTab">🧠 Mente</button><button id="bodyTab">🚶 Corpo</button><button id="psychTab">💙 Psicologia</button></nav>
+<section id="routine"><!-- DAILY_ROUTINE --></section>
+<section id="mind" hidden><h2>Jogo de memória e atenção</h2><p>Observe as três palavras. Depois escolha qual delas apareceu.</p><div id="study"><p id="words" style="font-size:1.5rem;font-weight:bold"></p><button id="ready">Já memorizei</button></div><div id="quiz" hidden><p>Qual palavra estava na lista?</p><div id="options" class="choices"></div></div><p id="mindFeedback" class="status" aria-live="polite"></p><button id="nextMind" hidden>Próxima rodada</button><p><small>Sem cronômetro e sem penalidade por erros.</small></p></section>
 <section id="body" hidden><h2>Movimento seguro, sentado</h2><p><strong>Antes de começar:</strong> use cadeira firme, sem rodas, pés apoiados no chão. Faça apenas movimentos confortáveis. Se houver tontura, dor, falta de ar ou instabilidade, pare.</p><div id="bodyExercise"></div><div class="actions"><button id="previousBody">Anterior</button><button id="nextBody">Próximo</button></div><p><small>Evite exercícios de equilíbrio em pé sem orientação profissional. Não há coleta de dados de saúde.</small></p></section>
 <section id="psych" hidden><h2>💙 Como você está hoje?</h2><p><small>Demonstração de conversa acolhedora. Perguntas ilustrativas, ainda não avaliadas pela equipe de Psicologia da UNESP. Você pode pular qualquer pergunta. As respostas não são salvas nem enviadas.</small></p><div id="psychConversation" aria-live="polite"></div><div id="psychChoices" class="choices"></div><div class="actions"><button id="psychSkip">Pular pergunta</button><button id="psychRestart">Recomeçar</button></div><p><small>Esta conversa não é atendimento psicológico. Se precisar de apoio, converse com um profissional de saúde ou alguém de confiança.</small></p></section>
 <footer><p id="progress" aria-live="polite"></p><small>Versão experimental — para revisão posterior pela equipe Ativa Parkinson. Sem armazenamento ou envio de respostas.</small></footer>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-function tab(name){$('mind').hidden=name!=='mind';$('body').hidden=name!=='body';$('psych').hidden=name!=='psych';}
+function tab(name){$('routine').hidden=name!=='routine';$('mind').hidden=name!=='mind';$('body').hidden=name!=='body';$('psych').hidden=name!=='psych';}
+$('routineTab').onclick=()=>tab('routine');
 $('mindTab').onclick=()=>tab('mind');$('bodyTab').onclick=()=>tab('body');$('psychTab').onclick=()=>tab('psych');
 const rounds=[
  {words:['CASA','FLOR','SOL'],answer:'FLOR',options:['FLOR','LIVRO','PONTE']},

@@ -1,6 +1,6 @@
 # Companion = Ciência
 
-Public, versioned educational knowledge for Lumi Develop. The current edition has 33 topics, including eight exercise/rehabilitation topics. It is a bounded curated collection, not an exhaustive literature review or a clinically certified product.
+Public, versioned educational knowledge for Lumi Develop. The current edition has 34 topics, including eight exercise/rehabilitation topics. It is a bounded curated collection, not an exhaustive literature review or a clinically certified product.
 
 ## Evidence and editorial rules
 
@@ -37,3 +37,6 @@ The public catalog also contains doctoralResearch: four completed USP theses, Al
 ## Mobile research entry
 
 More starts with two independent entries: Companion · Ciência for the main library and Pesquisa brasileira for the doctoral register. The science view shows the knowledge topics; the research view shows academic records without the science search or topic list. Pesquisa brasileira opens the doctoral register directly. Entering Companion does not focus the search input, avoiding keyboard activation and scrolling past the research section on Android. The link /?companion=pesquisa-brasileira opens that section after authentication. Drafts remain intact.
+
+## Daily routine
+General educational routine in Mind & Body and the shared science catalog, using one content source (daily-routine.mjs). Sequence and example durations are editorial organization, not a validated clinical protocol. Includes fatigue/OFF adaptation, weekly versus daily exercise, voice, food, sleep and social contact; no medication changes, saved health data or added model calls.

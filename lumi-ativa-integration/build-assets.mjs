@@ -1,3 +1,5 @@
+import {renderDailyRoutine} from '../companion-science/daily-routine.mjs';
+import {SOURCES as routineSources} from '../companion-science/catalog.mjs';
 import {createHash} from 'node:crypto';
 import {RETURN_CSS,addReturnNavigation} from '../frontend/subpage-navigation.mjs';
 import fs from 'node:fs';import path from 'node:path';
@@ -8,6 +10,7 @@ for(const name of fs.readdirSync(new URL('../ativa-demo/public/',import.meta.url
 // Inline approved WEBP images into the development-only HTML asset. Fail the build
 // if any image is missing, so a green deployment never shows broken illustrations.
 let mindBodyHtml=fs.readFileSync(new URL('../lumi-mind-body/index.html',import.meta.url),'utf8');
+mindBodyHtml=mindBodyHtml.replace('<!-- DAILY_ROUTINE -->',renderDailyRoutine(routineSources));
 for(let i=1;i<=4;i++){
  const file=new URL('../lumi-mind-body/exercicio-'+i+'.webp',import.meta.url);
  const bytes=fs.readFileSync(file);
