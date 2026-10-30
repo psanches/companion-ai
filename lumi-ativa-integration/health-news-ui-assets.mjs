@@ -28,13 +28,18 @@ function date(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return 'Data indi
 function state(message){box.replaceChildren(el('p','news-state',message));}
 function card(item){
  let url;try{url=new URL(item.url);if(url.protocol!=='https:'||url.username||url.password)return null;}catch{return null;}
- if(item.dateVerified!==true||!item.publishedAt||!item.title||!item.summary)return null;
+ const official=item.kind==='official-update';
+ if(item.dateVerified!==true||!item.publishedAt||!item.title||(!official&&!item.summary))return null;
  const article=el('article','news-card'),meta=el('div','news-meta');
  meta.append(el('span','news-region',(item.kind==='contexto'?'Leitura de contexto':'Notícia')+' · '+(item.region==='Brasil'?'Brasil':'Internacional')));const categories={'saude-geral':'Saúde geral','qualidade-de-vida':'Qualidade de vida','exercicios':'Exercícios e movimento','parkinson-envelhecimento':'Parkinson e envelhecimento'};if(categories[item.category])meta.append(el('span','',categories[item.category]));
  const published=el('time','','Publicado em '+date(item.publishedAt));published.dateTime=item.publishedAt;meta.append(published);if(item.repeated===true)meta.append(el('span','news-repeat','Reapresentada'));
- article.append(meta,el('h2','',item.title),el('p','news-summary',item.summary));
+ if(official)meta.append(el('span','news-official-label',url.hostname.includes('michaeljfox.org')?'Destaque fixo solicitado':'Atualização oficial da OMS'));
+ article.append(meta,el('h2','',item.title),el('p','news-summary',official?'Título original da fonte. Leia a publicação completa no site oficial ou abra a tradução em português.':item.summary));
+ if(official&&item.retained)article.append(el('p','news-stale','Última publicação verificada anteriormente; a atualização da fonte está indisponível.'));
  const footer=el('div','news-source');footer.append(el('span','','Fonte: '+(item.source||url.hostname)));
- const link=el('a','','Ler na fonte original ↗');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';footer.append(link);article.append(footer);return article;
+ const link=el('a','','Ler na fonte original ↗');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';footer.append(link);
+ if(official){const translated=el('a','','Ler em português ↗');translated.href='https://translate.google.com/translate?sl=auto&tl=pt&u='+encodeURIComponent(url.href);translated.target='_blank';translated.rel='noopener noreferrer';footer.append(translated);}
+ article.append(footer);return article;
 }
 let running=false;
 async function load(){if(running)return;running=true;reload.disabled=true;box.setAttribute('aria-busy','true');
@@ -42,19 +47,31 @@ async function load(){if(running)return;running=true;reload.disabled=true;box.se
   const response=await fetch('/health-news',{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(15000)});
   if(!response.ok)throw Error('unavailable');const data=await response.json();
   if(![3,4].includes(data.policyVersion)||!Array.isArray(data.items))throw Error('unverified');
-  const entries=data.items.map(item=>({item,node:card(item)})).filter(x=>x.node),cards=entries.map(x=>x.node);
+  const officialItems=data.officialSources?[data.officialSources.mjff,...(data.officialSources.who||[])].filter(Boolean):[];
+  const officialUrls=new Set(officialItems.map(x=>x.url));
+  const entries=data.items.filter(x=>!officialUrls.has(x.url)).map(item=>({item,node:card(item)})).filter(x=>x.node),cards=entries.map(x=>x.node);
   box.replaceChildren();
+  if(data.officialSources){
+   box.append(el('h2','news-group-title','Michael J. Fox Foundation — destaque fixo'));
+   const pinned=data.officialSources.mjff&&card(data.officialSources.mjff);
+   if(pinned)box.append(pinned);else{const link=el('a','news-state','Não foi possível confirmar a última publicação. Abrir o blog oficial da Michael J. Fox Foundation ↗');link.href='https://www.michaeljfox.org/blog';link.target='_blank';link.rel='noopener noreferrer';box.append(link);}
+   box.append(el('h2','news-group-title','Últimas atualizações da OMS'));
+   const who=(data.officialSources.who||[]).map(card).filter(Boolean);box.append(...who);
+   if(!who.length){const link=el('a','news-state','Consultar atualizações oficiais da OMS ↗');link.href='https://www.who.int/news-room/headlines';link.target='_blank';link.rel='noopener noreferrer';box.append(link);}
+  }
   if(data.policyVersion===4&&!data.demo){
    const fresh=entries.filter(x=>x.item.repeated!==true),previous=entries.filter(x=>x.item.repeated===true);
    if(fresh.length)box.append(el('h2','news-group-title','Novas nesta edição ('+fresh.length+')'),...fresh.map(x=>x.node));
    if(previous.length)box.append(el('h2','news-group-title','Leituras anteriores ('+previous.length+')'),...previous.map(x=>x.node));
   }else box.append(...cards);
-  if(!cards.length)state('Ainda não há notícias verificadas disponíveis. Consulte novamente mais tarde.');
+  if(!cards.length&&!officialItems.length&&!data.officialSources)state('Ainda não há notícias verificadas disponíveis. Consulte novamente mais tarde.');
   edition.replaceChildren(el('strong','','Boletim de '+date(data.date)),document.createTextNode(' · '+cards.length+(cards.length===1?' notícia verificada':' notícias verificadas')));
   if(data.policyVersion===4&&!data.demo){
    const fresh=entries.filter(x=>x.item.repeated!==true).length,repeated=entries.length-fresh;
    edition.append(document.createTextNode(' · '+fresh+(fresh===1?' nova na Lumi':' novas na Lumi')+' · '+repeated+(repeated===1?' reapresentada':' reapresentadas')));
   }
+  if(data.verification?.collectionError)edition.append(el('span','news-stale',' · Busca de novas matérias indisponível; leituras anteriores preservadas.'));
+  if(officialItems.length)edition.append(document.createTextNode(' · '+officialItems.length+' atualizações diretas das fontes'));
   if(data.demo){edition.classList.remove('news-stale');edition.append(document.createTextNode(' · Demonstração estática · Sem atualização automática'));reload.hidden=true;}else if(data.mode==='week-complete'){edition.classList.add('news-stale');edition.append(document.createTextNode(' · Atualizações pausadas · Última edição preservada'));}else if(data.stale){edition.classList.add('news-stale');edition.append(document.createTextNode(' · Última edição disponível'));}else edition.classList.remove('news-stale');
  }catch{edition.textContent='Boletim indisponível no momento';state('Não consegui carregar as notícias agora. Use “Recarregar boletim” para tentar novamente.');}
  finally{running=false;reload.disabled=false;box.setAttribute('aria-busy','false');}

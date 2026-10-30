@@ -76,7 +76,7 @@ function decodeArticleEntities(text){
   return code>0&&code<=0x10ffff&&!(code>=0xd800&&code<=0xdfff)?String.fromCodePoint(code):match;
  });
 }
-export async function verifyStory(candidate,today,citedUrls,fetcher=fetch){
+export async function verifyStory(candidate,today,citedUrls,fetcher=fetch,options={}){
  let url=publicSourceUrl(candidate.url);
  if(!citedUrls.has(url.href))throw Error('URL was not returned by web search');
  let response;
@@ -88,13 +88,14 @@ export async function verifyStory(candidate,today,citedUrls,fetcher=fetch){
  if(!response.headers.get('content-type')?.includes('text/html')){await response.body?.cancel();throw Error('Source is not an article page');}
  const html=await readHtml(response);
  if(/"isAccessibleForFree"\s*:\s*(?:false|"false")/i.test(html))throw Error('Article requires subscription; public text is insufficient');
- const publication=publicationFromHtml(html);const ageDays=checkPublication(publication.date,today);
+ const publication=publicationFromHtml(html);const ageDays=checkPublication(publication.date,today,options.maxAgeDays??90);
  if(candidate.publishedAt&&candidate.publishedAt!==publication.date)throw Error('Search date disagrees with original publication date');
  let body=html.replace(/<(script|style|nav|header|footer)\b[^>]*>[\s\S]*?<\/\1>/gi,' ');
  body=decodeArticleEntities(body.slice(Math.max(0,body.search(/<h1\b/i))).replace(/<[^>]*>/g,' ')).replace(/\s+/g,' ').trim().slice(0,14000);
- if(ageDays>30&&/dia[- ]d|neste sabado|neste domingo|inscri[çc][õo]es|campanha de multivacina/i.test(body.slice(0,500)))throw Error('Expired event is not an evergreen context reading');
+ if(!options.allowExpiredEvent&&ageDays>30&&/dia[- ]d|neste sabado|neste domingo|inscri[çc][õo]es|campanha de multivacina/i.test(body.slice(0,500)))throw Error('Expired event is not an evergreen context reading');
  if(body.length<250)throw Error('Insufficient source text');
- return {url:url.href,publishedAt:publication.date,dateEvidence:publication.evidence,ageDays,region:url.hostname.endsWith('.br')?'Brasil':'Internacional',source:url.hostname,kind:ageDays<=30?'noticia':'contexto',category:classifyStory(body.slice(0,500)),sourceText:body};
+ const sourceTitle=decodeArticleEntities((html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1]||'').replace(/<[^>]*>/g,' ')).replace(/\s+/g,' ').trim();
+ return {sourceTitle,url:url.href,publishedAt:publication.date,dateEvidence:publication.evidence,ageDays,region:url.hostname.endsWith('.br')?'Brasil':'Internacional',source:url.hostname,kind:ageDays<=30?'noticia':'contexto',category:classifyStory(body.slice(0,500)),sourceText:body};
 }
 export function citedSourceUrls(data){
  const values=[];

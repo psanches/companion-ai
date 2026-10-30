@@ -217,3 +217,52 @@ export async function generateHealthNewsPreview(env,now=new Date(),transport=fet
  return {policyVersion:4,status:items.length?'ready':'empty',date,title:'Notícias de Saúde — prévia para revisão',mode:'review-only',automaticUpdates:false,published:false,items,shortfall:10-items.length,verification:{...audit,verified:verified.length,accepted:items.length},policy:NEWS_PREVIEW_POLICY};
 }
 
+
+// Official-source highlights bypass editorial age, score, topic and repetition rules.
+// They are read directly, without the AI service, and keep the original title/date.
+export function validOfficialItem(item,host,date){
+ try{return item?.dateVerified===true&&item.kind==='official-update'&&typeof item.title==='string'&&!!item.title.trim()&&publicSourceUrl(item.url).hostname.replace(/^www\./,'')===host&&checkPublication(item.publishedAt,date,Infinity)>=0;}catch{return false;}
+}
+export async function collectOfficialUpdates(now=new Date(),fetcher=fetch,previous={}){
+ const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(now),checkedAt=now.toISOString(),errors=[];
+ const result={checkedAt,mjff:null,who:[],errors};
+ let calls=0;
+ const bounded=(url,options)=>{if(calls>=19)throw Error('Official sources request budget reached');calls++;return fetcher(url,options);};
+ async function listing(url,pattern,limit){
+  let source=publicSourceUrl(url),response;
+  for(let hop=0;hop<3;hop++){
+   response=await bounded(source.href,{redirect:'manual',signal:AbortSignal.timeout(15000),headers:{accept:'text/html'}});
+   if([301,302,303,307,308].includes(response.status)){const location=response.headers.get('location');await response.body?.cancel();const target=publicSourceUrl(new URL(location,source).href);if(target.hostname!==source.hostname)throw Error('Unexpected official source redirect');source=target;response=null;continue;}break;
+  }
+  if(!response?.ok)throw Error('Official index unavailable: HTTP '+(response?.status||'redirect-limit'));
+  if(!response.headers.get('content-type')?.includes('text/html'))throw Error('Official index is not HTML');
+  const reader=response.body.getReader(),parts=[];let size=0;
+  for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>1500000){await reader.cancel();throw Error('Official index exceeds size limit');}parts.push(value);}
+  const bytes=new Uint8Array(size);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length;}
+  let html=new TextDecoder().decode(bytes);const at=html.search(/<h1\b/i);if(at>=0)html=html.slice(at);
+  const links=[];
+  for(const m of html.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi)){
+   try{const target=publicSourceUrl(new URL(m[1].replaceAll('&amp;','&'),source).href);if(target.hostname===source.hostname&&pattern.test(target.pathname)&&!links.includes(target.href))links.push(target.href);}catch{}
+   if(links.length===limit)break;
+  }
+  if(!links.length)throw Error('No article links on official index');
+  return links;
+ }
+ async function collect(url,pattern,limit,host){
+  const links=await listing(url,pattern,limit),cited=new Set(links),items=[];
+  for(let at=0;at<links.length;at+=3){await Promise.all(links.slice(at,at+3).map(async url=>{
+   try{const story=await verifyStory({url},date,cited,bounded,{maxAgeDays:Infinity,allowExpiredEvent:true});
+    if(!story.sourceTitle)throw Error('Missing original article title');
+    const item={url:story.url,title:story.sourceTitle,publishedAt:story.publishedAt,dateEvidence:story.dateEvidence,dateVerified:true,kind:'official-update',source:host,language:'en',checkedAt,exemptFromEditorialRules:true};
+    if(!validOfficialItem(item,host,date))throw Error('Invalid official article');items.push(item);
+   }catch(error){errors.push({source:host,url,reason:String(error.message).slice(0,180)});}
+  }));}
+  return items.sort((a,b)=>b.publishedAt.localeCompare(a.publishedAt)||links.indexOf(a.url)-links.indexOf(b.url));
+ }
+ try{result.mjff=(await collect('https://www.michaeljfox.org/blog',/^\/news\/[^/]+\/?$/,12,'michaeljfox.org'))[0]||null;}catch(error){errors.push({source:'michaeljfox.org',reason:String(error.message).slice(0,180)});}
+ try{result.who=(await collect('https://www.who.int/news-room/headlines',/^\/news\/item\/[^/]+\/?$/,2,'who.int')).slice(0,2);}catch(error){errors.push({source:'who.int',reason:String(error.message).slice(0,180)});}
+ if(!result.mjff&&validOfficialItem(previous?.mjff,'michaeljfox.org',date))result.mjff={...previous.mjff,retained:true};
+ if(!result.who.length)result.who=(previous?.who||[]).filter(x=>validOfficialItem(x,'who.int',date)).slice(0,2).map(x=>({...x,retained:true}));
+ result.sourceRequests=calls;
+ return result;
+}

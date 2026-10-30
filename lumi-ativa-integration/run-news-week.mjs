@@ -32,7 +32,7 @@ try{
   if(response.status!==404)break;await response.body?.cancel();await new Promise(resolve=>setTimeout(resolve,1000));
  }
  const digest=await response.json().catch(()=>null);assert.equal(response.status,200,'Initial news generation failed: '+(digest?.error||response.status));assert.ok(validWeeklyEdition(digest),'Invalid verified public edition');
- console.log(JSON.stringify({stage:'verified-weekly-edition-published',date:digest.date,items:digest.items.map(({title,url,publishedAt,importance,scope,source})=>({title,url,publishedAt,importance,scope,source})),verification:digest.verification,window:digest.window,personalDataUsed:false}));
+ console.log(JSON.stringify({stage:'verified-weekly-edition-published',date:digest.date,items:digest.items.map(({title,url,publishedAt,importance,scope,source})=>({title,url,publishedAt,importance,scope,source})),verification:digest.verification,officialSources:digest.officialSources,window:digest.window,personalDataUsed:false}));
 }finally{
  if(created){await cf(name,{method:'DELETE'});console.log(JSON.stringify({temporaryNewsWorkerRemoved:true}));}
 }

@@ -207,3 +207,27 @@ test('redirect-heavy discovery respects the Free Worker ceiling and reserves lat
  assert.ok(sourceRequests+apiRequests+NEWS_COLLECTION_BUDGET.storageOperations<50);
  assert.equal(NEWS_COLLECTION_BUDGET.sourceRequests+NEWS_COLLECTION_BUDGET.apiRequests+NEWS_COLLECTION_BUDGET.storageOperations,47);
 });
+
+test('official highlights include the newest MJFF article despite age and fundraising rules, and retain WHO without AI',async()=>{
+ const {collectOfficialUpdates,validOfficialItem}=await import('./health-news-preview.mjs');
+ const mjff='https://www.michaeljfox.org/news/fundraiser',older='https://www.michaeljfox.org/news/old',future='https://www.michaeljfox.org/news/future',who='https://www.who.int/news/item/29-10-2026-candidates',accident='https://www.who.int/news/item/28-10-2026-train-accident';let calls=0;
+ const transport=async(url)=>{
+  calls++;assert.notEqual(url,'https://api.openai.com/v1/responses');
+  if(url==='https://www.michaeljfox.org/blog')return new Response('<h1>Blog</h1><a href="'+older+'">Old</a><a href="'+mjff+'">Fundraising</a><a href="'+future+'">Future</a><a href="https://evil.example/news/fake">Fake</a>',{headers:{'content-type':'text/html'}});
+  if(url==='https://www.who.int/news-room/headlines')return new Response('<h1>Latest</h1><a href="'+who+'">Candidates</a><a href="'+accident+'">Statement</a>',{headers:{'content-type':'text/html'}});
+  const date=url===future?'2026-11-05':url===older?'2026-06-17':url===mjff?'2026-06-18':url===who?'2026-10-29':'2026-10-28';
+  return new Response('<meta property="article:published_time" content="'+date+'"><h1>'+ (url===mjff?'Fundraising event neste sabado':'Official statement')+'</h1><p>'+evidence.repeat(8)+'</p>',{headers:{'content-type':'text/html'}});
+ };
+ const result=await collectOfficialUpdates(new Date('2026-10-30T12:00:00Z'),transport);
+ assert.equal(result.mjff.url,mjff);assert.equal(result.mjff.publishedAt,'2026-06-18');assert.equal(result.mjff.exemptFromEditorialRules,true);assert.equal(result.who.length,2);assert.equal(result.who[0].url,who);assert.ok(result.errors.some(x=>x.url===future));assert.equal(result.sourceRequests,calls);
+ assert.equal(validOfficialItem({...result.mjff,url:'https://evil.example/fake'},'michaeljfox.org','2026-10-30'),false);
+ const retained=await collectOfficialUpdates(new Date('2026-10-31T12:00:00Z'),async()=>new Response(null,{status:503}),result);
+ assert.equal(retained.mjff.url,mjff);assert.equal(retained.mjff.retained,true);assert.ok(retained.who.every(x=>x.retained));
+});
+
+test('API failure diagnostics distinguish quota and rate limits without exposing provider messages',async()=>{
+ const {requestNewsResearch}=await import('./health-news-daily.mjs');
+ for(const code of ['insufficient_quota','rate_limit_exceeded']){
+  await assert.rejects(requestNewsResearch('synthetic',{},async()=>Response.json({error:{code,message:'sensitive-provider-message'}},{status:429})),error=>error.message.includes(code)&&!error.message.includes('sensitive-provider-message'));
+ }
+});

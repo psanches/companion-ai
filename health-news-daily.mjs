@@ -8,7 +8,7 @@ function extractText(data){return(data.output||[]).flatMap(i=>i.content||[]).fil
 function schema(fields,minItems,maxItems){return {type:'json_schema',name:'health_news',strict:true,schema:{type:'object',additionalProperties:false,required:['items'],properties:{items:{type:'array',minItems,maxItems,items:{type:'object',additionalProperties:false,required:Object.keys(fields),properties:fields}}}}};}
 async function ask(apiKey,body,fetcher){
  const response=await fetcher('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(120000),headers:{authorization:'Bearer '+apiKey,'content-type':'application/json'},body:JSON.stringify({model:MODEL,reasoning:{effort:'low'},max_output_tokens:6000,store:false,...body})});
- if(!response.ok)throw Error('Research API error: '+response.status);const data=await response.json();
+ if(!response.ok){const failure=await response.json().catch(()=>null);const code=String(failure?.error?.code||'').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,64);throw Error('Research API error: '+response.status+(code?' ('+code+')':''));}const data=await response.json();
  if(data.status!=='completed')throw Error('Research incomplete: '+(data.incomplete_details?.reason||data.status||'unknown'));
  return data;
 }

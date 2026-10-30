@@ -1,7 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {generateWeeklyDigest,getWeeklyDigest,newsWeekActive,NEWS_WEEK,WEEK_KEY,validWeeklyEdition,publishableWeeklyEdition,NEWS_GENERATOR_REVISION,mergeDailyReadings} from '../../health-news-week.mjs';
+import {generateWeeklyDigest as generateWeeklyDigestCore,getWeeklyDigest,newsWeekActive,NEWS_WEEK,WEEK_KEY,validWeeklyEdition,publishableWeeklyEdition,NEWS_GENERATOR_REVISION,mergeDailyReadings} from '../../health-news-week.mjs';
 import {NEWS_LIVE_HTML} from '../health-news-ui-assets.mjs';
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {pathToFileURL} from 'node:url';
+const generateWeeklyDigest=(env,now,fetcher,editor,collector=async()=>null)=>generateWeeklyDigestCore(env,now,fetcher,editor,collector);
 const now=new Date('2026-10-28T12:00:00Z');
 const item={url:'https://www.parkinson.org/news/research/caregivers',publishedAt:'2026-10-27',kind:'noticia',dateVerified:true,language:'pt-BR',scope:'global',importance:8,title:'Pesquisa e cuidado',summary:Array(90).fill('evidência-fictícia').join(' '),topicKey:'caregiver-support-study',scopeEvidence:'National evidence supports caregivers throughout the country.'};
 const preview={policyVersion:4,date:'2026-10-28',items:Array.from({length:6},(_,i)=>({...item,url:'https://'+['www.parkinson.org','www.nih.gov','www.who.int','www.fiocruz.br','www.paho.org','www.nature.com'][i]+'/news/test-'+i,topicKey:'study-'+i}))};
@@ -61,32 +62,32 @@ test('a generator revision regenerates an older same-day cache once and then reu
 
 
 test('publication accepts three complete readings and rejects a single-source edition without deleting the last good one',async()=>{
- const f=fixture(),legacy={...preview,items:preview.items.slice(0,1)};f.data.set(WEEK_KEY,JSON.stringify(legacy));
+ const f=fixture(),legacy={...preview,items:preview.items.map(x=>({...x,publishedAt:'2026-10-26'}))};f.data.set(WEEK_KEY,JSON.stringify(legacy));
  assert.equal(publishableWeeklyEdition(preview),true);
  for(const items of [preview.items.slice(0,2),preview.items.map((x,i)=>({...x,url:'https://www.who.int/news/'+i})),preview.items.map(x=>({...x,summary:'Uma frase muito curta.'}))]){
   assert.equal(publishableWeeklyEdition({...preview,items}),false);
-  await assert.rejects(generateWeeklyDigest(f.env,now,undefined,async()=>({...preview,items})),/No publishable/);
+  await assert.rejects(generateWeeklyDigest(f.env,new Date('2026-11-03T12:00:00Z'),undefined,async()=>({...preview,items})),/No publishable/);
   assert.equal(f.writes.length,0);assert.deepEqual(JSON.parse(f.data.get(WEEK_KEY)),legacy);
  }
 });
 
 
-test('two new readings lead the edition and one prior reading fills three, with original dates and no duplicates',async()=>{
+test('two new readings lead the edition and eligible prior readings fill up to ten, with original dates and no duplicates',async()=>{
  const f=fixture(),previous={...preview,date:'2026-10-27'};f.data.set(WEEK_KEY,JSON.stringify(previous));
  const fresh=preview.items.slice(0,2).map((x,i)=>({...x,url:x.url+'-new',topicKey:'fresh-'+i,publishedAt:'2026-10-28'}));
  const result=await generateWeeklyDigest(f.env,now,undefined,async()=>({...preview,items:fresh}));
- assert.equal(result.items.length,3);assert.deepEqual(result.items.slice(0,2).map(x=>x.topicKey),['fresh-0','fresh-1']);assert.equal(result.verification.newItems,2);assert.equal(result.verification.repeatedItems,1);
+ assert.equal(result.items.length,8);assert.deepEqual(result.items.slice(0,2).map(x=>x.topicKey),['fresh-0','fresh-1']);assert.equal(result.verification.newItems,2);assert.equal(result.verification.repeatedItems,6);
  for(const x of result.items.slice(2)){assert.equal(x.repeated,true);assert.equal(x.repeatedFromEdition,'2026-10-27');assert.equal(x.publishedAt,'2026-10-27');}
- assert.equal(new Set(result.items.map(x=>x.url)).size,3);assert.equal(new Set(result.items.map(x=>x.topicKey)).size,3);assert.equal(publishableWeeklyEdition(result),true);
+ assert.equal(new Set(result.items.map(x=>x.url)).size,8);assert.equal(new Set(result.items.map(x=>x.topicKey)).size,8);assert.equal(publishableWeeklyEdition(result),true);
 });
-test('failed collection can reuse three verified readings but never relabels publication dates as today',async()=>{
+test('failed collection can reuse all six verified readings but never relabels publication dates as today',async()=>{
  const f=fixture();f.data.set(WEEK_KEY,JSON.stringify({...preview,date:'2026-10-27'}));
  const result=await generateWeeklyDigest(f.env,now,undefined,async()=>{throw Error('Search unavailable');});
- assert.equal(result.date,'2026-10-28');assert.equal(result.items.length,3);assert.equal(result.verification.newItems,0);assert.equal(result.verification.repeatedItems,3);assert.ok(result.items.every(x=>x.repeated&&x.publishedAt==='2026-10-27'));
+ assert.equal(result.date,'2026-10-28');assert.equal(result.items.length,6);assert.equal(result.verification.newItems,0);assert.equal(result.verification.repeatedItems,6);assert.ok(result.items.every(x=>x.repeated&&x.publishedAt==='2026-10-27'));
 });
 test('fallback skips old and duplicate topics and never displaces new readings',()=>{
  const previous={...preview,date:'2026-10-27'},fresh=[{...preview.items[0],publishedAt:'2026-10-28'}];
- const items=mergeDailyReadings(fresh,previous,'2026-10-28');assert.equal(items.length,3);assert.equal(items[0].repeated,false);assert.equal(items.filter(x=>x.url===fresh[0].url).length,1);
+ const items=mergeDailyReadings(fresh,previous,'2026-10-28');assert.equal(items.length,6);assert.equal(items[0].repeated,false);assert.equal(items.filter(x=>x.url===fresh[0].url).length,1);
  assert.equal(mergeDailyReadings([],previous,'2026-11-05').length,0);
 });
 
@@ -94,7 +95,7 @@ test('reused readings cannot fill the edition with institutional elections or is
  const admin={...item,url:'https://www.who.int/news/announcement-of-candidates-for-the-position-of-who-director-general',title:'OMS anuncia candidatos ao cargo de Diretor-Geral',topicKey:'leadership'};
  const accident={...item,url:'https://www.who.int/news/train-accident',title:'Declaração sobre acidente de trem',topicKey:'accident'};
  const result=mergeDailyReadings([admin,accident],preview,preview.date);
- assert.equal(result.length,3);assert.ok(result.every(x=>!['leadership','accident'].includes(x.topicKey)));
+ assert.equal(result.length,6);assert.ok(result.every(x=>!['leadership','accident'].includes(x.topicKey)));
 });
 
 test('three short, sourced readings can publish while unverified dates and unsupported text remain rejected',()=>{
@@ -104,4 +105,20 @@ test('three short, sourced readings can publish while unverified dates and unsup
  for(const change of [{publishedAt:'2026-10-29'},{dateVerified:false},{scope:'regional'},{summary:Array(49).fill('palavra').join(' ')}]){
   assert.equal(publishableWeeklyEdition({...brief,items:brief.items.map((x,i)=>i===0?{...x,...change}:x)}),false);
  }
+});
+
+test('MJFF pin publishes even with no eligible general news and an unavailable AI service',async()=>{
+ const f=fixture(),pin={url:'https://www.michaeljfox.org/news/pinned',title:'Fundraising update',publishedAt:'2026-06-18',dateVerified:true,kind:'official-update',source:'michaeljfox.org',language:'en',exemptFromEditorialRules:true};
+ const result=await generateWeeklyDigest(f.env,now,undefined,async()=>{throw Error('Research API error: 429 (insufficient_quota)');},async()=>({mjff:pin,who:[],checkedAt:now.toISOString()}));
+ assert.equal(result.items.length,0);assert.equal(result.officialSources.mjff.url,pin.url);assert.equal(publishableWeeklyEdition(result),true);assert.match(result.verification.collectionError,/insufficient_quota/);
+ assert.equal((await getWeeklyDigest(f.env,now)).officialSources.mjff.publishedAt,'2026-06-18');
+});
+
+test('official highlights, model calls and KV persistence share a ceiling below 50 subrequests',async()=>{
+ const f=fixture();f.data.set(WEEK_KEY,JSON.stringify(preview));let requests=0;
+ const transport=async()=>{requests++;return Response.json({});};
+ const collector=async(now,fetcher)=>{for(let i=0;i<19;i++)await fetcher('https://www.michaeljfox.org/news/'+i);return {mjff:null,who:[]};};
+ const editor=async(env,now,fetcher)=>{for(let i=0;i<5;i++)await fetcher('https://api.openai.com/v1/responses');for(let i=0;i<36;i++)await fetcher('https://www.who.int/news/'+i);return preview;};
+ const result=await generateWeeklyDigest(f.env,now,transport,editor,collector);
+ assert.equal(requests,41);assert.equal(result.verification.totalSourceRequests,36);assert.equal(result.verification.totalModelRequests,5);assert.equal(requests+3+f.writes.length,47);assert.equal(result.items.length,6);
 });
