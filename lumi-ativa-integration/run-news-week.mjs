@@ -15,7 +15,14 @@ const checkToken=randomBytes(32).toString('hex');
 const entry=`import {generateWeeklyDigest} from './health-news-week.mjs';
 export default {async fetch(request,env){
  if(request.method!=='POST'||request.headers.get('authorization')!=='Bearer '+env.CHECK_TOKEN)return new Response(null,{status:404});
- try{return Response.json(await generateWeeklyDigest(env));}
+ const storage=env.HEALTH_NEWS_KV;
+ // An authorized manual refresh may retry a same-day edition whose collection
+ // failed, while successful same-day editions still reuse the shared cache.
+ const retryEnv={...env,HEALTH_NEWS_KV:{
+  async get(key,type){const value=await storage.get(key,type);return key.startsWith('health-news:editorial-week:date:')&&value?.verification?.collectionError?null:value;},
+  put(...args){return storage.put(...args);}
+ }};
+ try{return Response.json(await generateWeeklyDigest(retryEnv));}
  catch(error){return Response.json({error:error.message},{status:502});}
 }};`;
 const form=new FormData();form.set('metadata',new Blob([JSON.stringify({main_module:'worker.mjs',compatibility_date:settings.compatibility_date,bindings:[binding,{type:'secret_text',name:'LUMI_RESEARCH_OPENAI_API_KEY',text:key},{type:'secret_text',name:'CHECK_TOKEN',text:checkToken}]})],{type:'application/json'}));
