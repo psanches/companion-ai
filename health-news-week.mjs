@@ -55,7 +55,9 @@ export async function generateWeeklyDigest(env,now=new Date(),fetcher=fetch,edit
   return fetcher(url,options);
  };
  let officialSources;
- try{officialSources=await officialCollector(now,sharedTransport,previous?.officialSources||{});}catch{officialSources=previous?.officialSources||null;}
+ const previousOfficial=previous?.officialSources;
+ const officialAlreadyCheckedToday=previousOfficial?.checkedAt&&Number.isFinite(Date.parse(previousOfficial.checkedAt))&&newsDay(new Date(previousOfficial.checkedAt))===date&&validOfficialItem(previousOfficial.mjff,'michaeljfox.org',date)&&(previousOfficial.who||[]).length>=2&&(previousOfficial.who||[]).every(x=>validOfficialItem(x,'who.int',date));
+ try{officialSources=officialAlreadyCheckedToday?previousOfficial:await officialCollector(now,sharedTransport,previousOfficial||{});}catch{officialSources=previousOfficial||null;}
 
  let preview,collectionError=null;
  try{preview=await editor(env,now,sharedTransport,{fillMinimum:true,excludeUrls:recent.map(x=>x.url),excludeTopics:recent.map(x=>x.topicKey).filter(Boolean)});}catch(error){collectionError=String(error.message||'Collection unavailable').slice(0,500);preview={policyVersion:4,date,items:[]};}

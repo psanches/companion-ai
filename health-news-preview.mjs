@@ -250,8 +250,11 @@ export async function collectOfficialUpdates(now=new Date(),fetcher=fetch,previo
  }
  async function collect(url,pattern,limit,host){
   const links=await listing(url,pattern,limit),cited=new Set(links),items=[];
+  const previousItems=host==='michaeljfox.org'?[...(previous?.mjffCandidates||[]),previous?.mjff].filter(Boolean):(previous?.who||[]);
+  const cached=new Map(previousItems.filter(x=>validOfficialItem(x,host,date)).map(x=>[x.url,x]));
   for(let at=0;at<links.length;at+=3){await Promise.all(links.slice(at,at+3).map(async url=>{
-   try{const story=await verifyStory({url},date,cited,bounded,{maxAgeDays:Infinity,allowExpiredEvent:true});
+   try{if(cached.has(url)){const {retained,...item}=cached.get(url);items.push({...item,indexCheckedAt:checkedAt});return;}
+    const story=await verifyStory({url},date,cited,bounded,{maxAgeDays:Infinity,allowExpiredEvent:true});
     if(!story.sourceTitle)throw Error('Missing original article title');
     const item={url:story.url,title:story.sourceTitle,publishedAt:story.publishedAt,dateEvidence:story.dateEvidence,dateVerified:true,kind:'official-update',source:host,language:'en',checkedAt,exemptFromEditorialRules:true};
     if(!validOfficialItem(item,host,date))throw Error('Invalid official article');items.push(item);
@@ -259,7 +262,7 @@ export async function collectOfficialUpdates(now=new Date(),fetcher=fetch,previo
   }));}
   return items.sort((a,b)=>b.publishedAt.localeCompare(a.publishedAt)||links.indexOf(a.url)-links.indexOf(b.url));
  }
- try{result.mjff=(await collect('https://www.michaeljfox.org/blog',/^\/news\/[^/]+\/?$/,12,'michaeljfox.org'))[0]||null;}catch(error){errors.push({source:'michaeljfox.org',reason:String(error.message).slice(0,180)});}
+ try{result.mjffCandidates=await collect('https://www.michaeljfox.org/blog',/^\/news\/[^/]+\/?$/,12,'michaeljfox.org');result.mjff=result.mjffCandidates[0]||null;}catch(error){errors.push({source:'michaeljfox.org',reason:String(error.message).slice(0,180)});}
  try{result.who=(await collect('https://www.who.int/news-room/headlines',/^\/news\/item\/[^/]+\/?$/,2,'who.int')).slice(0,2);}catch(error){errors.push({source:'who.int',reason:String(error.message).slice(0,180)});}
  if(!result.mjff&&validOfficialItem(previous?.mjff,'michaeljfox.org',date))result.mjff={...previous.mjff,retained:true};
  if(!result.who.length)result.who=(previous?.who||[]).filter(x=>validOfficialItem(x,'who.int',date)).slice(0,2).map(x=>({...x,retained:true}));

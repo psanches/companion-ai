@@ -19,7 +19,7 @@ export default {async fetch(request,env){
  // An authorized manual refresh may retry a same-day edition whose collection
  // failed, while successful same-day editions still reuse the shared cache.
  const retryEnv={...env,HEALTH_NEWS_KV:{
-  async get(key,type){const value=await storage.get(key,type);return key.startsWith('health-news:editorial-week:date:')&&value?.verification?.collectionError?null:value;},
+  async get(key,type){const value=await storage.get(key,type);return key.startsWith('health-news:editorial-week:date:')&&(value?.verification?.collectionError||value?.verification?.rejected?.some(x=>/source.*budget|request budget/i.test(x.reason)))?null:value;},
   put(...args){return storage.put(...args);}
  }};
  try{return Response.json(await generateWeeklyDigest(retryEnv));}

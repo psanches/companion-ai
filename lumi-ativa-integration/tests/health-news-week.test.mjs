@@ -122,3 +122,11 @@ test('official highlights, model calls and KV persistence share a ceiling below 
  const result=await generateWeeklyDigest(f.env,now,transport,editor,collector);
  assert.equal(requests,41);assert.equal(result.verification.totalSourceRequests,36);assert.equal(result.verification.totalModelRequests,5);assert.equal(requests+3+f.writes.length,47);assert.equal(result.items.length,6);
 });
+
+test('an authorized same-day retry reuses verified highlights and reserves all source requests for general collection',async()=>{
+ const f=fixture(),official=(host)=>({url:'https://www.'+host+'/news/latest',title:'Latest original title',publishedAt:'2026-10-27',dateVerified:true,kind:'official-update',source:host});
+ const previous={...preview,officialSources:{checkedAt:now.toISOString(),mjff:official('michaeljfox.org'),who:[official('who.int'),{...official('who.int'),url:'https://www.who.int/news/second'}]}};
+ f.data.set(WEEK_KEY,JSON.stringify(previous));let sourceRequests=0;
+ const result=await generateWeeklyDigest(f.env,now,async()=>{sourceRequests++;return Response.json({});},async(env,now,fetcher)=>{for(let i=0;i<36;i++)await fetcher('https://www.who.int/news/test-'+i);return preview;},async()=>assert.fail('Highlights already checked today must not be fetched again'));
+ assert.equal(sourceRequests,36);assert.equal(result.officialSources.mjff.url,previous.officialSources.mjff.url);assert.equal(result.items.length,6);
+});
