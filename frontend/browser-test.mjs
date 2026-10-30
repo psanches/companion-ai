@@ -84,7 +84,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.locator('#companionScienceSearch').fill('proteínas');
  assert.equal(await page.locator('#companionScienceResults > details').count(),1);
  await page.locator('#companionScienceResults summary').click();
- assert.ok((await page.locator('.science-record').textContent()).includes('Não reduzir a proteína total'));
+ assert.ok((await page.locator('#companionScienceResults .science-record').textContent()).includes('Não reduzir a proteína total'));
  assert.equal(await page.locator('#chatForm').isVisible(),false);
  assert.equal(await page.locator('#companionScience').evaluate(n=>n.scrollWidth<=n.clientWidth),true,'science has no horizontal overflow');
  await page.screenshot({path:new URL('./test-results/'+name+'-science.png',import.meta.url).pathname,fullPage:true});
