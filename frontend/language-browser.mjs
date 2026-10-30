@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 export async function checkAppLanguages(page,{mobile=false,screenshotPath}={}){
  const previous=await page.locator('#messageInput').inputValue();
- const history=await page.locator('#messages .msg:not(#lumiCalendarWeek):not(#lumiCalendarDay)').evaluateAll(nodes=>nodes.map(n=>{const clone=n.cloneNode(true);clone.querySelectorAll('.lumi-reply-notice').forEach(x=>x.remove());return clone.textContent;}));
+ const history=await page.locator('#messages .msg:not(#lumiCalendarWeek):not(#lumiCalendarDay):not([data-lumi-welcome])').evaluateAll(nodes=>nodes.map(n=>{const clone=n.cloneNode(true);clone.querySelectorAll('.lumi-reply-notice').forEach(x=>x.remove());return clone.textContent;}));
  await page.locator('#messageInput').fill('Draft: Salvar · contact name');
  await closeMobileMenu(page);await page.locator('#lumiLanguageSelect').selectOption('en');
  await page.waitForFunction(()=>document.documentElement.lang==='en'&&document.getElementById('lumiAgendaBtn').textContent.includes('Calendar'));
@@ -11,7 +11,7 @@ export async function checkAppLanguages(page,{mobile=false,screenshotPath}={}){
  await page.locator('#lumiGuideDialog > .lumi-reply-notice').getByText('a repository of specialized articles',{exact:false}).waitFor({state:'attached'});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'English controls must fit the viewport');
  if(mobile)for(const id of ['sidebarNewChatBtn','lumiLanguageSelect'])assert.ok(await page.locator('#'+id).evaluate(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}),id+' fits in English');
- assert.deepEqual(await page.locator('#messages .msg:not(#lumiCalendarWeek):not(#lumiCalendarDay)').evaluateAll(nodes=>nodes.map(n=>{const clone=n.cloneNode(true);clone.querySelectorAll('.lumi-reply-notice').forEach(x=>x.remove());return clone.textContent;})),history);
+ assert.deepEqual(await page.locator('#messages .msg:not(#lumiCalendarWeek):not(#lumiCalendarDay):not([data-lumi-welcome])').evaluateAll(nodes=>nodes.map(n=>{const clone=n.cloneNode(true);clone.querySelectorAll('.lumi-reply-notice').forEach(x=>x.remove());return clone.textContent;})),history);
  await page.locator('#voiceButton').click();
  assert.equal(await page.evaluate(()=>window.__voiceInstances.at(-1).lang),'en-US');
  await page.locator('#voiceButton').click();await page.evaluate(()=>{document.getElementById('lumiVoiceStatus').hidden=true;});
