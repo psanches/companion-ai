@@ -93,9 +93,9 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.locator('#companionTabs button').nth(1).click();
  await page.locator('#companionDoctoralResearch').waitFor({state:'hidden'});
  await page.locator('#companionScienceSearch').fill('proteínas');
- assert.equal(await page.locator('#companionScienceResults > details').count(),1);
- await page.locator('#companionScienceResults summary').click();
- assert.ok((await page.locator('#companionScienceResults .science-record').textContent()).includes('Não reduzir a proteína total'));
+ assert.deepEqual(await page.locator('#companionScienceResults > details').evaluateAll(nodes=>nodes.map(n=>n.dataset.topic)),['protein','daily-routine']);
+ await page.locator('#companionScienceResults [data-topic="protein"] > summary').click();
+ assert.ok((await page.locator('#companionScienceResults [data-topic="protein"] .science-record').textContent()).includes('Não reduzir a proteína total'));
  assert.equal(await page.locator('#chatForm').isVisible(),false);
  assert.equal(await page.locator('#companionScience').evaluate(n=>n.scrollWidth<=n.clientWidth),true,'science has no horizontal overflow');
  await page.screenshot({path:new URL('./test-results/'+name+'-science.png',import.meta.url).pathname,fullPage:true});
@@ -238,7 +238,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  for(const path of ['/lumi-mind-body.html','/ativa','/ativa-medical/']){
   await page.goto(HOST+path);const back=page.locator('#lumiReturnNav a');await back.waitFor({state:'visible'});
   assert.equal(await back.getAttribute('href'),'/');assert.equal(await back.getAttribute('target'),'_top');
-  if(path==='/lumi-mind-body.html'){await checkMindBodyEnglish(page);for(const id of ['bodyTab','psychTab','mindTab'])await page.locator('#'+id).click();}
+  if(path==='/lumi-mind-body.html'){assert.equal(await page.locator('#routine').isVisible(),true);assert.ok((await page.locator('#routine').textContent()).includes('150 minutos semanais'));assert.equal(await page.locator('#routine').evaluate(n=>n.scrollWidth<=n.clientWidth),true);await page.locator('#mindTab').click();await checkMindBodyEnglish(page);for(const id of ['bodyTab','psychTab','mindTab'])await page.locator('#'+id).click();}
   await page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));
   assert.ok(await back.evaluate(a=>{const r=a.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&r.height>=44;}),name+' visible return '+path);
   await back.focus();await page.keyboard.press('Enter');await page.waitForURL(HOST+'/');await page.locator('#signInBtn').waitFor({state:'visible'});
