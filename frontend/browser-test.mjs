@@ -73,6 +73,18 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.locator('#lumiNewsHelpClose').click();
  await page.locator('#lumiNewsHelpDialog').waitFor({state:'hidden'});
 
+ // Companion is a separate local science lookup; desktop, Android and PWA share it.
+ await page.locator('#companionTabs button').nth(1).click();
+ await page.locator('#companionScienceSearch').fill('proteínas');
+ assert.equal(await page.locator('#companionScienceResults details').count(),1);
+ await page.locator('#companionScienceResults summary').click();
+ assert.ok((await page.locator('.science-record').textContent()).includes('Não reduzir a proteína total'));
+ assert.equal(await page.locator('#chatForm').isVisible(),false);
+ assert.equal(await page.locator('#companionScience').evaluate(n=>n.scrollWidth<=n.clientWidth),true,'science has no horizontal overflow');
+ await page.screenshot({path:new URL('./test-results/'+name+'-science.png',import.meta.url).pathname,fullPage:true});
+ await page.locator('#companionTabs button').nth(0).click();
+ assert.equal(await page.locator('#chatForm').isVisible(),true);
+
  await checkEmergencyContact(page,{mobile:width<=900,screenshotPath:new URL('./test-results/'+name+'-sos.png',import.meta.url).pathname});
  // Browser speech events are simulated; this checks the live DOM contract, not hardware.
  await page.locator('#voiceButton').click();await page.getByText('Ouvindo… Você pode pausar até 30 segundos. Toque para parar (máximo 2 minutos).',{exact:true}).waitFor();
