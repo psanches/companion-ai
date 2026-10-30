@@ -1,3 +1,4 @@
+import {DOCTORAL_RESEARCH} from '../companion-science/doctoral-research.mjs';
 import {TOPICS,SOURCES,VERSION,CHECKED,searchTopics,normalize} from '../companion-science/catalog.mjs';
 import {installScience} from '../companion-science/interface.mjs';
 import {patchVoiceInput} from './voice-input.mjs';
@@ -11,7 +12,7 @@ import {NEWS_SCRIPT,NEWS_CSS} from '../lumi-ativa-integration/health-news-ui-ass
 const hash=text=>createHash('sha256').update(text).digest('hex');
 export function buildRelease(assets){
  const files={};
- const scienceScript=';(()=>{const normalize='+normalize.toString()+';('+installScience.toString()+')('+JSON.stringify({topics:TOPICS,sources:SOURCES,version:VERSION,checked:CHECKED})+','+searchTopics.toString()+');})();';
+ const scienceScript=';(()=>{const normalize='+normalize.toString()+';('+installScience.toString()+')('+JSON.stringify({topics:TOPICS,sources:SOURCES,version:VERSION,checked:CHECKED,research:DOCTORAL_RESEARCH})+','+searchTopics.toString()+');})();';
  for(const [path,asset]of Object.entries(assets))if(path.startsWith('/lumi-original/')&&/\.(js|css)$/.test(path)&&!path.endsWith('/sw.js'))files[path.replace('/lumi-original','')]=asset;
  files['/app.js']={...files['/app.js'],content:patchVoiceInput(patchCalendarApp(files['/app.js'].content))+BETA_FEEDBACK_FRONTEND+EMERGENCY_CONTACT_FRONTEND};
  for(const [name,content,type]of [['/health-news-ui.js',NEWS_SCRIPT,'application/javascript; charset=utf-8'],['/health-news-ui.css',NEWS_CSS,'text/css; charset=utf-8'],['/experience.js',fs.readFileSync(new URL('./experience.js',import.meta.url),'utf8')+scienceScript,'application/javascript; charset=utf-8'],['/experience.css',fs.readFileSync(new URL('./experience.css',import.meta.url),'utf8')+'\n'+fs.readFileSync(new URL('../companion-science/style.css',import.meta.url),'utf8'),'text/css; charset=utf-8']])files[name]={content,type,encoding:'utf8'};

@@ -1,6 +1,6 @@
 # Companion = Ciência
 
-Public, versioned educational knowledge for Lumi Develop. The current edition has 28 topics, including eight exercise/rehabilitation topics. It is a bounded curated collection, not an exhaustive literature review or a clinically certified product.
+Public, versioned educational knowledge for Lumi Develop. The current edition has 33 topics, including eight exercise/rehabilitation topics. It is a bounded curated collection, not an exhaustive literature review or a clinically certified product.
 
 ## Evidence and editorial rules
 
@@ -25,3 +25,11 @@ Science content is Portuguese; the surrounding interface follows PT/EN and expla
 ## Scope
 
 Only the existing development asset build includes this feature. Production files and deploy targets are unchanged. Browser regression scenarios cover desktop, Android 360/393, standalone PWA, 320px and landscape. CI must pass the existing full deployment gates before publishing.
+
+## Brazilian references and explanations
+
+Includes Ativa Parkinson (Unesp/Bauru), national neurology guidelines, and Brazilian trials. Congress papers and descriptions of clinical practice retain their publication type and limitations rather than being presented as established efficacy. Institutions have plain-language descriptions and national origin where verified. Evidence labels and abbreviations are explained in the library and direct chat answers.
+
+## Doctoral research register
+
+The public catalog also contains doctoralResearch: four completed USP theses verified against institutional records and one MOVI-LAB group record. The group page lists doctoral students but does not verify individual project titles or enrollment status. These academic records are displayed separately from clinical knowledge; no thesis or grant is treated as automatic proof of an effective treatment. Consultation uses no model calls. Source publication/defense dates remain separate from the consultation date.

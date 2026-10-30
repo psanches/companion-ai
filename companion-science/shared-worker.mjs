@@ -1,10 +1,11 @@
+import {DOCTORAL_RESEARCH} from './doctoral-research.mjs';
 import {TOPICS,SOURCES,VERSION,CHECKED,normalize} from './catalog.mjs';
 import {createCalendarVerifier} from '../lumi-calendar/calendar-auth.mjs';
 const HOST='lumi-develop.psanchesnle.workers.dev';
 const response=(data,status=200)=>Response.json(data,{status,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
-export function sharedScienceCatalog(){return {version:VERSION,checked:CHECKED,scope:'public-scientific-knowledge',topics:TOPICS,sources:SOURCES};}
+export function sharedScienceCatalog(){return {version:VERSION,checked:CHECKED,scope:'public-scientific-knowledge',topics:TOPICS,sources:SOURCES,doctoralResearch:DOCTORAL_RESEARCH};}
 export function scienceReply(topic,english=false){
- return (english?'Companion · Science — shared knowledge (content in Portuguese)':'Companion · Ciência — memória geral')+'\n\n'+topic.title+'\n'+topic.evidence+'\n\n'+topic.text+'\n\n'+(english?'In practice: ':'Na prática: ')+topic.practice+'\n\n'+(english?'Limits and precautions: ':'Limites e cuidados: ')+topic.limits+'\n\n'+(english?'Sources:\n':'Fontes:\n')+topic.sources.map(id=>'['+SOURCES[id].name+']('+SOURCES[id].url+')').join('\n')+'\n\n'+(english?'Sources consulted: ':'Fontes consultadas: ')+CHECKED+(english?' · Retrieved without an AI call.':' · Consulta sem chamada de IA.');
+ return (english?'Companion · Science — shared knowledge (content in Portuguese)':'Companion · Ciência — memória geral')+'\n\n'+topic.title+'\n'+topic.evidence+(topic.evidenceDescription?'\n'+topic.evidenceDescription:'')+'\n\n'+topic.text+(topic.terms?.length?'\n\n'+topic.terms.map(t=>t.name+': '+t.meaning).join('\n'):'')+'\n\n'+(english?'In practice: ':'Na prática: ')+topic.practice+'\n\n'+(english?'Limits and precautions: ':'Limites e cuidados: ')+topic.limits+'\n\n'+(english?'Sources:\n':'Fontes:\n')+topic.sources.map(id=>'['+SOURCES[id].name+']('+SOURCES[id].url+')'+(SOURCES[id].about?' — '+SOURCES[id].about:'')).join('\n')+'\n\n'+(english?'Sources consulted: ':'Fontes consultadas: ')+CHECKED+(english?' · Retrieved without an AI call.':' · Consulta sem chamada de IA.');
 }
 async function bodyWithinLimit(request){
  const reader=request.body?.getReader();if(!reader)return null;const chunks=[];let size=0;

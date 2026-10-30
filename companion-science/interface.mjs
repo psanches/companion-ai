@@ -1,5 +1,5 @@
 // Public educational lookup only: no model calls, personal storage or remote queries.
-export function installScience({topics,sources,version,checked},search){
+export function installScience({topics,sources,version,checked,research=[]},search){
  const ready=()=>{
   const app=document.querySelector('main.app'),messages=document.getElementById('messages');
   if(!app||!messages||document.getElementById('companionScience'))return;
@@ -23,6 +23,17 @@ export function installScience({topics,sources,version,checked},search){
    const heading=make('h2',label('Companion = Ciência','Companion = Science'));heading.id='companionScienceHeading';panel.append(heading);
    panel.append(make('p',label('Memória geral da Lumi: conhecimento científico compartilhado. Consulte medicamentos, exercícios, fonoaudiologia e psicologia.','Lumi shared knowledge: scientific content for everyone. Browse medicines, exercise, speech therapy and psychology.')));
    const note=make('p',label('Consulta direta à base, sem chamada de IA. Conteúdo científico em português; fontes originais disponíveis.','Direct knowledge lookup, without an AI call. Scientific content is in Portuguese; original sources are available.'));note.className='science-note';panel.append(note);
+   if(research.length){
+    const register=make('details');register.id='companionDoctoralResearch';
+    register.append(make('summary',label('Pesquisa brasileira: teses e doutorados','Brazilian research: doctoral theses and groups')));
+    const introduction=make('p',label('Registros acadêmicos com autor, instituição e fonte original. Uma tese defendida ou uma bolsa de pesquisa não equivale, sozinha, a uma recomendação clínica.','Academic records with authors, institutions and original sources. A defended thesis or research grant alone is not a clinical recommendation.'));introduction.className='science-record';register.append(introduction);
+    for(const r of research){
+     const detail=make('details');detail.dataset.research=r.id;detail.append(make('summary',r.title));
+     const body=make('div');body.className='science-record';body.append(make('p',r.kind),make('p',r.author),make('p',r.institution),make('p',label('Orientação / equipe: ','Supervisor / team: ')+r.supervisor),make('small',r.date),make('p',r.summary),make('p',r.limits));
+     const source=make('a',label('Abrir registro institucional','Open institutional record'));source.href=r.url;source.target='_blank';source.rel='noopener noreferrer';body.append(source);if(r.doi)body.append(make('small','DOI: '+r.doi));detail.append(body);register.append(detail);
+    }
+    panel.append(register);
+   }
    const controls=make('div');controls.className='science-controls';
    const searchLabel=make('label',label('Pesquisar na base','Search the knowledge base')),input=make('input');input.id='companionScienceSearch';input.type='search';input.placeholder=label('Ex.: proteínas, ON/OFF, equilíbrio','E.g. proteínas, ON/OFF, equilíbrio');input.value=query;searchLabel.append(input);
    const categoryLabel=make('label',label('Área','Category')),filter=make('select');filter.id='companionScienceCategory';
@@ -37,10 +48,11 @@ export function installScience({topics,sources,version,checked},search){
     for(const t of found){
      const details=make('details');details.dataset.topic=t.id;const summary=make('summary',t.title);details.append(summary);
      const content=make('div');content.className='science-record';details.append(content);
-     const badge=make('p',t.evidence);badge.className='science-evidence';content.append(badge,make('p',t.text));
+     const badge=make('p',t.evidence);badge.className='science-evidence';content.append(badge);if(t.evidenceDescription)content.append(make('small',t.evidenceDescription));content.append(make('p',t.text));
+     if(t.terms?.length){const glossary=make('details');glossary.className='science-terms';glossary.append(make('summary',label('Entenda os termos','Understand the terms')));const list=make('ul');for(const term of t.terms)list.append(make('li',term.name+': '+term.meaning));glossary.append(list);content.append(glossary);}
      for(const [title,text]of [[label('Na prática','In practice'),t.practice],[label('Limites e cuidados','Limits and precautions'),t.limits]]){content.append(make('h3',title),make('p',text));}
      content.append(make('h3',label('Fontes e evidência','Sources and evidence')));
-     const refs=make('ul');for(const id of t.sources){const s=sources[id],li=make('li'),link=make('a',s.name);link.href=s.url;link.target='_blank';link.rel='noopener noreferrer';li.append(link,make('small',s.kind+' · '+s.year+(s.doi?' · DOI '+s.doi:'')));refs.append(li);}content.append(refs);
+     const refs=make('ul');for(const id of t.sources){const s=sources[id],li=make('li'),link=make('a',s.name);link.href=s.url;link.target='_blank';link.rel='noopener noreferrer';li.append(link,make('small',s.kind+' · '+s.year+(s.doi?' · DOI '+s.doi:'')));if(s.country)li.append(make('small',label('Origem: ','Origin: ')+s.country));if(s.about)li.append(make('p',s.about));refs.append(li);}content.append(refs);
      content.append(make('small',label('Fontes consultadas em 30/10/2026.','Sources consulted on 30 October 2026.')));
      const direct=make('button',label('Levar resposta ao chat · sem IA','Take answer to chat · no AI'));direct.type='button';direct.className='science-direct';direct.onclick=()=>{
       const draft=document.getElementById('messageInput');

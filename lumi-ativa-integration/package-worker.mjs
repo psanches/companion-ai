@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import {applyRuntimePolicy} from './runtime-policy.mjs';
 const files = {
   'science-knowledge.mjs': '../companion-science/shared-worker.mjs',
+  'doctoral-research.mjs': '../companion-science/doctoral-research.mjs',
   'catalog.mjs': '../companion-science/catalog.mjs',
   'model-budget.mjs': './model-budget.mjs',
   'personal-memory.mjs': './personal-memory.mjs',
