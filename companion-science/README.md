@@ -20,7 +20,7 @@ An explicit chat message `Companion: <topic title or ID>` retrieves the canonica
 
 Lumi and Companion have separate top-level buttons on PC/Android/PWA. Companion uses local accent-insensitive search and category filters. No-match queries do not generate an answer. Opening science preserves chat history and drafts. Taking a topic into Lumi inserts its summary, limits and source URLs into an empty composer, without sending; existing drafts are preserved. Sending that message uses Lumi's existing AI flow and billing. The direct lookup button prepares a canonical Companion message, again without sending automatically. No API credentials or model configuration are introduced or changed.
 
-Science content is Portuguese; the surrounding interface follows PT/EN and explains the content language. Transient search is cleared on sign-out. No personal data, query history or clinical records are stored by this feature.
+Science content is Portuguese; the surrounding interface follows PT/EN and explains the content language. Transient search is cleared on sign-out. Browsing the library does not persist search queries. Explicit chat lookups are retained only in the requesting account’s existing conversation history. The shared catalog never stores personal data, private conversations or clinical records.
 
 ## Scope
 
