@@ -8,6 +8,8 @@ export async function checkAppLanguages(page,{mobile=false,screenshotPath}={}){
  await closeMobileMenu(page);await page.locator('#lumiLanguageSelect').selectOption('en');
  await page.waitForFunction(()=>document.documentElement.lang==='en'&&document.getElementById('lumiAgendaBtn').textContent.includes('Calendar'));
  assert.equal(await page.locator('#messageInput').inputValue(),'Draft: Salvar · contact name');
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'English controls must fit the viewport');
+ if(mobile)for(const id of ['sidebarNewChatBtn','lumiLanguageSelect'])assert.ok(await page.locator('#'+id).evaluate(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}),id+' fits in English');
  assert.deepEqual(await page.locator('#messages .msg:not(#lumiCalendarWeek):not(#lumiCalendarDay)').allTextContents(),history);
  await page.locator('#voiceButton').click();
  assert.equal(await page.evaluate(()=>window.__voiceInstances.at(-1).lang),'en-US');
