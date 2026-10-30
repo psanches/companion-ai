@@ -1,11 +1,11 @@
-import {openMobileSection,closeMobileMenu} from './mobile-navigation-browser.mjs';
+import {closeMobileMenu} from './mobile-navigation-browser.mjs';
 import assert from 'node:assert/strict';
 
 export async function checkAppLanguages(page,{mobile=false,screenshotPath}={}){
  const previous=await page.locator('#messageInput').inputValue();
  const history=await page.locator('#messages .msg:not(#lumiCalendarWeek):not(#lumiCalendarDay)').allTextContents();
  await page.locator('#messageInput').fill('Draft: Salvar · contact name');
- await openMobileSection(page,'lumiMobileAccount');await page.locator('#lumiLanguageSelect').selectOption('en');await closeMobileMenu(page);
+ await closeMobileMenu(page);await page.locator('#lumiLanguageSelect').selectOption('en');
  await page.waitForFunction(()=>document.documentElement.lang==='en'&&document.getElementById('lumiAgendaBtn').textContent.includes('Calendar'));
  assert.equal(await page.locator('#messageInput').inputValue(),'Draft: Salvar · contact name');
  assert.deepEqual(await page.locator('#messages .msg:not(#lumiCalendarWeek):not(#lumiCalendarDay)').allTextContents(),history);
@@ -24,12 +24,12 @@ export async function checkAppLanguages(page,{mobile=false,screenshotPath}={}){
  await page.locator('#lumiAgendaBtn').click();
  await page.getByRole('button',{name:'Close calendar',exact:true}).waitFor();
  await page.locator('#lumiCalendarWeek').getByText('14:00 – 14:30 · Compromisso fictício da agenda',{exact:true}).waitFor();
- await openMobileSection(page,'lumiMobileAccount');await page.locator('#lumiLanguageSelect').selectOption('pt-BR');await closeMobileMenu(page);
+ await closeMobileMenu(page);await page.locator('#lumiLanguageSelect').selectOption('pt-BR');
  await page.getByRole('button',{name:'Fechar agenda',exact:true}).waitFor();await page.getByRole('button',{name:'Fechar agenda',exact:true}).click();
- await openMobileSection(page,'lumiMobileAccount');await page.locator('#lumiLanguageSelect').selectOption('en');await closeMobileMenu(page);
+ await closeMobileMenu(page);await page.locator('#lumiLanguageSelect').selectOption('en');
  assert.equal(await page.locator('#settingsBtn, #settingsDialog').count(),0);
  if(screenshotPath)await page.screenshot({path:screenshotPath,fullPage:true});
- await openMobileSection(page,'lumiMobileAccount');await page.locator('#lumiLanguageSelect').selectOption('pt-BR');await closeMobileMenu(page);
+ await closeMobileMenu(page);await page.locator('#lumiLanguageSelect').selectOption('pt-BR');
  await page.waitForFunction(()=>document.documentElement.lang==='pt-BR');
  assert.equal(await page.locator('#lumiSosSamuCall').getAttribute('href'),'tel:192');
  assert.equal(await page.locator('#lumiSosSamuCall').textContent(),'SAMU · 192');
@@ -37,7 +37,7 @@ export async function checkAppLanguages(page,{mobile=false,screenshotPath}={}){
 }
 
 export async function checkMindBodyEnglish(page){
- await openMobileSection(page,'lumiMobileAccount');await page.locator('#lumiLanguageSelect').selectOption('en');await closeMobileMenu(page);
+ await closeMobileMenu(page);await page.locator('#lumiLanguageSelect').selectOption('en');
  await page.getByRole('heading',{name:'Memory and attention game',exact:true}).waitFor();
  assert.equal(await page.locator('#words').textContent(),'HOUSE · FLOWER · SUN');
  await page.getByRole('button',{name:'I have memorized them',exact:true}).click();
@@ -46,5 +46,5 @@ export async function checkMindBodyEnglish(page){
  assert.ok((await page.locator('#bodyExercise').textContent()).includes('breathe in naturally'));
  await page.locator('#psychTab').click();await page.getByText('Lumi: How are you feeling today?',{exact:true}).waitFor();
  await page.getByRole('button',{name:'I am well',exact:true}).click();await page.getByText('Thank you for sharing. We can continue at your pace.',{exact:true}).waitFor();
- await openMobileSection(page,'lumiMobileAccount');await page.locator('#lumiLanguageSelect').selectOption('pt-BR');await closeMobileMenu(page);
+ await closeMobileMenu(page);await page.locator('#lumiLanguageSelect').selectOption('pt-BR');
 }

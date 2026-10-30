@@ -27,3 +27,15 @@ test('reused reading is visibly labelled and retains its original publication da
  w.fetch=async()=>Response.json({policyVersion:4,date:'2026-10-29',items:[{title:'Matéria anterior',summary:'Resumo verificado.',publishedAt:'2026-10-27',region:'Internacional',source:'www.parkinson.org',url:'https://www.parkinson.org/blog/test/example',dateVerified:true,repeated:true}]});
  w.eval(NEWS_SCRIPT);await tick();assert.equal(w.document.querySelector('.news-repeat').textContent,'Reapresentada');assert.equal(w.document.querySelector('time').dateTime,'2026-10-27');assert.match(w.document.getElementById('newsEdition').textContent,/29\/10\/2026/);w.close();
 });
+
+test('current edition separates new and reused stories without changing original dates or triggering research',async()=>{
+ const dom=setup(),w=dom.window,calls=[];
+ const item={title:'Pesquisa',summary:'Resumo verificado.',publishedAt:'2026-10-29',region:'Internacional',source:'www.parkinson.org',url:'https://www.parkinson.org/blog/test/example',dateVerified:true};
+ w.fetch=async(url,options)=>{calls.push({url,options});return Response.json({policyVersion:4,date:'2026-10-30',items:[{...item,repeated:true},{...item,url:'https://www.parkinson.org/blog/test/new',repeated:false}]});};
+ w.eval(NEWS_SCRIPT);await tick();
+ assert.deepEqual([...w.document.querySelectorAll('.news-group-title')].map(x=>x.textContent),['Novas nesta edição (1)','Leituras anteriores (1)']);
+ assert.match(w.document.getElementById('newsEdition').textContent,/30\/10\/2026.*1 nova na Lumi.*1 reapresentada/);
+ assert.ok([...w.document.querySelectorAll('time')].every(x=>x.dateTime==='2026-10-29'));
+ assert.equal(w.document.querySelector('.news-source a').href,'https://www.parkinson.org/blog/test/new');
+ assert.equal(calls.length,1);assert.equal(calls[0].url,'/health-news');assert.equal(calls[0].options.method,undefined);w.close();
+});

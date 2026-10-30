@@ -95,7 +95,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  if(width<=900){
   await openMobileSection(page);
   assert.equal(await page.locator('#lumiMobileAccount').evaluate(n=>n.open),true);
-  for(const id of ['inviteBtn','profileBtn','memoryBtn','lumiPrivacyBtn','lumiLanguageSelect','signOutBtn']){
+  for(const id of ['inviteBtn','profileBtn','memoryBtn','lumiPrivacyBtn','signOutBtn']){
    const control=page.locator('#'+id);assert.equal(await control.isVisible(),true,id+' available in More');
    await control.scrollIntoViewIfNeeded();
    assert.ok(await control.evaluate(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}),id+' reachable by scrolling');
@@ -134,7 +134,10 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.locator('#loadEarlierBtn').click();assert.equal(await page.locator('#messages .msg').count(),12);
  await page.waitForFunction(()=>document.querySelectorAll('#conversationList .conversation-item').length===5);
  assert.deepEqual(await page.locator('#conversationList .conversation-item').allTextContents(),['Conversa salva 7','Conversa salva 6','Conversa salva 5','Conversa salva 4','Conversa salva 3']);
- await openMobileSection(page,'lumiMobileConversations');
+ await closeMobileMenu(page);
+ if(width<=900){
+  for(const id of ['sidebarNewChatBtn','lumiLanguageSelect']){assert.equal(await page.locator('#lumiMobilePrimaryActions #'+id).isVisible(),true);assert.ok(await page.locator('#'+id).evaluate(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;}));}
+ }
  if(!mobile){failNextArchive=true;await page.locator('#sidebarNewChatBtn').click();await page.waitForFunction(()=>!document.getElementById('sidebarNewChatBtn').disabled&&document.getElementById('sidebarStatus').textContent.includes('Falha de arquivo'));assert.equal(await page.locator('#messages .msg').count(),12);}
  await page.locator('#sidebarNewChatBtn').click();
  await page.waitForFunction(()=>!document.getElementById('sidebarNewChatBtn').disabled&&document.querySelector('#conversationList .conversation-item')?.textContent==='Mensagem fictícia 0');
@@ -148,7 +151,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
 
  assert.equal(await page.locator('#lumiMindBodyMobile').count(),0,'No duplicate mobile navigation above chat');
  if(width>900)assert.deepEqual(await page.locator('#conversationSidebar').evaluate(n=>[...n.querySelectorAll('#lumiAgendaBtn,#lumiExerciseBtn,#lumiHealthNewsBtn')].map(e=>e.id)),['lumiAgendaBtn','lumiExerciseBtn','lumiHealthNewsBtn']);
- else{assert.deepEqual(await page.locator('#lumiMobileNav > button').evaluateAll(nodes=>nodes.map(n=>n.id)),['lumiMobileChatBtn','lumiAgendaBtn','chatHistoryBtn']);assert.ok(await page.locator('.app-header').evaluate(n=>n.getBoundingClientRect().height<=60));assert.equal(await page.locator('#profileBtn').isVisible(),false);assert.equal(await page.locator('#lumiLanguageSelect').isVisible(),false);}
+ else{assert.deepEqual(await page.locator('#lumiMobileNav > button').evaluateAll(nodes=>nodes.map(n=>n.id)),['lumiMobileChatBtn','lumiAgendaBtn','chatHistoryBtn']);assert.ok(await page.locator('.app-header').evaluate(n=>n.getBoundingClientRect().height<=60));assert.equal(await page.locator('#profileBtn').isVisible(),false);assert.equal(await page.locator('#lumiLanguageSelect').isVisible(),true);assert.equal(await page.locator('#sidebarNewChatBtn').isVisible(),true);}
  await openMobileSection(page);
  await page.locator('#lumiImportantLinksBtn').click();
  const linksDialog=page.locator('#lumiImportantLinksDialog');
@@ -175,7 +178,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
   await openMobileSection(page,'lumiMobileAccount');await page.screenshot({path:new URL('./test-results/'+name+'-account.png',import.meta.url).pathname,fullPage:true});await closeMobileMenu(page);
   await page.locator('#messageInput').fill('Rascunho entre telas');await page.locator('#lumiAgendaBtn').click();await page.locator('#lumiCalendarWeek').waitFor({state:'visible'});assert.equal(await page.locator('#chatForm').isVisible(),false);await page.locator('#lumiMobileChatBtn').click();assert.equal(await page.locator('#messageInput').inputValue(),'Rascunho entre telas');assert.equal(await page.locator('#lumiCalendarWeek').count(),0);assert.equal(await page.locator('#chatForm').isVisible(),true);
   if(name==='android-393'){
-   await page.setViewportSize({width:1200,height:900});await page.waitForFunction(()=>!document.documentElement.classList.contains('lumi-mobile-light'));assert.equal(await page.locator('.header-actions #profileBtn').count(),1);assert.equal(await page.locator('#conversationSidebar > #lumiAgendaBtn').count(),1);assert.equal(await page.locator('#lumiMobileNav').isVisible(),false);
+   await page.setViewportSize({width:1200,height:900});await page.waitForFunction(()=>!document.documentElement.classList.contains('lumi-mobile-light'));assert.equal(await page.locator('.header-actions #profileBtn').count(),1);assert.equal(await page.locator('#conversationSidebar > #lumiAgendaBtn').count(),1);assert.equal(await page.locator('#lumiMobileNav').isVisible(),false);assert.equal(await page.locator('#conversationSidebar > #sidebarNewChatBtn').count(),1);assert.equal(await page.locator('.header-actions #lumiLanguageControl').count(),1);
    await page.setViewportSize({width,height});await page.locator('#lumiMobileNav').waitFor({state:'visible'});assert.equal(await page.locator('#lumiMobileNav #lumiAgendaBtn').count(),1);assert.equal(await page.locator('#messageInput').inputValue(),'Rascunho entre telas');
   }
  }

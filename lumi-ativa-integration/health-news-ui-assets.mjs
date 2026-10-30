@@ -42,9 +42,19 @@ async function load(){if(running)return;running=true;reload.disabled=true;box.se
   const response=await fetch('/health-news',{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(15000)});
   if(!response.ok)throw Error('unavailable');const data=await response.json();
   if(![3,4].includes(data.policyVersion)||!Array.isArray(data.items))throw Error('unverified');
-  const cards=data.items.map(card).filter(Boolean);box.replaceChildren(...cards);
+  const entries=data.items.map(item=>({item,node:card(item)})).filter(x=>x.node),cards=entries.map(x=>x.node);
+  box.replaceChildren();
+  if(data.policyVersion===4&&!data.demo){
+   const fresh=entries.filter(x=>x.item.repeated!==true),previous=entries.filter(x=>x.item.repeated===true);
+   if(fresh.length)box.append(el('h2','news-group-title','Novas nesta edição ('+fresh.length+')'),...fresh.map(x=>x.node));
+   if(previous.length)box.append(el('h2','news-group-title','Leituras anteriores ('+previous.length+')'),...previous.map(x=>x.node));
+  }else box.append(...cards);
   if(!cards.length)state('Ainda não há notícias verificadas disponíveis. Consulte novamente mais tarde.');
   edition.replaceChildren(el('strong','','Boletim de '+date(data.date)),document.createTextNode(' · '+cards.length+(cards.length===1?' notícia verificada':' notícias verificadas')));
+  if(data.policyVersion===4&&!data.demo){
+   const fresh=entries.filter(x=>x.item.repeated!==true).length,repeated=entries.length-fresh;
+   edition.append(document.createTextNode(' · '+fresh+(fresh===1?' nova na Lumi':' novas na Lumi')+' · '+repeated+(repeated===1?' reapresentada':' reapresentadas')));
+  }
   if(data.demo){edition.classList.remove('news-stale');edition.append(document.createTextNode(' · Demonstração estática · Sem atualização automática'));reload.hidden=true;}else if(data.mode==='week-complete'){edition.classList.add('news-stale');edition.append(document.createTextNode(' · Atualizações pausadas · Última edição preservada'));}else if(data.stale){edition.classList.add('news-stale');edition.append(document.createTextNode(' · Última edição disponível'));}else edition.classList.remove('news-stale');
  }catch{edition.textContent='Boletim indisponível no momento';state('Não consegui carregar as notícias agora. Use “Recarregar boletim” para tentar novamente.');}
  finally{running=false;reload.disabled=false;box.setAttribute('aria-busy','false');}
