@@ -13,12 +13,12 @@ export function installReplyNotice(){
    if(welcome&&welcome!==lastWelcome)completed=0;
    lastWelcome=welcome;
    const replies=[...messages.querySelectorAll('.msg.assistant:not(#lumiCalendarWeek):not(#lumiCalendarDay)')];
-   const guide=document.getElementById('lumiGuideDialog');if(guide)replies.push(guide);
+   const guides=['lumiGuideDialog','lumiDemoDialog'].map(id=>document.getElementById(id)).filter(Boolean);replies.push(...guides);
    for(const message of replies){
-    const eligible=message===guide||message.hasAttribute('data-lumi-welcome')||message.dataset.lumiNoticeDue==='true';
+    const eligible=guides.includes(message)||message.hasAttribute('data-lumi-welcome')||message.dataset.lumiNoticeDue==='true';
     let notice=message.querySelector(':scope > .lumi-reply-notice');
     if(!eligible){notice?.remove();continue;}
-    if(!notice){notice=document.createElement('small');notice.className='lumi-reply-notice';notice.dataset.lumiOriginal='true';message.append(notice);}
+    if(!notice){notice=document.createElement('small');notice.className='lumi-reply-notice';notice.dataset.lumiOriginal='true';const intro=guides.includes(message)?message.querySelector('p'):null;if(intro)intro.after(notice);else message.append(notice);}
     if(notice.textContent!==texts[language])notice.textContent=texts[language];
     notice.lang=language==='en'?'en':'pt-BR';
    }
