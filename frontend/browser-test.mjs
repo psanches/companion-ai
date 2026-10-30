@@ -226,6 +226,15 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
    await page.setViewportSize({width,height});await page.locator('#lumiMobileNav').waitFor({state:'visible'});assert.equal(await page.locator('#lumiMobileNav #lumiAgendaBtn').count(),1);assert.equal(await page.locator('#messageInput').inputValue(),'Rascunho entre telas');
   }
  }
+ // Welcome notice plus one reminder per ten completed chat exchanges.
+ await closeMobileMenu(page);await page.locator('#sidebarNewChatBtn').click();
+ await page.locator('[data-lumi-welcome] > .lumi-reply-notice').waitFor();
+ for(let turn=1;turn<=10;turn++){
+  await page.locator('#messageInput').fill('Teste fictício de rotina '+turn);
+  await page.locator('.send-button').click();
+  await page.waitForFunction(()=>!document.getElementById('chatForm').dataset.sending);
+  assert.equal(await page.locator('#messages .lumi-reply-notice').count(),turn===10?2:1,'notice cadence at turn '+turn);
+ }
  await checkAppLanguages(page,{mobile:width<=900,screenshotPath:new URL('./test-results/'+name+'-english.png',import.meta.url).pathname});
  await page.screenshot({path:new URL('./test-results/'+name+'-authenticated.png',import.meta.url).pathname,fullPage:true});
  await page.locator('#messageInput').fill('Mensagem em edição');newer=true;await page.evaluate(()=>window.dispatchEvent(new Event('online')));await page.locator('#lumiUpdateNotice').waitFor({state:'visible'});assert.ok(await page.locator('.send-button').evaluate(n=>{const r=n.getBoundingClientRect();return r.bottom<=innerHeight&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===n;}),'Update notice must not cover Send');await page.getByRole('button',{name:'Atualizar',exact:true}).click();assert.equal(await page.locator('#messageInput').inputValue(),'Mensagem em edição');
