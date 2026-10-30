@@ -31,7 +31,7 @@ export function installScience({topics,sources,version,checked,research=[]},sear
     for(const r of research){
      const detail=make('details');detail.dataset.research=r.id;detail.append(make('summary',r.title));
      const body=make('div');body.className='science-record';body.append(make('p',r.kind),make('p',r.author),make('p',r.institution),make('p',label('Orientação / equipe: ','Supervisor / team: ')+r.supervisor),make('small',r.date),make('p',r.summary),make('p',r.limits));
-     const source=make('a',label('Abrir registro institucional','Open institutional record'));source.href=r.url;source.target='_blank';source.rel='noopener noreferrer';body.append(source);if(r.doi)body.append(make('small','DOI: '+r.doi));detail.append(body);register.append(detail);
+     const source=make('a',label('Abrir registro institucional','Open institutional record'));source.href=english()?r.url:(r.urlPt||r.url);source.target='_blank';source.rel='noopener noreferrer';body.append(source);if(r.doi)body.append(make('small','DOI: '+r.doi));detail.append(body);register.append(detail);
     }
     panel.append(register);
    }
