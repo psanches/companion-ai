@@ -76,7 +76,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  // Companion is a separate local science lookup; desktop, Android and PWA share it.
  await page.locator('#companionTabs button').nth(1).click();
  await page.locator('#companionDoctoralResearch > summary').click();
- assert.equal(await page.locator('#companionDoctoralResearch [data-research]').count(),5);
+ assert.equal(await page.locator('#companionDoctoralResearch [data-research]').count(),6);
  await page.locator('#companionDoctoralResearch [data-research] > summary').first().click();
  assert.ok((await page.locator('#companionDoctoralResearch').textContent()).includes('Tamine Teixeira'));
  assert.equal(await page.locator('#companionScience').evaluate(n=>n.scrollWidth<=n.clientWidth),true);

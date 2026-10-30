@@ -1,5 +1,5 @@
 // Shared, versioned public knowledge. No personal or clinical records.
-export const VERSION='2026-10-30.3';
+export const VERSION='2026-10-30.4';
 export const CHECKED='2026-10-30';
 export const SOURCES={
  ativa2015:{name:'Moretto et al. — Ativa Parkinson: atividade física e qualidade de vida',url:'https://acervodigital.unesp.br/handle/11449/142101',kind:'Trabalho em congresso de extensão universitária',year:'2015',country:'Brasil',about:'Trabalho da Universidade Estadual Paulista (Unesp), em Bauru, apresentado no 8º Congresso de Extensão Universitária; o resumo descreve dez participantes.'},

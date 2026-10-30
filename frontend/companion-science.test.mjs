@@ -28,7 +28,7 @@ test('local science navigation never sends a request, preserves drafts and clear
  // ready callback runs after __normalize exists.
  await new Promise(r=>w.addEventListener('load',r,{once:true}));
  const tabs=d.querySelectorAll('#companionTabs button');tabs[1].click();assert.equal(d.getElementById('companionScience').hidden,false);
- assert.equal(d.querySelectorAll('#companionDoctoralResearch [data-research]').length,5);assert.match(d.getElementById('companionDoctoralResearch').textContent,/não equivale/);
+ assert.equal(d.querySelectorAll('#companionDoctoralResearch [data-research]').length,6);assert.match(d.getElementById('companionDoctoralResearch').textContent,/não equivale/);
  const input=d.getElementById('companionScienceSearch');input.value='proteínas';input.dispatchEvent(new w.Event('input'));
  assert.equal(d.querySelectorAll('#companionScienceResults > details').length,1);
  const draft=d.getElementById('messageInput');
