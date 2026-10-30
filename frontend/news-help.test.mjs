@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from '../ativa-demo/node_modules/jsdom/lib/api.js';
 import {installLumiLanguage} from './language.mjs';
-import {NEWS_PREVIEW_POLICY,PARKINSON_SOURCE_CATALOG,GENERAL_SOURCES} from '../health-news-preview.mjs';
+import {NEWS_PREVIEW_POLICY,PARKINSON_SOURCE_CATALOG,GENERAL_SOURCES,HEALTH_PRESS_SOURCES} from '../health-news-preview.mjs';
 import {NEWS_WEEK} from '../health-news-week.mjs';
 import {HEALTH_NEWS_CRON_UTC} from '../health-news-daily.mjs';
 import assets from '../lumi-ativa-integration/assets.generated.mjs';
@@ -23,8 +23,8 @@ test('packaged help opens and closes without calling research or changing stored
 test('help matches active editorial policy, source allowlists and finite update window',()=>{
  const dom=fixture();try{const d=dom.window.document,text=d.getElementById('lumiNewsHelpDialog').textContent;
  assert.match(text,new RegExp('de '+NEWS_PREVIEW_POLICY.minItems+' a '+NEWS_PREVIEW_POLICY.maxItems+' matérias completas'));assert.match(text,new RegExp('máximo '+NEWS_PREVIEW_POLICY.maxAgeDays+' dias'));assert.match(text,new RegExp('mínima de '+NEWS_PREVIEW_POLICY.minScore+' em 10'));
- for(const source of [...PARKINSON_SOURCE_CATALOG.map(x=>x.domain),...GENERAL_SOURCES])assert.ok([...d.querySelectorAll('#lumiNewsHelpDialog li')].some(x=>x.textContent.endsWith(source)),source);
- assert.equal(d.querySelectorAll('#lumiNewsHelpDialog li').length,PARKINSON_SOURCE_CATALOG.length+GENERAL_SOURCES.length);
+ for(const source of [...PARKINSON_SOURCE_CATALOG.map(x=>x.domain),...GENERAL_SOURCES,...HEALTH_PRESS_SOURCES])assert.ok([...d.querySelectorAll('#lumiNewsHelpDialog li')].some(x=>x.textContent.endsWith(source)),source);
+ assert.equal(d.querySelectorAll('#lumiNewsHelpDialog li').length,PARKINSON_SOURCE_CATALOG.length+GENERAL_SOURCES.length+HEALTH_PRESS_SOURCES.length);
  assert.match(NEWS_WEEK.start,/2026-10-28T00:00:00-03:00/);assert.match(NEWS_WEEK.end,/2026-11-04T00:00:00-03:00/);assert.equal(HEALTH_NEWS_CRON_UTC,'0 9 * * *');assert.match(text,/28\/10\/2026/);assert.match(text,/04\/11\/2026/);assert.match(text,/as 6h/);
  }finally{dom.window.close();}
 });

@@ -111,12 +111,12 @@
     account.parentElement.open=true;groups.prepend(account.parentElement);
     move('lumiAgendaBtn',nav);move('chatHistoryBtn',nav);more?.setAttribute('aria-controls','conversationSidebar');
     for(const id of ['lumiHealthNewsBtn','lumiExerciseBtn','lumiImportantLinksBtn'])move(id,features);
-    move('sidebarNewChatBtn',primary);move('lumiLanguageControl',primary);
+    move('sidebarNewChatBtn',nav);nav.prepend(document.getElementById('sidebarNewChatBtn'));move('lumiLanguageControl',primary);
     for(const id of ['conversationList','sidebarStatus'])move(id,conversations);
     const label=sidebar.querySelector('.sidebar-label');if(label){if(!placements.has(label)){const marker=document.createComment('mobile history label');label.before(marker);placements.set(label,marker);}conversations.insertBefore(label,document.getElementById('conversationList'));}
     for(const [id,label]of [['inviteBtn','Convidar para a Lumi'],['profileBtn','Perfil'],['memoryBtn','Minha memória']])move(id,account,label);
     move('soundButton',playback);
-    move('lumiPrivacyBtn',account);move('authBox',account);
+    move('lumiPrivacyBtn',account);move('authBox',sidebar.querySelector('.sidebar-top'));sidebar.querySelector('.sidebar-top').append(document.getElementById('closeSidebarBtn'));
     for(const id of ['lumiGuideBtn','lumiNewsHelpBtn','lumiDemoBtn','lumiBetaFeedbackBtn','lumiBetaBtn','healthDemoBtn','lumiInstitutionalLink'])move(id,help,id==='healthDemoBtn'?'Meu Cuidado — demonstração':null);
     language();
    }else{

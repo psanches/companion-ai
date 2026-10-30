@@ -21,19 +21,19 @@ test('reject future/older-than-seven-days and duplicate facts/URLs; fewer than t
 });
 function fixture(){const calls=[],events=[],urls=['https://www.michaeljfox.org/news/pd-new','https://www.gov.br/saude/news/national'];let api=0;const payload=items=>({status:'completed',output:[{type:'output_text',content:[{type:'output_text',text:JSON.stringify({items})}]}]});
  const transport=async(url,o)=>{calls.push(url);if(url==='https://api.openai.com/v1/responses'){
-  const body=JSON.parse(o.body);api++;if(api<3){events.push('search-'+api);if(api===2)assert.ok(events.includes('verify-pd'));
-   const d=payload([{url:urls[api-1]}]);d.output.unshift({type:'web_search_call',action:{sources:[{url:urls[api-1]}]}});assert.ok(body.input.includes('máximo 7 dias'));return Response.json(d);
+  const body=JSON.parse(o.body);api++;if(api<4){events.push('search-'+api);if(api===2)assert.ok(events.includes('verify-pd'));
+   const d=payload(api===3?[]:[{url:urls[Math.min(api-1,1)]}]);d.output.unshift({type:'web_search_call',action:{sources:[{url:urls[Math.min(api-1,1)]}]}});assert.ok(body.input.includes('máximo 7 dias'));return Response.json(d);
   }events.push('editor');const inputs=JSON.parse(body.input[1].content);return Response.json(payload(Object.fromEntries(inputs.map((s,id)=>[s.url,review(id,{scope:'global',evidenceId:0})]))));
  }if(!urls.includes(url))return new Response('<h1>News index</h1>',{headers:{'content-type':'text/html'}});events.push(url.includes('michaeljfox')?'verify-pd':'verify-general');return new Response(`<meta property="article:published_time" content="${day}"><h1>${url.includes('michaeljfox')?'Parkinson research':'National prevention guidance'}</h1><p>${evidence.repeat(5)}</p>`,{headers:{'content-type':'text/html'}});};
  return {events,calls,transport};}
 test('complete preview searches and verifies official Parkinson BEFORE general health, reuses existing key, never writes storage',async()=>{
  const f=fixture(),env={LUMI_RESEARCH_OPENAI_API_KEY:'synthetic-test-key',HEALTH_NEWS_KV:new Proxy({},{get(){throw Error('No preview storage permitted');}})};
  const result=await generateHealthNewsPreview(env,new Date('2026-10-24T12:00:00Z'),f.transport);
- assert.deepEqual(f.events,['search-1','verify-pd','search-2','verify-general','editor']);assert.deepEqual(result.verification.stages,['official-parkinsons','general-health']);assert.equal(result.items.length,2);assert.equal(result.shortfall,8);assert.equal(result.items[0].priority,0);assert.equal(result.published,false);assert.equal(result.automaticUpdates,false);assert.equal(result.verification.apiRequests,3);assert.doesNotMatch(JSON.stringify(result),/synthetic-test-key/);
+ assert.deepEqual(f.events,['search-1','verify-pd','search-2','verify-general','search-3','editor']);assert.deepEqual(result.verification.stages,['official-parkinsons','general-health','health-press']);assert.equal(result.items.length,2);assert.equal(result.shortfall,8);assert.equal(result.items[0].priority,0);assert.equal(result.published,false);assert.equal(result.automaticUpdates,false);assert.equal(result.verification.apiRequests,4);assert.doesNotMatch(JSON.stringify(result),/synthetic-test-key/);
 });
 test('no candidates returns an honest empty preview after both search stages; no translation call or storage',async()=>{
  let calls=0;const result=await generateHealthNewsPreview({OPENAI_API_KEY:'test'},new Date('2026-10-24T12:00:00Z'),async(url)=>{if(url!=='https://api.openai.com/v1/responses')return new Response('<h1>Empty</h1>',{headers:{'content-type':'text/html'}});calls++;return Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[]}},{content:[{type:'output_text',text:'{"items":[]}'}]}]});});
- assert.equal(calls,2);assert.equal(result.items.length,0);assert.equal(result.shortfall,10);assert.equal(NEWS_PREVIEW_POLICY.maxItems,10);
+ assert.equal(calls,3);assert.equal(result.items.length,0);assert.equal(result.shortfall,10);assert.equal(NEWS_PREVIEW_POLICY.maxItems,10);
 });
 
 test('international catalogue contains verified sources from fifteen countries plus transnational organisations',async()=>{
@@ -65,7 +65,7 @@ test('empty model discovery recovers via fetched official article links; 403 ind
  const payload=items=>Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[]}},{content:[{type:'output_text',text:JSON.stringify({items})}]}]});
  const transport=async(url,options)=>{
   if(url==='https://api.openai.com/v1/responses'){
-   api++;if(api<=2)return payload([]);
+   api++;if(api<=3)return payload([]);
    return payload({[article]:review(0,{scope:'global',evidenceId:0})});
   }
   if(url==='https://www.michaeljfox.org/research-news')return new Response('<h1>News</h1><a href="/news/recovered">Research Parkinson</a>',{headers:{'content-type':'text/html'}});
@@ -73,7 +73,7 @@ test('empty model discovery recovers via fetched official article links; 403 ind
   return new Response(null,{status:403});
  };
  const result=await generateHealthNewsPreview({OPENAI_API_KEY:'fixture-key'},new Date(day+'T12:00:00Z'),transport);
- assert.equal(result.items.length,1);assert.equal(result.status,'ready');assert.equal(result.items[0].url,article);assert.equal(result.verification.discovery[0].publisherCandidates,1);assert.ok(result.verification.rejected.some(x=>/403/.test(x.reason)));assert.equal(api,3);assert.equal(result.published,false);
+ assert.equal(result.items.length,1);assert.equal(result.status,'ready');assert.equal(result.items[0].url,article);assert.equal(result.verification.discovery[0].publisherCandidates,1);assert.ok(result.verification.rejected.some(x=>/403/.test(x.reason)));assert.equal(api,4);assert.equal(result.published,false);
 });
 
 
@@ -118,14 +118,14 @@ test('daily exclusions prevent opening old URLs and suppress already-covered top
  const payload=items=>Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[{url:recent},{url:fresh}]}},{content:[{type:'output_text',text:JSON.stringify({items})}]}]});
  const transport=async(url,options)=>{
   if(url==='https://api.openai.com/v1/responses'){
-   api++;if(api===1)return payload([{url:recent},{url:fresh}]);if(api===2)return payload([]);
+   api++;if(api===1)return payload([{url:recent},{url:fresh}]);if(api===2||api===3)return payload([]);
    return payload({[fresh]:review(0,{scope:'global',evidenceId:0,topicKey:'previous-topic'})});
   }
   if([recent,fresh].includes(url)){opened.push(url);return new Response('<meta property="article:published_time" content="2026-10-24"><h1>Parkinson research</h1><p>'+evidence.repeat(5)+'</p>',{headers:{'content-type':'text/html'}});}
   return new Response('<h1>Index</h1>',{headers:{'content-type':'text/html'}});
  };
  const result=await generateHealthNewsPreview({OPENAI_API_KEY:'fixture'},new Date(day+'T12:00:00Z'),transport,{excludeUrls:[recent],excludeTopics:['previous-topic']});
- assert.deepEqual(opened,[fresh]);assert.equal(result.items.length,0);assert.equal(api,3);
+ assert.deepEqual(opened,[fresh]);assert.equal(result.items.length,0);assert.equal(api,4);
 });
 
 
@@ -141,19 +141,19 @@ test('selection limits each organisation to two including NIH subdomains',async(
  const items=selectEditorialStories(stories,stories.map((_,i)=>review(i)),day);assert.equal(items.length,2);
 });
 
-test('publication discovery supplements sparse results using other organisations within a four-call budget',async()=>{
+test('publication discovery supplements sparse results using other organisations within a five-call budget',async()=>{
  const hosts=['www.parkinson.org','www.nih.gov','www.who.int','www.fiocruz.br','www.paho.org','www.nature.com'],urls=hosts.map((host,i)=>'https://'+host+'/news/fresh-'+i);let api=0;const requests=[];
  const payload=items=>({status:'completed',output:[{type:'web_search_call',action:{sources:urls.map(url=>({url}))}},{content:[{type:'output_text',text:JSON.stringify({items})}]}]});
  const result=await generateHealthNewsPreview({OPENAI_API_KEY:'synthetic'},new Date(day+'T12:00:00Z'),async(url,options)=>{
   if(url==='https://api.openai.com/v1/responses'){
    const body=JSON.parse(options.body);requests.push(body);api++;
-   if(api===1)return Response.json(payload([{url:urls[0]}]));if(api===2)return Response.json(payload([{url:urls[1]}]));if(api===3)return Response.json(payload(urls.slice(2).map(url=>({url}))));
-   assert.equal(api,4);const inputs=JSON.parse(body.input[1].content);return Response.json(payload(Object.fromEntries(inputs.map((s,id)=>[s.url,review(id,{scope:'global',evidenceId:0,summary:Array(90).fill('fictício').join(' ')})]))));
+   if(api===1)return Response.json(payload([{url:urls[0]}]));if(api===2)return Response.json(payload([{url:urls[1]}]));if(api===3)return Response.json(payload([]));if(api===4)return Response.json(payload(urls.slice(2).map(url=>({url}))));
+   assert.equal(api,5);const inputs=JSON.parse(body.input[1].content);return Response.json(payload(Object.fromEntries(inputs.map((s,id)=>[s.url,review(id,{scope:'global',evidenceId:0,summary:Array(90).fill('fictício').join(' ')})]))));
   }
   if(!urls.includes(url))return new Response('<h1>Empty index</h1>',{headers:{'content-type':'text/html'}});
   return new Response('<meta property="article:published_time" content="'+day+'"><h1>Parkinson prevention research</h1><p>'+evidence.repeat(5)+'</p>',{headers:{'content-type':'text/html'}});
  },{fillMinimum:true});
- assert.equal(result.items.length,6);assert.equal(result.verification.apiRequests,4);assert.ok(result.verification.sourceRequests<=80);assert.ok(!requests[2].tools[0].filters.allowed_domains.includes('parkinson.org'));assert.ok(!requests[2].tools[0].filters.allowed_domains.includes('nih.gov'));
+ assert.equal(result.items.length,6);assert.equal(result.verification.apiRequests,5);assert.ok(result.verification.sourceRequests<=110);assert.ok(!requests[3].tools[0].filters.allowed_domains.includes('parkinson.org'));assert.ok(!requests[3].tools[0].filters.allowed_domains.includes('nih.gov'));
 });
 
 test('discovery skips known index pages and extracts current Parkinson Foundation and FAPESP article links',async()=>{
@@ -163,4 +163,31 @@ test('discovery skips known index pages and extracts current Parkinson Foundatio
  for(const [url,match,article]of [['https://www.parkinson.org/resources-support/blog',/^\/blog\/[^/]+\/[^/]+\/?$/,'/blog/awareness/new-study'],['https://agencia.fapesp.br/',/^\/(?:index\.php\/)?[^/]+\/\d+\/?$/,'/pesquisa-saude/12345']]){
   const links=publisherArticleLinks('<h1>News</h1><a href="'+article+'">Research</a>',{url,match});assert.equal(links.length,1);assert.equal(links[0].url,new URL(article,url).href);
  }
+});
+
+test('dedicated health desks verify article text and reject blocked or subscription-only pages',async()=>{
+ const {HEALTH_PRESS_CATALOG,HEALTH_PRESS_SOURCES}=await import('./health-news-preview.mjs');
+ const article='https://www.cnnbrasil.com.br/saude/pesquisa-cuidado/',blocked='https://www1.folha.uol.com.br/equilibrioesaude/2026/10/cuidado.shtml',paywall='https://www.nytimes.com/2026/10/24/well/care.html';
+ let searches=0;const payload=(items,search=false)=>({status:'completed',output:[...(search?[{type:'web_search_call',action:{sources:[article,blocked,paywall].map(url=>({url}))}}]:[]),{content:[{type:'output_text',text:JSON.stringify({items})}]}]});
+ const result=await generateHealthNewsPreview({OPENAI_API_KEY:'synthetic'},new Date(day+'T12:00:00Z'),async(url,options)=>{
+  if(url==='https://api.openai.com/v1/responses'){
+   const body=JSON.parse(options.body);
+   if(body.tools){searches++;if(searches===3){assert.deepEqual(body.tools[0].filters.allowed_domains,HEALTH_PRESS_SOURCES);assert.match(body.input,/CADERNOS DE SAÚDE/);return Response.json(payload([article,blocked,paywall].map(url=>({url})),true));}return Response.json(payload([],true));}
+   const inputs=JSON.parse(body.input[1].content);assert.deepEqual(inputs.map(s=>s.url),[article]);return Response.json(payload({[article]:review(0,{scope:'global',evidenceId:0})}));
+  }
+  if(url===blocked)return new Response(null,{status:403});
+  const html='<meta property="article:published_time" content="'+day+'"><h1>Pesquisa sobre envelhecimento e cuidado</h1><p>'+evidence.repeat(12)+'</p>';
+  if(url===paywall)return new Response('<script type="application/ld+json">{"isAccessibleForFree":false}</script>'+html,{headers:{'content-type':'text/html'}});
+  return new Response(url===article?html:'<h1>Health index</h1>',{headers:{'content-type':'text/html'}});
+ });
+ assert.equal(searches,3);assert.equal(result.items.length,1);assert.equal(result.items[0].url,article);
+ assert.ok(result.verification.rejected.some(x=>x.url===blocked&&/403/.test(x.reason)));
+ assert.ok(result.verification.rejected.some(x=>x.url===paywall&&/subscription/.test(x.reason)));
+ assert.ok(result.verification.sourceRequests<=110);
+ for(const entry of HEALTH_PRESS_CATALOG){assert.ok(HEALTH_PRESS_SOURCES.includes(entry.domain));assert.ok(new URL(entry.url).hostname.endsWith(entry.domain));}
+});
+test('a reputable organisation does not make leadership elections or isolated accidents relevant health news',()=>{
+ const stories=[story('announcement-of-candidates-for-the-position-of-who-director-general','www.who.int'),story('train-accident','www.who.int'),story('caregiver-research','www.nih.gov')];
+ const chosen=selectEditorialStories(stories,stories.map((s,i)=>review(i)),day);
+ assert.equal(chosen.length,1);assert.match(chosen[0].url,/caregiver-research/);
 });

@@ -1,5 +1,5 @@
-// Verify public primary-source pages before a story can enter the daily edition.
-const DOMAINS=['franceparkinson.fr','dpv-bundesverband.de','parkinson-gesellschaft.de','parkinson.ch','parkinson.it','parkinson-italia.it','esparkinson.es','parkinson.pt','parkinson.nl','parkinsonnet.nl','parkinsons.org.nz','parkinsonssocietyindia.com','jpda-net.org','parkinson.org.br','apdaparkinson.org','cureparkinsons.org.uk','parkinsonseurope.org','movementdisorders.org','gov.br','usp.br','who.int','paho.org','nih.gov','nia.nih.gov','ninds.nih.gov','fda.gov','cdc.gov','parkinson.org','michaeljfox.org','parkinsons.org.uk','parkinson.ca','parkinsons.org.au','nature.com','science.org','thelancet.com','nejm.org','bmj.com','jamanetwork.com','eurekalert.org','alzheimers.org.uk','nhs.uk','europa.eu','fiocruz.br','fapesp.br','ebc.com.br','globo.com','abril.com.br','reuters.com','bbc.com','bbc.co.uk','statnews.com','medicalxpress.com','sciencedaily.com','medicalnewstoday.com','health.harvard.edu','mayoclinic.org'];
+// Verify public publisher pages before a story can enter the daily edition.
+const DOMAINS=['uol.com.br','estadao.com.br','cnnbrasil.com.br','theguardian.com','nytimes.com','washingtonpost.com','franceparkinson.fr','dpv-bundesverband.de','parkinson-gesellschaft.de','parkinson.ch','parkinson.it','parkinson-italia.it','esparkinson.es','parkinson.pt','parkinson.nl','parkinsonnet.nl','parkinsons.org.nz','parkinsonssocietyindia.com','jpda-net.org','parkinson.org.br','apdaparkinson.org','cureparkinsons.org.uk','parkinsonseurope.org','movementdisorders.org','gov.br','usp.br','who.int','paho.org','nih.gov','nia.nih.gov','ninds.nih.gov','fda.gov','cdc.gov','parkinson.org','michaeljfox.org','parkinsons.org.uk','parkinson.ca','parkinsons.org.au','nature.com','science.org','thelancet.com','nejm.org','bmj.com','jamanetwork.com','eurekalert.org','alzheimers.org.uk','nhs.uk','europa.eu','fiocruz.br','fapesp.br','ebc.com.br','globo.com','abril.com.br','reuters.com','bbc.com','bbc.co.uk','statnews.com','medicalxpress.com','sciencedaily.com','medicalnewstoday.com','health.harvard.edu','mayoclinic.org'];
 export function publicSourceUrl(value){
  const u=new URL(value);
  if(u.protocol!=='https:'||u.username||u.password||u.port)throw Error('Source URL is not allowed');
@@ -86,7 +86,9 @@ export async function verifyStory(candidate,today,citedUrls,fetcher=fetch){
  }
  if(!response?.ok)throw Error('Source page unavailable: HTTP '+(response?.status||'redirect-limit'));
  if(!response.headers.get('content-type')?.includes('text/html')){await response.body?.cancel();throw Error('Source is not an article page');}
- const html=await readHtml(response);const publication=publicationFromHtml(html);const ageDays=checkPublication(publication.date,today);
+ const html=await readHtml(response);
+ if(/"isAccessibleForFree"\s*:\s*(?:false|"false")/i.test(html))throw Error('Article requires subscription; public text is insufficient');
+ const publication=publicationFromHtml(html);const ageDays=checkPublication(publication.date,today);
  if(candidate.publishedAt&&candidate.publishedAt!==publication.date)throw Error('Search date disagrees with original publication date');
  let body=html.replace(/<(script|style|nav|header|footer)\b[^>]*>[\s\S]*?<\/\1>/gi,' ');
  body=decodeArticleEntities(body.slice(Math.max(0,body.search(/<h1\b/i))).replace(/<[^>]*>/g,' ')).replace(/\s+/g,' ').trim().slice(0,14000);

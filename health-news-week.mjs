@@ -1,8 +1,8 @@
 // Shared public editions only. The authorization window is explicit and finite.
-import {generateHealthNewsPreview,NEWS_PREVIEW_POLICY,newsOrganization} from './health-news-preview.mjs';
+import {generateHealthNewsPreview,NEWS_PREVIEW_POLICY,newsOrganization,unrelatedHealthTopic} from './health-news-preview.mjs';
 import {checkPublication,publicSourceUrl} from './health-news-verification.mjs';
 export const NEWS_WEEK=Object.freeze({start:'2026-10-28T00:00:00-03:00',end:'2026-11-04T00:00:00-03:00',maxItems:10,policyVersion:4});
-export const NEWS_GENERATOR_REVISION=3;
+export const NEWS_GENERATOR_REVISION=4;
 export const WEEK_KEY='health-news:editorial-week:latest';
 const DATE_PREFIX='health-news:editorial-week:date:',RECENT='health-news:editorial-week:recent';
 export const newsDay=now=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
@@ -21,7 +21,7 @@ export function publishableWeeklyEdition(digest){
 export function mergeDailyReadings(fresh,previous,date){
  const items=[],urls=new Set(),topics=new Set(),organizations=new Map();
  function append(item,repeated=false){
-  if(!item)return;const candidate={...item};
+  if(!item||unrelatedHealthTopic(item.url+' '+item.title))return;const candidate={...item};
   if(!validWeeklyEdition({policyVersion:4,date,items:[candidate]}))return;
   const words=candidate.summary.trim().split(/\s+/).length;if(words<NEWS_PREVIEW_POLICY.minSummaryWords||words>NEWS_PREVIEW_POLICY.maxSummaryWords)return;
   const organization=newsOrganization(candidate.url);if(urls.has(candidate.url)||topics.has(candidate.topicKey)||(organizations.get(organization)||0)>=NEWS_PREVIEW_POLICY.maxPerSource)return;

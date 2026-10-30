@@ -37,7 +37,7 @@ const withNews={fetch:async request=>{const path=new URL(request.url).pathname;i
 const fixture=`(()=>{window.__voiceInstances=[];window.SpeechRecognition=class {constructor(){window.__voiceInstances.push(this);}start(){this.onstart?.();}stop(){this.onend?.();}abort(){}};let signedIn=false;const listeners=[];window.__setAuth=value=>{signedIn=value;for(const cb of listeners)cb(value?'SIGNED_IN':'SIGNED_OUT',value?{access_token:'synthetic-test-token',user:{id:'synthetic-owner'}}:null);};window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:signedIn?{access_token:'synthetic-test-token',user:{id:'synthetic-owner'}}:null}}),onAuthStateChange:cb=>{listeners.push(cb);return {data:{subscription:{unsubscribe(){}}}};},signOut:async()=>{window.__setAuth(false);return {};},signInWithOtp:async options=>{window.__authOptions=options;return {};},signInWithOAuth:async options=>{window.__authOptions=options;return {};}}})};})();`;
 const browser=await chromium.launch({headless:true,...(process.env.LUMI_CHROMIUM_EXECUTABLE?{executablePath:process.env.LUMI_CHROMIUM_EXECUTABLE,args:["--no-sandbox","--disable-dev-shm-usage","--no-zygote"]}:{})});const results=[];let currentPage;
 try{
-for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360',360,800,true],['android-393',393,851,true],['small-320',320,640,true],['landscape',800,360,true]]){
+for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360',360,800,true],['android-393',393,851,true],['pwa-393',393,851,true],['small-320',320,640,true],['landscape',800,360,true]]){
  resetBackend();
  const context=await browser.newContext({viewport:{width,height},isMobile:mobile,hasTouch:mobile,serviceWorkers:'block'}),page=await context.newPage();currentPage=page;const errors=[];
  page.setDefaultTimeout(15000);console.log('Viewport scenario:',name);
@@ -51,6 +51,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
   const request=route.request();const response=await worker.fetch(new Request(url,{method:request.method(),...(request.method()==='POST'?{body:request.postData()}:{}),headers:request.headers()}));
   return route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())});
  });
+ if(name==='pwa-393')await page.addInitScript(()=>{const original=window.matchMedia.bind(window);window.matchMedia=q=>q==='(display-mode: standalone)'?{matches:true,addEventListener(){},removeEventListener(){}}:original(q);});
  if(name==='small-320')await page.addInitScript(()=>localStorage.setItem('companion-ai-v2','{corrupt'));
  await page.goto(HOST);await page.locator('#signInBtn').waitFor({state:'visible'});
  await page.locator('#lumiSosSamuCall').waitFor({state:'visible'});
@@ -100,6 +101,9 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
    await control.scrollIntoViewIfNeeded();
    assert.ok(await control.evaluate(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}),id+' reachable by scrolling');
   }
+  // Hit testing catches covering elements, which a bounding-box check alone misses.
+  await page.locator('#conversationSidebar').evaluate(n=>n.scrollTop=n.scrollHeight);
+  assert.equal(await page.locator('#signOutBtn').evaluate(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),true,'Sign out remains clickable after scrolling More');
   await page.screenshot({path:new URL('./test-results/'+name+'-more-controls.png',import.meta.url).pathname,fullPage:true});
   await closeMobileMenu(page);
  }
@@ -136,13 +140,14 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  assert.deepEqual(await page.locator('#conversationList .conversation-item').allTextContents(),['Conversa salva 7','Conversa salva 6','Conversa salva 5','Conversa salva 4','Conversa salva 3']);
  await closeMobileMenu(page);
  if(width<=900){
-  for(const id of ['sidebarNewChatBtn','lumiLanguageSelect']){assert.equal(await page.locator('#lumiMobilePrimaryActions #'+id).isVisible(),true);assert.ok(await page.locator('#'+id).evaluate(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;}));}
+  for(const id of ['sidebarNewChatBtn','lumiLanguageSelect']){assert.equal(await page.locator('#'+id).isVisible(),true);assert.ok(await page.locator('#'+id).evaluate(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;}));}
  }
  if(!mobile){failNextArchive=true;await page.locator('#sidebarNewChatBtn').click();await page.waitForFunction(()=>!document.getElementById('sidebarNewChatBtn').disabled&&document.getElementById('sidebarStatus').textContent.includes('Falha de arquivo'));assert.equal(await page.locator('#messages .msg').count(),12);}
  await page.locator('#sidebarNewChatBtn').click();
  await page.waitForFunction(()=>!document.getElementById('sidebarNewChatBtn').disabled&&document.querySelector('#conversationList .conversation-item')?.textContent==='Mensagem fictícia 0');
  assert.equal(await page.locator('#conversationList .conversation-item').count(),5);
  assert.equal(await page.locator('#messages .msg').count(),1);
+ assert.ok(!(await page.locator('#messages').textContent()).includes('Mensagem fictícia 17'),'New conversation clears the previous chat from the screen');
  await openMobileSection(page,'lumiMobileConversations');
  await page.locator('#conversationList .conversation-item').first().click();
  await page.waitForFunction(()=>document.querySelectorAll('#messages .msg').length===6&&!document.getElementById('sidebarNewChatBtn').disabled);
@@ -151,7 +156,7 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
 
  assert.equal(await page.locator('#lumiMindBodyMobile').count(),0,'No duplicate mobile navigation above chat');
  if(width>900)assert.deepEqual(await page.locator('#conversationSidebar').evaluate(n=>[...n.querySelectorAll('#lumiAgendaBtn,#lumiExerciseBtn,#lumiHealthNewsBtn')].map(e=>e.id)),['lumiAgendaBtn','lumiExerciseBtn','lumiHealthNewsBtn']);
- else{assert.deepEqual(await page.locator('#lumiMobileNav > button').evaluateAll(nodes=>nodes.map(n=>n.id)),['lumiMobileChatBtn','lumiAgendaBtn','chatHistoryBtn']);assert.ok(await page.locator('.app-header').evaluate(n=>n.getBoundingClientRect().height<=60));assert.equal(await page.locator('#profileBtn').isVisible(),false);assert.equal(await page.locator('#lumiLanguageSelect').isVisible(),true);assert.equal(await page.locator('#sidebarNewChatBtn').isVisible(),true);}
+ else{assert.deepEqual(await page.locator('#lumiMobileNav > button').evaluateAll(nodes=>nodes.map(n=>n.id)),['sidebarNewChatBtn','lumiMobileChatBtn','lumiAgendaBtn','chatHistoryBtn']);assert.ok(await page.locator('.app-header').evaluate(n=>n.getBoundingClientRect().height<=60));assert.equal(await page.locator('#profileBtn').isVisible(),false);assert.equal(await page.locator('#lumiLanguageSelect').isVisible(),true);assert.equal(await page.locator('#sidebarNewChatBtn').isVisible(),true);}
  await openMobileSection(page);
  await page.locator('#lumiImportantLinksBtn').click();
  const linksDialog=page.locator('#lumiImportantLinksDialog');

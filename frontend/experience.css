@@ -121,4 +121,13 @@ dialog{max-width:calc(100vw - 24px);max-height:calc(var(--lumi-viewport-height,1
  html.lumi-mobile-light #lumiVoicePlaybackControls #soundButton::after{display:none}
  html.lumi-mobile-light #lumiUpdateNotice{margin:2px 12px;padding:4px}
 }
-
+/* Keep essential mobile actions reachable in browser and standalone PWA. */
+@media(max-width:900px){
+ html.lumi-mobile-light #lumiMobileNav{grid-template-columns:repeat(4,minmax(0,1fr))}
+ html.lumi-mobile-light #lumiMobileNav>button{font-size:14px!important;padding:8px 3px!important;line-height:1.15!important}
+ html.lumi-mobile-light #lumiMobileNav>#sidebarNewChatBtn{color:#f0f8ff!important;background:#254f73!important;white-space:normal;overflow-wrap:normal}
+ html.lumi-mobile-light #conversationSidebar .sidebar-top{position:sticky;top:0;z-index:2;background:#101827;gap:8px}
+ html.lumi-mobile-light #conversationSidebar .sidebar-top h2{margin-right:auto}
+ html.lumi-mobile-light #conversationSidebar .sidebar-top .auth-box{flex:0 0 auto;max-width:40%}
+ html.lumi-mobile-light #conversationSidebar .sidebar-top .auth-button{width:auto;min-width:60px;min-height:48px;height:auto;padding:10px;white-space:normal;background:#25344a;color:#fff}
+}

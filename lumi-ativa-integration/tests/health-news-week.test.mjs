@@ -89,3 +89,10 @@ test('fallback skips old and duplicate topics and never displaces new readings',
  const items=mergeDailyReadings(fresh,previous,'2026-10-28');assert.equal(items.length,6);assert.equal(items[0].repeated,false);assert.equal(items.filter(x=>x.url===fresh[0].url).length,1);
  assert.equal(mergeDailyReadings([],previous,'2026-11-05').length,0);
 });
+
+test('reused readings cannot fill the edition with institutional elections or isolated accidents',()=>{
+ const admin={...item,url:'https://www.who.int/news/announcement-of-candidates-for-the-position-of-who-director-general',title:'OMS anuncia candidatos ao cargo de Diretor-Geral',topicKey:'leadership'};
+ const accident={...item,url:'https://www.who.int/news/train-accident',title:'Declaração sobre acidente de trem',topicKey:'accident'};
+ const result=mergeDailyReadings([admin,accident],preview,preview.date);
+ assert.equal(result.length,6);assert.ok(result.every(x=>!['leadership','accident'].includes(x.topicKey)));
+});

@@ -76,13 +76,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
         run: node lumi-ativa-integration/inspect.mjs
-      - name: Collect first verified public news edition for the authorized week
-        if: contains(github.event.head_commit.message, '[news-week-start]')
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
-          LUMI_RESEARCH_OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
-        run: node lumi-ativa-integration/run-news-week.mjs
       - name: Package synthetic Lumi UI
         run: node lumi-ativa-integration/build-assets.mjs
       - name: Integrate only authorized lumi-develop sandbox, preserving baseline and bindings
@@ -101,6 +94,13 @@ jobs:
         run: node lumi-beta/deployed-check.mjs
       - name: Verify existing public health-news edition (read-only)
         run: node frontend/health-news-check.mjs
+      - name: Refresh verified public news after the development UI is published
+        if: contains(github.event.head_commit.message, '[news-week-start]')
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ATIVA_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ATIVA_CLOUDFLARE_ACCOUNT_ID }}
+          LUMI_RESEARCH_OPENAI_API_KEY: ${{ secrets.LUMI_RESEARCH_OPENAI_API_KEY }}
+        run: node lumi-ativa-integration/run-news-week.mjs
   health_news_check:
     # News generation stays disabled until the official beta launch review.
     if: ${{ false }}
