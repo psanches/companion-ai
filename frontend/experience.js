@@ -75,7 +75,7 @@
   const media=matchMedia('(max-width:900px)'),placements=new Map(),t=value=>window.LumiI18n?.t(value)||value;
   const make=(tag,id,text)=>{const node=document.createElement(tag);if(id)node.id=id;if(text)node.textContent=text;return node;};
   const nav=make('nav','lumiMobileNav');nav.setAttribute('aria-label',t('Navegação principal'));
-  const chat=make('button','lumiMobileChatBtn','Conversa');chat.type='button';nav.append(chat);app.append(nav);
+  const chat=make('button','lumiMobileChatBtn','Voltar ao chat');chat.type='button';chat.hidden=true;nav.append(chat);app.append(nav);
   const context=make('span','lumiMobileContext','Conversa');header.append(context);
   const primary=make('div','lumiMobilePrimaryActions');header.append(primary);
   const playback=make('div','lumiVoicePlaybackControls');document.getElementById('chatForm')?.prepend(playback);
@@ -93,13 +93,14 @@
   }
   function closeMenu(){if(sidebar.classList.contains('open'))document.getElementById('closeSidebarBtn')?.click();}
   function update(){
-   if(!active)return;const open=sidebar.classList.contains('open'),calendar=!!document.getElementById('lumiCalendarWeek');
+   if(!active)return;const open=sidebar.classList.contains('open'),calendar=!!document.querySelector('#lumiCalendarWeek,#lumiCalendarDay');
+   chat.hidden=!calendar;nav.classList.toggle('has-chat-return',calendar);
    app.classList.toggle('lumi-mobile-agenda',calendar);chat.setAttribute('aria-current',!open&&!calendar?'page':'false');
    agenda?.setAttribute('aria-current',!open&&calendar?'page':'false');more?.setAttribute('aria-current',open?'page':'false');more?.setAttribute('aria-expanded',String(open));
    const text=t(open?'Mais':calendar?'Agenda':'Conversa');if(context.textContent!==text)context.textContent=text;
   }
   function language(){
-   chat.textContent=t('Conversa');nav.setAttribute('aria-label',t('Navegação principal'));
+   chat.textContent=t('Voltar ao chat');nav.setAttribute('aria-label',t('Navegação principal'));
    for(const [node,label]of labels)node.dataset.mobileLabel=t(label);
    for(const [id,label]of [['lumiMobileConversations','Conversas anteriores'],['lumiMobileAccount','Minha conta'],['lumiMobileHelp','Ajuda e testes']])document.querySelector('#'+id+' > summary').textContent=t(label);
    if(active){if(more){more.textContent=t('Mais');more.setAttribute('aria-label',t('Mais'));more.title=t('Mais');}if(agenda)agenda.textContent=t('Agenda');if(title)title.textContent=t('Mais');update();}

@@ -60,10 +60,10 @@ test('a generator revision regenerates an older same-day cache once and then reu
 });
 
 
-test('publication requires six complete readings and rejects a single-source edition without deleting the last good one',async()=>{
+test('publication accepts three complete readings and rejects a single-source edition without deleting the last good one',async()=>{
  const f=fixture(),legacy={...preview,items:preview.items.slice(0,1)};f.data.set(WEEK_KEY,JSON.stringify(legacy));
  assert.equal(publishableWeeklyEdition(preview),true);
- for(const items of [preview.items.slice(0,5),preview.items.map((x,i)=>({...x,url:'https://www.who.int/news/'+i})),preview.items.map(x=>({...x,summary:'Uma frase muito curta.'}))]){
+ for(const items of [preview.items.slice(0,2),preview.items.map((x,i)=>({...x,url:'https://www.who.int/news/'+i})),preview.items.map(x=>({...x,summary:'Uma frase muito curta.'}))]){
   assert.equal(publishableWeeklyEdition({...preview,items}),false);
   await assert.rejects(generateWeeklyDigest(f.env,now,undefined,async()=>({...preview,items})),/No publishable/);
   assert.equal(f.writes.length,0);assert.deepEqual(JSON.parse(f.data.get(WEEK_KEY)),legacy);
@@ -71,22 +71,22 @@ test('publication requires six complete readings and rejects a single-source edi
 });
 
 
-test('two new readings lead the edition and four prior readings fill six, with original dates and no duplicates',async()=>{
+test('two new readings lead the edition and one prior reading fills three, with original dates and no duplicates',async()=>{
  const f=fixture(),previous={...preview,date:'2026-10-27'};f.data.set(WEEK_KEY,JSON.stringify(previous));
  const fresh=preview.items.slice(0,2).map((x,i)=>({...x,url:x.url+'-new',topicKey:'fresh-'+i,publishedAt:'2026-10-28'}));
  const result=await generateWeeklyDigest(f.env,now,undefined,async()=>({...preview,items:fresh}));
- assert.equal(result.items.length,6);assert.deepEqual(result.items.slice(0,2).map(x=>x.topicKey),['fresh-0','fresh-1']);assert.equal(result.verification.newItems,2);assert.equal(result.verification.repeatedItems,4);
+ assert.equal(result.items.length,3);assert.deepEqual(result.items.slice(0,2).map(x=>x.topicKey),['fresh-0','fresh-1']);assert.equal(result.verification.newItems,2);assert.equal(result.verification.repeatedItems,1);
  for(const x of result.items.slice(2)){assert.equal(x.repeated,true);assert.equal(x.repeatedFromEdition,'2026-10-27');assert.equal(x.publishedAt,'2026-10-27');}
- assert.equal(new Set(result.items.map(x=>x.url)).size,6);assert.equal(new Set(result.items.map(x=>x.topicKey)).size,6);assert.equal(publishableWeeklyEdition(result),true);
+ assert.equal(new Set(result.items.map(x=>x.url)).size,3);assert.equal(new Set(result.items.map(x=>x.topicKey)).size,3);assert.equal(publishableWeeklyEdition(result),true);
 });
-test('failed collection can reuse six verified readings but never relabels publication dates as today',async()=>{
+test('failed collection can reuse three verified readings but never relabels publication dates as today',async()=>{
  const f=fixture();f.data.set(WEEK_KEY,JSON.stringify({...preview,date:'2026-10-27'}));
  const result=await generateWeeklyDigest(f.env,now,undefined,async()=>{throw Error('Search unavailable');});
- assert.equal(result.date,'2026-10-28');assert.equal(result.items.length,6);assert.equal(result.verification.newItems,0);assert.equal(result.verification.repeatedItems,6);assert.ok(result.items.every(x=>x.repeated&&x.publishedAt==='2026-10-27'));
+ assert.equal(result.date,'2026-10-28');assert.equal(result.items.length,3);assert.equal(result.verification.newItems,0);assert.equal(result.verification.repeatedItems,3);assert.ok(result.items.every(x=>x.repeated&&x.publishedAt==='2026-10-27'));
 });
 test('fallback skips old and duplicate topics and never displaces new readings',()=>{
  const previous={...preview,date:'2026-10-27'},fresh=[{...preview.items[0],publishedAt:'2026-10-28'}];
- const items=mergeDailyReadings(fresh,previous,'2026-10-28');assert.equal(items.length,6);assert.equal(items[0].repeated,false);assert.equal(items.filter(x=>x.url===fresh[0].url).length,1);
+ const items=mergeDailyReadings(fresh,previous,'2026-10-28');assert.equal(items.length,3);assert.equal(items[0].repeated,false);assert.equal(items.filter(x=>x.url===fresh[0].url).length,1);
  assert.equal(mergeDailyReadings([],previous,'2026-11-05').length,0);
 });
 
@@ -94,5 +94,14 @@ test('reused readings cannot fill the edition with institutional elections or is
  const admin={...item,url:'https://www.who.int/news/announcement-of-candidates-for-the-position-of-who-director-general',title:'OMS anuncia candidatos ao cargo de Diretor-Geral',topicKey:'leadership'};
  const accident={...item,url:'https://www.who.int/news/train-accident',title:'Declaração sobre acidente de trem',topicKey:'accident'};
  const result=mergeDailyReadings([admin,accident],preview,preview.date);
- assert.equal(result.length,6);assert.ok(result.every(x=>!['leadership','accident'].includes(x.topicKey)));
+ assert.equal(result.length,3);assert.ok(result.every(x=>!['leadership','accident'].includes(x.topicKey)));
+});
+
+test('three short, sourced readings can publish while unverified dates and unsupported text remain rejected',()=>{
+ const brief={...preview,items:preview.items.slice(0,3).map(x=>({...x,summary:Array(50).fill('evidência').join(' ')}))};
+ assert.equal(publishableWeeklyEdition(brief),true);
+ assert.equal(publishableWeeklyEdition({...brief,items:brief.items.slice(0,2)}),false);
+ for(const change of [{publishedAt:'2026-10-29'},{dateVerified:false},{scope:'regional'},{summary:Array(49).fill('palavra').join(' ')}]){
+  assert.equal(publishableWeeklyEdition({...brief,items:brief.items.map((x,i)=>i===0?{...x,...change}:x)}),false);
+ }
 });
