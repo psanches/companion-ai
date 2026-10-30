@@ -20,3 +20,10 @@ html:not(.lumi-authenticated) #companionTabs,html:not(.lumi-authenticated) #comp
 #companionScience .science-methodology{background:transparent}#companionScience .science-methodology p,#companionScience .science-methodology>small{margin:10px 14px}
 #companionTabs button:focus-visible,#companionScience :focus-visible{outline:3px solid #fbbf24;outline-offset:3px}
 @media(max-width:600px){#companionScience{padding:12px 12px 20px}#companionScience .science-controls{grid-template-columns:1fr}#companionTabs{padding:6px 10px;gap:6px}#companionTabs button{font-size:14px}}
+
+#lumiCompanionScienceBtn,#lumiBrazilResearchBtn{margin:0 14px 12px;padding:12px;min-height:48px;border:1px solid #9bd6f5;border-radius:12px;background:#25344a;color:#fff;font:16px system-ui;text-align:left;cursor:pointer}
+#lumiCompanionScienceBtn:focus-visible,#lumiBrazilResearchBtn:focus-visible{outline:3px solid #fbbf24;outline-offset:3px}
+
+#companionScience:not(.science-research-view) #companionDoctoralResearch{display:none}
+#companionScience.science-research-view > :not(h2):not(#companionDoctoralResearch){display:none}
+@media(max-width:900px){html.lumi-mobile-light #lumiMobileScienceEntries{display:flex;flex-direction:column;gap:4px}}

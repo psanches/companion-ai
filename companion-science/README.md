@@ -33,3 +33,7 @@ Includes Ativa Parkinson (Unesp/Bauru), national neurology guidelines, and Brazi
 ## Doctoral research register
 
 The public catalog also contains doctoralResearch: four completed USP theses, Aline Prieto Silveira Ciola’s completed Unesp doctoral thesis, and one MOVI-LAB group record, verified against institutional sources. The group page lists doctoral students but does not verify individual project titles or enrollment status. These academic records are displayed separately from clinical knowledge; no thesis or grant is treated as automatic proof of an effective treatment. Consultation uses no model calls. Source publication/defense dates remain separate from the consultation date.
+
+## Mobile research entry
+
+More starts with two independent entries: Companion · Ciência for the main library and Pesquisa brasileira for the doctoral register. The science view shows the knowledge topics; the research view shows academic records without the science search or topic list. Pesquisa brasileira opens the doctoral register directly. Entering Companion does not focus the search input, avoiding keyboard activation and scrolling past the research section on Android. The link /?companion=pesquisa-brasileira opens that section after authentication. Drafts remain intact.

@@ -114,6 +114,7 @@ html.lumi-authenticated #profileBtn,html.lumi-authenticated #healthDemoBtn{displ
   // The original beta dashboard listener expects a trigger that is absent from the
   // original HTML. Add it only to this development copy, avoiding a null listener.
   const betaAnchor='<button id="lumiExerciseBtn"';
+  content=content.replace(betaAnchor,'<button id="lumiCompanionScienceBtn" type="button" aria-controls="companionScience">Companion · Ciência</button>\n  <button id="lumiBrazilResearchBtn" type="button" aria-controls="companionDoctoralResearch">Pesquisa brasileira</button>\n  '+betaAnchor);
   if(!content.includes(betaAnchor))throw Error('Lumi beta button insertion anchor missing');
   // Replace the generic legacy exercise entry with the new specialized module.
   // Keep the original dialog and event handlers intact to avoid breaking legacy app.js.

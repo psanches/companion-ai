@@ -80,6 +80,7 @@
   const primary=make('div','lumiMobilePrimaryActions');header.append(primary);
   const playback=make('div','lumiVoicePlaybackControls');document.getElementById('chatForm')?.prepend(playback);
   const groups=make('div','lumiMobileMore');sidebar.append(groups);
+  const scienceEntries=make('div','lumiMobileScienceEntries');groups.append(scienceEntries);
   const features=make('div','lumiMobileFeatures');groups.append(features);
   function group(id,label){const details=make('details',id),summary=make('summary',null,label),body=make('div');details.append(summary,body);groups.append(details);return body;}
   const conversations=group('lumiMobileConversations','Conversas anteriores'),account=group('lumiMobileAccount','Minha conta'),help=group('lumiMobileHelp','Ajuda e testes');
@@ -92,8 +93,10 @@
    if(label){labels.set(node,label);node.dataset.mobileLabel=t(label);}
   }
   function closeMenu(){if(sidebar.classList.contains('open'))document.getElementById('closeSidebarBtn')?.click();}
+  let wasMoreOpen=false;
   function update(){
    if(!active)return;const open=sidebar.classList.contains('open'),calendar=!!document.querySelector('#lumiCalendarWeek,#lumiCalendarDay');
+   if(open&&!wasMoreOpen)sidebar.scrollTop=0;wasMoreOpen=open;
    chat.hidden=!calendar;nav.classList.toggle('has-chat-return',calendar);
    app.classList.toggle('lumi-mobile-agenda',calendar);chat.setAttribute('aria-current',!open&&!calendar?'page':'false');
    agenda?.setAttribute('aria-current',!open&&calendar?'page':'false');more?.setAttribute('aria-current',open?'page':'false');more?.setAttribute('aria-expanded',String(open));
@@ -109,7 +112,8 @@
    const next=media.matches&&root.classList.contains('lumi-authenticated');if(next===active)return;
    active=next;root.classList.toggle('lumi-mobile-light',active);
    if(active){
-    account.parentElement.open=true;groups.prepend(account.parentElement);
+    account.parentElement.open=true;groups.prepend(account.parentElement);groups.prepend(scienceEntries);
+    for(const id of ['lumiCompanionScienceBtn','lumiBrazilResearchBtn'])move(id,scienceEntries);
     move('lumiAgendaBtn',nav);move('chatHistoryBtn',nav);more?.setAttribute('aria-controls','conversationSidebar');
     for(const id of ['lumiHealthNewsBtn','lumiExerciseBtn','lumiImportantLinksBtn'])move(id,features);
     move('sidebarNewChatBtn',nav);nav.prepend(document.getElementById('sidebarNewChatBtn'));move('lumiLanguageControl',primary);

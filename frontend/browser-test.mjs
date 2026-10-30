@@ -74,13 +74,24 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.locator('#lumiNewsHelpDialog').waitFor({state:'hidden'});
 
  // Companion is a separate local science lookup; desktop, Android and PWA share it.
- await page.locator('#companionTabs button').nth(1).click();
- await page.locator('#companionDoctoralResearch > summary').click();
+ if(width<=900){
+  await openMobileSection(page);
+  await page.waitForFunction(()=>['lumiCompanionScienceBtn','lumiBrazilResearchBtn'].every(id=>{const r=document.getElementById(id).getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}));
+ }
+ await page.locator('#lumiCompanionScienceBtn').click();
+ assert.equal(await page.locator('#companionScience').isVisible(),true);
+ assert.equal(await page.evaluate(()=>document.activeElement?.id==='companionScienceSearch'),false);
+ if(width<=900)await openMobileSection(page);
+ await page.locator('#lumiBrazilResearchBtn').click();
+ assert.equal(await page.locator('#companionDoctoralResearch').evaluate(n=>n.open),true);
+ assert.equal(await page.evaluate(()=>document.activeElement?.id==='companionScienceSearch'),false,'science navigation does not open the search keyboard');
+ assert.equal(await page.locator('#companionDoctoralResearch > summary').evaluate(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;}),true,'Brazilian research entry visible on arrival');
  assert.equal(await page.locator('#companionDoctoralResearch [data-research]').count(),6);
  await page.locator('#companionDoctoralResearch [data-research] > summary').first().click();
  assert.ok((await page.locator('#companionDoctoralResearch').textContent()).includes('Tamine Teixeira'));
  assert.equal(await page.locator('#companionScience').evaluate(n=>n.scrollWidth<=n.clientWidth),true);
- await page.locator('#companionDoctoralResearch > summary').click();
+ await page.locator('#companionTabs button').nth(1).click();
+ await page.locator('#companionDoctoralResearch').waitFor({state:'hidden'});
  await page.locator('#companionScienceSearch').fill('proteínas');
  assert.equal(await page.locator('#companionScienceResults > details').count(),1);
  await page.locator('#companionScienceResults summary').click();

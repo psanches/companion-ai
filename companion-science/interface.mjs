@@ -11,16 +11,17 @@ export function installScience({topics,sources,version,checked,research=[]},sear
   const panel=make('section');panel.id='companionScience';panel.hidden=true;panel.setAttribute('aria-labelledby','companionScienceHeading');messages.before(panel);
   let selected=false,category='',query='';
   function switchTo(value){
+   panel.classList.remove('science-research-view');const heading=panel.querySelector('h2');if(heading)heading.textContent=label('Companion = Ciência','Companion = Science');
    selected=value;app.classList.toggle('companion-science-active',value);panel.hidden=!value;
    lumi.setAttribute('aria-pressed',String(!value));science.setAttribute('aria-pressed',String(value));
-   if(value)panel.querySelector('input')?.focus();
+   if(value){document.activeElement?.blur();panel.scrollTop=0;panel.querySelector('h2')?.focus({preventScroll:true});}
   }
   lumi.onclick=()=>switchTo(false);science.onclick=()=>switchTo(true);
   function render(){
    lumi.textContent=label('Lumi · Conversar','Lumi · Chat');science.textContent=label('Companion · Ciência','Companion · Science');
    const focus=panel.contains(document.activeElement)?document.activeElement?.id:null;
    panel.replaceChildren();
-   const heading=make('h2',label('Companion = Ciência','Companion = Science'));heading.id='companionScienceHeading';panel.append(heading);
+   const heading=make('h2',panel.classList.contains('science-research-view')?label('Pesquisa brasileira','Brazilian research'):label('Companion = Ciência','Companion = Science'));heading.id='companionScienceHeading';heading.tabIndex=-1;panel.append(heading);
    panel.append(make('p',label('Memória geral da Lumi: conhecimento científico compartilhado. Consulte medicamentos, exercícios, fonoaudiologia e psicologia.','Lumi shared knowledge: scientific content for everyone. Browse medicines, exercise, speech therapy and psychology.')));
    const note=make('p',label('Consulta direta à base, sem chamada de IA. Conteúdo científico em português; fontes originais disponíveis.','Direct knowledge lookup, without an AI call. Scientific content is in Portuguese; original sources are available.'));note.className='science-note';panel.append(note);
    if(research.length){
@@ -75,10 +76,18 @@ export function installScience({topics,sources,version,checked,research=[]},sear
    methodology.append(make('small','Versão '+version+' · '+checked));panel.append(methodology);
    if(focus)document.getElementById(focus)?.focus();
   }
-  render();switchTo(false);
+  function openResearch(){
+   switchTo(true);const register=document.getElementById('companionDoctoralResearch');
+   if(register){panel.classList.add('science-research-view');panel.querySelector('h2').textContent=label('Pesquisa brasileira','Brazilian research');register.open=true;const summary=register.querySelector('summary');summary?.focus({preventScroll:true});panel.scrollTop+=register.getBoundingClientRect().top-panel.getBoundingClientRect().top;}
+  }
+  const scienceShortcut=document.getElementById('lumiCompanionScienceBtn');if(scienceShortcut)scienceShortcut.onclick=()=>switchTo(true);
+  const shortcut=document.getElementById('lumiBrazilResearchBtn');if(shortcut)shortcut.onclick=openResearch;
+  let pendingResearch=new URLSearchParams(location.search).get('companion')==='pesquisa-brasileira';
+  function openPendingResearch(){if(pendingResearch&&document.documentElement.classList.contains('lumi-authenticated')){pendingResearch=false;openResearch();}}
+  render();switchTo(false);openPendingResearch();
   // Reset transient search and close science on sign-out; do not disturb chat drafts.
-  new MutationObserver(()=>{if(!document.documentElement.classList.contains('lumi-authenticated')){switchTo(false);query='';category='';render();}}).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
-  window.addEventListener('lumi-language-change',render);
+  new MutationObserver(()=>{if(!document.documentElement.classList.contains('lumi-authenticated')){switchTo(false);query='';category='';render();}else openPendingResearch();}).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+  window.addEventListener('lumi-language-change',()=>{const open=document.getElementById('companionDoctoralResearch')?.open;render();if(open)document.getElementById('companionDoctoralResearch').open=true;});
   for(const id of ['sidebarNewChatBtn','newChatBtn','lumiAgendaBtn'])document.getElementById(id)?.addEventListener('click',()=>switchTo(false));
  };
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready,{once:true});else ready();
