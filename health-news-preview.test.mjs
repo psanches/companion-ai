@@ -29,6 +29,21 @@ test('Folha, Estadão and Veja are collected directly even when search returns n
 const day='2026-10-24',evidence='National guidance applies to people throughout the country and supports better public health.';
 const story=(id,host='www.nih.gov',text=evidence,date=day)=>({url:`https://${host}/news/${id}`,publishedAt:date,ageDays:(Date.parse(day)-Date.parse(date))/86400000,source:host,region:host.endsWith('.br')?'Brasil':'Internacional',sourceText:text,kind:'noticia'});
 const review=(id,extra={})=>({id,scope:'national',localFocus:false,scopeEvidence:evidence,importance:8,reason:'Orientação com alcance nacional',topicKey:'unique-'+id,title:'Notícia verificada '+id,summary:'Resumo fiel da matéria. Explica seu alcance.',...extra});
+test('established newspapers need no Lumi score and the response schema does not ask them for one',async()=>{
+ const {editorialSourceSchema}=await import('./health-news-preview.mjs');
+ for(const host of ['www1.folha.uol.com.br','www.estadao.com.br','veja.abril.com.br','www.bbc.com','www.cnnbrasil.com.br']){
+  const source=story('health',host),r=review(0);delete r.importance;delete r.reason;
+  const selected=selectEditorialStories([source],[r],day);assert.equal(selected.length,1,host);assert.equal(selected[0].trustedPublisher,true);assert.equal('importance' in selected[0],false);
+  const fields=editorialSourceSchema([source]).schema.properties.items.properties[source.url].properties;assert.equal('importance' in fields,false);assert.equal('reason' in fields,false);
+ }
+});
+test('Parkinson and movement articles lead other health topics and can be older than daily news',()=>{
+ const older=story('movement','www.bbc.com','Parkinson: gait and walking rehabilitation. '+evidence,'2026-09-24');
+ const general=story('general','www.nih.gov',evidence),reviews=[review(0,{importance:10}),review(1,{importance:1,title:'Parkinson e movimento'})];
+ const result=selectEditorialStories([general,older],reviews,day);
+ assert.equal(result[0].url,older.url);assert.equal(result[0].kind,'artigo');assert.equal(result[0].publishedAt,'2026-09-24');assert.equal(result[1].kind,'noticia');
+ assert.equal(selectEditorialStories([{...older,sourceText:evidence}],[review(0)],day).length,0);
+});
 test('official Parkinson comes first regardless of general-news score, maximum ten, dates visible',()=>{
  const stories=Array.from({length:15},(_,i)=>story(i,['www.nih.gov','www.who.int','www.paho.org','www.fiocruz.br','www.nature.com','www.bbc.com'][i%6]));stories.push(story('pd','www.michaeljfox.org','Parkinson research. '+evidence));
  const reviews=stories.map((s,i)=>review(i,{importance:i===15?7:10})),items=selectEditorialStories(stories,reviews,day);
