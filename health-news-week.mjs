@@ -2,7 +2,7 @@
 import {generateHealthNewsPreview,NEWS_PREVIEW_POLICY,newsOrganization,unrelatedHealthTopic,collectOfficialUpdates,validOfficialItem} from './health-news-preview.mjs';
 import {checkPublication,publicSourceUrl} from './health-news-verification.mjs';
 export const NEWS_WEEK=Object.freeze({start:'2026-10-28T00:00:00-03:00',end:'2026-11-04T00:00:00-03:00',maxItems:10,policyVersion:4});
-export const NEWS_GENERATOR_REVISION=6;
+export const NEWS_GENERATOR_REVISION=7;
 export const WEEK_KEY='health-news:editorial-week:latest';
 const DATE_PREFIX='health-news:editorial-week:date:',RECENT='health-news:editorial-week:recent';
 export const newsDay=now=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
