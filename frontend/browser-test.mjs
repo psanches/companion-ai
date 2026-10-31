@@ -94,6 +94,10 @@ for(const [name,width,height,mobile]of [['desktop',1440,900,false],['android-360
  await page.locator('#companionDoctoralResearch').waitFor({state:'hidden'});
  await page.locator('#companionScienceSearch').fill('proteínas');
  assert.deepEqual(await page.locator('#companionScienceResults > details').evaluateAll(nodes=>nodes.map(n=>n.dataset.topic)),['protein','daily-routine']);
+ await page.locator('#companionScienceSubmit').click();
+ assert.equal(await page.evaluate(()=>document.activeElement?.id),'companionScienceCount');
+ assert.equal(await page.locator('#companionScienceCount').evaluate(n=>{const r=n.getBoundingClientRect(),p=n.parentElement.getBoundingClientRect();return r.top>=p.top&&r.bottom<=p.bottom&&r.top>=0&&r.bottom<=innerHeight;}),true,'search completion visible after submission');
+ assert.match(await page.locator('#companionScienceCount').textContent(),/Busca concluída: 2/);
  await page.locator('#companionScienceResults [data-topic="protein"] > summary').click();
  assert.ok((await page.locator('#companionScienceResults [data-topic="protein"] .science-record').textContent()).includes('Não reduzir a proteína total'));
  assert.equal(await page.locator('#chatForm').isVisible(),false);

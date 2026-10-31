@@ -32,6 +32,10 @@ test('local science navigation never sends a request, preserves drafts and clear
  assert.ok(d.getElementById('companionScience').classList.contains('science-research-view'));tabs[1].click();assert.equal(d.getElementById('companionScience').classList.contains('science-research-view'),false);
  const input=d.getElementById('companionScienceSearch');input.value='proteínas';input.dispatchEvent(new w.Event('input'));
  assert.equal(d.querySelectorAll('#companionScienceResults > details').length,2);
+ assert.match(d.getElementById('companionScienceCount').textContent,/Busca concluída: 2/);
+ input.focus();assert.equal(d.activeElement,input);
+ d.getElementById('companionScienceSubmit').click();
+ assert.equal(d.activeElement.id,'companionScienceCount');
  const draft=d.getElementById('messageInput');
  d.querySelector('.science-direct').click();assert.match(draft.value,/^Companion: Proteínas e levodopa$/);assert.equal(calls,0);draft.value='';tabs[1].click();
  draft.value='Mensagem ainda não enviada';
@@ -39,7 +43,9 @@ test('local science navigation never sends a request, preserves drafts and clear
  draft.value='';d.querySelector('.science-record button:not(.science-direct)').click();assert.match(draft.value,/Proteínas e levodopa/);assert.equal(d.getElementById('companionScience').hidden,true);assert.equal(calls,0);
  tabs[1].click();d.getElementById('sidebarNewChatBtn').click();assert.equal(d.getElementById('companionScience').hidden,true);
  tabs[1].click();const q=d.getElementById('companionScienceSearch');q.value='desconhecidox';q.dispatchEvent(new w.Event('input'));assert.match(d.getElementById('companionScienceResults').textContent,/Nenhum assunto/);
+ d.getElementById('companionScienceSubmit').click();assert.match(d.getElementById('companionScienceCount').textContent,/Busca concluída: 0/);assert.equal(d.activeElement.id,'companionScienceCount');
  w.LumiI18n.language='en';w.dispatchEvent(new w.Event('lumi-language-change'));assert.match(tabs[1].textContent,/Science/);
+ assert.match(d.getElementById('companionScienceCount').textContent,/Search complete: 0/);
  d.documentElement.classList.remove('lumi-authenticated');await new Promise(r=>setTimeout(r,0));assert.equal(d.getElementById('companionScience').hidden,true);assert.equal(d.getElementById('companionScienceSearch').value,'');
  assert.equal(calls,0);dom.window.close();
 });

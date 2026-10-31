@@ -35,16 +35,17 @@ export function installScience({topics,sources,version,checked,research=[]},sear
     }
     panel.append(register);
    }
-   const controls=make('div');controls.className='science-controls';
+   const controls=make('form');controls.className='science-controls';controls.setAttribute('role','search');
    const searchLabel=make('label',label('Pesquisar na base','Search the knowledge base')),input=make('input');input.id='companionScienceSearch';input.type='search';input.placeholder=label('Ex.: proteínas, ON/OFF, equilíbrio','E.g. proteínas, ON/OFF, equilíbrio');input.value=query;searchLabel.append(input);
    const categoryLabel=make('label',label('Área','Category')),filter=make('select');filter.id='companionScienceCategory';
    const any=make('option',label('Todas as áreas','All categories'));any.value='';filter.append(any);
    for(const c of new Set(topics.map(t=>t.category))){const o=make('option',c);o.value=c;filter.append(o);}filter.value=category;categoryLabel.append(filter);controls.append(searchLabel,categoryLabel);panel.append(controls);
-   const count=make('p');count.id='companionScienceCount';count.setAttribute('role','status');panel.append(count);
+   const submit=make('button',label('Pesquisar na base','Search the knowledge base'));submit.type='submit';submit.id='companionScienceSubmit';controls.append(submit);
+   const count=make('p');count.id='companionScienceCount';count.tabIndex=-1;count.setAttribute('role','status');count.setAttribute('aria-live','polite');count.setAttribute('aria-atomic','true');panel.append(count);
    const results=make('div');results.id='companionScienceResults';panel.append(results);
    function update(){
     query=input.value;category=filter.value;const found=search(topics,query,category);
-    count.textContent=label(found.length+' de '+topics.length+' assuntos nesta edição',found.length+' of '+topics.length+' topics in this edition');results.replaceChildren();
+    count.textContent=query.trim()||category?label('Busca concluída: '+found.length+' assunto(s) encontrado(s).','Search complete: '+found.length+' topic(s) found.'):label(found.length+' de '+topics.length+' assuntos nesta edição',found.length+' of '+topics.length+' topics in this edition');results.replaceChildren();
     if(!found.length){results.append(make('p',label('Nenhum assunto corresponde à pesquisa. Tente termos mais curtos ou consulte a Lumi; a base não cria uma resposta sem fonte.','No topic matches this search. Try shorter terms or ask Lumi; the knowledge base does not invent an unsourced answer.')));return;}
     for(const t of found){
      const details=make('details');details.dataset.topic=t.id;const summary=make('summary',t.title);details.append(summary);
@@ -69,6 +70,14 @@ export function installScience({topics,sources,version,checked,research=[]},sear
     }
    }
    input.oninput=update;filter.onchange=update;update();
+   controls.onsubmit=event=>{
+    event.preventDefault();update();
+    if(!query.trim()&&!category)count.textContent=label('Busca concluída: '+topics.length+' assuntos disponíveis.','Search complete: '+topics.length+' topics available.');
+    // Explicit submission dismisses the phone keyboard and reveals results.
+    // Live filtering keeps focus and scroll position while the user types.
+    document.activeElement?.blur();count.focus({preventScroll:true});
+    panel.scrollTop+=count.getBoundingClientRect().top-panel.getBoundingClientRect().top-12;
+   };
    const methodology=make('details');methodology.className='science-methodology';methodology.append(make('summary',label('Como esta base foi organizada','How this knowledge base was organized')));
    methodology.append(make('p',label('Priorizamos diretrizes, revisões sistemáticas e artigos revisados por pares, complementados por orientações de instituições especializadas. Prática comum, sozinha, não comprova eficácia. Cada assunto identifica o tipo de evidência e seus limites.','We prioritize guidelines, systematic reviews and peer-reviewed papers, complemented by specialist institutions. Common practice alone does not establish effectiveness. Each topic identifies its evidence and limits.')));
    methodology.append(make('p',label('As classificações alta/baixa e forte/condicional são da diretriz citada; não são uma avaliação GRADE própria. Uma fonte institucional não recebe automaticamente a mesma classificação.','High/low and strong/conditional ratings come from the cited guideline; they are not our own GRADE assessment. Institutional advice does not automatically receive the same rating.')));

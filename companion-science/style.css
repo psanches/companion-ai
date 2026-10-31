@@ -9,6 +9,8 @@ html:not(.lumi-authenticated) #companionTabs,html:not(.lumi-authenticated) #comp
 #companionScience h2{font-size:23px;margin:0 0 8px}#companionScience h3{font-size:16px;margin:18px 0 5px}
 #companionScience p{margin:8px 0 14px}#companionScience .science-note,#companionScience small{color:#cbd5e1;font-size:13px;display:block}
 #companionScience .science-controls{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:10px;margin:18px 0}
+#companionScience #companionScienceSubmit{grid-column:1/-1;margin:0}
+#companionScience #companionScienceCount{padding:10px 12px;border-left:4px solid #9bd6f5;border-radius:6px;background:#214058;font-weight:600}
 #companionScience label{display:grid;gap:5px;font-size:14px;min-width:0}
 #companionScience input,#companionScience select{width:100%;min-width:0;min-height:44px;padding:10px;background:#1e293b;color:#f8fafc;border:1px solid #64748b;border-radius:8px;font:inherit;font-size:16px}
 #companionScience details{margin:10px 0;border:1px solid #475569;border-radius:10px;background:#172336}
