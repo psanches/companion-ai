@@ -43,10 +43,11 @@ test('current edition separates new and reused stories without changing original
 test('MJFF pin and WHO updates remain visible with original dates when general collection fails',async()=>{
  const dom=setup(),w=dom.window;
  const official=(host,slug,date)=>({url:'https://www.'+host+'/news/'+slug,title:'Original source title',publishedAt:date,dateVerified:true,kind:'official-update',source:host,language:'en'});
- const mjff=official('michaeljfox.org','pin','2026-06-18'),who=official('who.int','update','2026-10-29');
+ const mjff={...official('michaeljfox.org','pin','2026-06-18'),titlePt:'Avanços na pesquisa de Parkinson'},who={...official('who.int','update','2026-10-29'),titlePt:'Atualização de saúde pública'};
  w.fetch=async()=>Response.json({policyVersion:4,date:'2026-10-30',items:[],officialSources:{mjff,who:[who]},verification:{collectionError:'Research API error: 429 (insufficient_quota)'}});
  w.eval(NEWS_SCRIPT);await tick();
  assert.equal(w.document.querySelectorAll('.news-card').length,2);assert.match(w.document.getElementById('newsItems').textContent,/Michael J. Fox Foundation — destaque fixo/);assert.match(w.document.getElementById('newsItems').textContent,/Últimas atualizações da OMS/);
+ assert.deepEqual([...w.document.querySelectorAll('.news-card h2')].map(x=>x.textContent),[mjff.titlePt,who.titlePt]);assert.doesNotMatch(w.document.getElementById('newsItems').textContent,/Original source title|Título original da fonte/);
  assert.equal(w.document.querySelector('time').dateTime,'2026-06-18');assert.match(w.document.getElementById('newsEdition').textContent,/Busca de novas matérias indisponível/);assert.match(w.document.getElementById('newsEdition').textContent,/2 atualizações diretas/);
  const translation=[...w.document.querySelectorAll('a')].find(a=>a.textContent==='Ler em português ↗');assert.equal(new URL(translation.href).searchParams.get('u'),mjff.url);assert.equal(translation.rel,'noopener noreferrer');w.close();
 });
