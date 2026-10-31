@@ -1,9 +1,9 @@
 // Shared public editions only. The authorization window is explicit and finite.
-import {generateHealthNewsPreview,NEWS_PREVIEW_POLICY,newsOrganization,unrelatedHealthTopic,collectOfficialUpdates,validOfficialItem} from './health-news-preview.mjs';
+import {generateHealthNewsPreview,NEWS_PREVIEW_POLICY,newsOrganization,unrelatedHealthTopic,collectOfficialUpdates,validOfficialItem,trustedHealthPublisher,parkinsonMovementArticle} from './health-news-preview.mjs';
 import {checkPublication,publicSourceUrl} from './health-news-verification.mjs';
 import {requestNewsResearch,newsResearchSchema} from './health-news-daily.mjs';
 export const NEWS_WEEK=Object.freeze({start:'2026-10-28T00:00:00-03:00',end:'2026-11-04T00:00:00-03:00',maxItems:10,policyVersion:4});
-export const NEWS_GENERATOR_REVISION=8;
+export const NEWS_GENERATOR_REVISION=9;
 export const WEEK_KEY='health-news:editorial-week:latest';
 const DATE_PREFIX='health-news:editorial-week:date:',RECENT='health-news:editorial-week:recent';
 export const newsDay=now=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
@@ -29,7 +29,7 @@ export function validWeeklyEdition(digest){
  if(digest?.policyVersion!==4||!/^\d{4}-\d{2}-\d{2}$/.test(digest.date||'')||!Array.isArray(digest.items)||digest.items.length>10)return false;
  if(!digest.items.length&&!validOfficialItem(digest.officialSources?.mjff,'michaeljfox.org',digest.date))return false;
  if(new Set(digest.items.map(x=>x.url)).size!==digest.items.length||new Set(digest.items.map(x=>x.topicKey)).size!==digest.items.length)return false;
- return digest.items.every(x=>{try{checkPublication(x.publishedAt,digest.date,7);publicSourceUrl(x.url);return x.dateVerified===true&&x.language==='pt-BR'&&x.kind==='noticia'&&['national','global'].includes(x.scope)&&Number.isInteger(x.importance)&&x.importance>=7&&x.importance<=10&&typeof x.title==='string'&&!!x.title.trim()&&typeof x.summary==='string'&&!!x.summary.trim()&&!!x.topicKey&&!!x.scopeEvidence;}catch{return false;}});
+ return digest.items.every(x=>{try{const age=checkPublication(x.publishedAt,digest.date,x.kind==='artigo'?90:7);publicSourceUrl(x.url);return x.dateVerified===true&&x.language==='pt-BR'&&['noticia','artigo'].includes(x.kind)&&(age<=7||parkinsonMovementArticle(x.title+' '+x.summary))&&['national','global'].includes(x.scope)&&(trustedHealthPublisher(x.url)||(Number.isInteger(x.importance)&&x.importance>=7&&x.importance<=10))&&typeof x.title==='string'&&!!x.title.trim()&&typeof x.summary==='string'&&!!x.summary.trim()&&!!x.topicKey&&!!x.scopeEvidence;}catch{return false;}});
 }
 export function publishableWeeklyEdition(digest){
  if(!validWeeklyEdition(digest)||(digest.items.length<NEWS_PREVIEW_POLICY.minItems&&!validOfficialItem(digest.officialSources?.mjff,'michaeljfox.org',digest.date)))return false;
