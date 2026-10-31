@@ -1,5 +1,31 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {generateHealthNewsPreview,selectEditorialStories,NEWS_PREVIEW_POLICY} from './health-news-preview.mjs';
+test('Folha, Estadão and Veja are collected directly even when search returns no candidates',async()=>{
+ const {HEALTH_PRESS_SOURCES}=await import('./health-news-preview.mjs');
+ assert.ok(HEALTH_PRESS_SOURCES.includes('veja.abril.com.br'));
+ assert.ok(HEALTH_PRESS_SOURCES.includes('saude.abril.com.br'));
+ const articles=new Map([
+  ['https://www1.folha.uol.com.br/equilibrioesaude/','https://www1.folha.uol.com.br/equilibrioesaude/2026/10/cuidadores.shtml'],
+  ['https://www.estadao.com.br/saude/','https://www.estadao.com.br/saude/apoio-a-cuidadores/'],
+  ['https://veja.abril.com.br/saude/','https://veja.abril.com.br/saude/autonomia-e-cuidado/']
+ ]),calls=[];
+ const payload=(items,search=false)=>({status:'completed',output:[...(search?[{type:'web_search_call',action:{sources:[]}}]:[]),{content:[{type:'output_text',text:JSON.stringify({items})}]}]});
+ const result=await generateHealthNewsPreview({OPENAI_API_KEY:'synthetic-test-key'},new Date('2026-10-24T12:00:00Z'),async(url,options)=>{
+  calls.push(url);
+  if(url==='https://api.openai.com/v1/responses'){
+   const body=JSON.parse(options.body);
+   if(body.tools)return Response.json(payload([],true));
+   const inputs=JSON.parse(body.input[1].content);
+   return Response.json(payload(Object.fromEntries(inputs.map((s,id)=>[s.url,review(id,{evidenceId:0})]))));
+  }
+  if(articles.has(url))return new Response('<h1>Saúde</h1><a href="'+articles.get(url)+'">Pesquisa de cuidados</a>',{headers:{'content-type':'text/html'}});
+  if([...articles.values()].includes(url))return new Response('<meta property="article:published_time" content="2026-10-24"><h1>National care research</h1><p>'+evidence.repeat(6)+'</p>',{headers:{'content-type':'text/html'}});
+  return new Response('<h1>Empty</h1>',{headers:{'content-type':'text/html'}});
+ });
+ for(const [index,article] of articles){assert.ok(calls.includes(index));assert.ok(calls.includes(article));assert.ok(result.items.some(x=>x.url===article));}
+ assert.equal(result.verification.apiRequests,4);
+ assert.ok(result.verification.sourceRequests<=36);
+});
 const day='2026-10-24',evidence='National guidance applies to people throughout the country and supports better public health.';
 const story=(id,host='www.nih.gov',text=evidence,date=day)=>({url:`https://${host}/news/${id}`,publishedAt:date,ageDays:(Date.parse(day)-Date.parse(date))/86400000,source:host,region:host.endsWith('.br')?'Brasil':'Internacional',sourceText:text,kind:'noticia'});
 const review=(id,extra={})=>({id,scope:'national',localFocus:false,scopeEvidence:evidence,importance:8,reason:'Orientação com alcance nacional',topicKey:'unique-'+id,title:'Notícia verificada '+id,summary:'Resumo fiel da matéria. Explica seu alcance.',...extra});
