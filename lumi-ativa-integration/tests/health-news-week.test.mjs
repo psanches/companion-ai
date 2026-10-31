@@ -16,6 +16,13 @@ const generateWeeklyDigest=(env,now,fetcher,editor,collector=async()=>null)=>gen
 const now=new Date('2026-10-28T12:00:00Z');
 const item={url:'https://www.parkinson.org/news/research/caregivers',publishedAt:'2026-10-27',kind:'noticia',dateVerified:true,language:'pt-BR',scope:'global',importance:8,title:'Pesquisa e cuidado',summary:Array(90).fill('evidência-fictícia').join(' '),topicKey:'caregiver-support-study',scopeEvidence:'National evidence supports caregivers throughout the country.'};
 const preview={policyVersion:4,date:'2026-10-28',items:Array.from({length:6},(_,i)=>({...item,url:'https://'+['www.parkinson.org','www.nih.gov','www.who.int','www.fiocruz.br','www.paho.org','www.nature.com'][i]+'/news/test-'+i,topicKey:'study-'+i}))};
+test('trusted publisher articles about Parkinson and movement persist without scores and retain their real dates',()=>{
+ const article={...item,url:'https://www.bbc.com/news/health/movement',kind:'artigo',publishedAt:'2026-09-28',title:'Parkinson e movimento'};delete article.importance;
+ assert.equal(validWeeklyEdition({policyVersion:4,date:'2026-10-28',items:[article]}),true);
+ assert.equal(validWeeklyEdition({policyVersion:4,date:'2026-10-28',items:[{...article,title:'Saúde geral',summary:'Informação geral sem foco no tema.'}]}),false);
+ assert.equal(validWeeklyEdition({policyVersion:4,date:'2026-10-28',items:[{...article,publishedAt:'2026-01-01'}]}),false);
+ assert.equal(mergeDailyReadings([article],null,'2026-10-28')[0].publishedAt,'2026-09-28');
+});
 function fixture(){const data=new Map(),writes=[];return {data,writes,env:{HEALTH_NEWS_KV:{get:async k=>data.has(k)?JSON.parse(data.get(k)):null,put:async(k,v)=>{writes.push(k);data.set(k,v);}}}};}
 test('window has seven local calendar days and stops before reading credentials or storage',async()=>{
  assert.equal(newsWeekActive(new Date('2026-10-28T02:59:59Z')),false);assert.equal(newsWeekActive(new Date('2026-10-28T03:00:00Z')),true);
