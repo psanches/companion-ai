@@ -1,4 +1,14 @@
 import test from 'node:test';import assert from 'node:assert/strict';
+import {translateEditionTitles} from '../../health-news-week.mjs';
+test('shared Portuguese titles include official highlights and preserve original titles without per-reader translation',async()=>{
+ const digest={items:[{url:'https://www.bbc.com/news/health/test',title:'Better sleep'}],officialSources:{mjff:{url:'https://www.michaeljfox.org/news/test',title:'Stem cell trials'},who:[{url:'https://www.who.int/news/test',title:'New public health study'}]}};
+ let calls=0;
+ const fetcher=async(url,options)=>{calls++;assert.equal(url,'https://api.openai.com/v1/responses');const body=JSON.parse(options.body);assert.equal(body.store,false);const input=JSON.parse(body.input[1].content);return Response.json({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({items:input.map(x=>({id:x.id,title:['Sono melhor','Ensaios com células-tronco','Novo estudo de saúde pública'][x.id]}))})}]}]});};
+ await translateEditionTitles(digest,{OPENAI_API_KEY:'synthetic'},fetcher);
+ assert.equal(calls,1);assert.equal(digest.items[0].titlePt,'Sono melhor');assert.equal(digest.officialSources.mjff.titlePt,'Ensaios com células-tronco');assert.equal(digest.officialSources.who[0].titlePt,'Novo estudo de saúde pública');assert.equal(digest.officialSources.mjff.title,'Stem cell trials');
+ const again=structuredClone(digest);for(const x of [again.items[0],again.officialSources.mjff,again.officialSources.who[0]])delete x.titlePt;
+ await translateEditionTitles(again,{OPENAI_API_KEY:'synthetic'},fetcher,digest);assert.equal(calls,1);assert.equal(again.officialSources.mjff.titlePt,digest.officialSources.mjff.titlePt);
+});
 import {generateWeeklyDigest as generateWeeklyDigestCore,getWeeklyDigest,newsWeekActive,NEWS_WEEK,WEEK_KEY,validWeeklyEdition,publishableWeeklyEdition,NEWS_GENERATOR_REVISION,mergeDailyReadings} from '../../health-news-week.mjs';
 import {NEWS_LIVE_HTML} from '../health-news-ui-assets.mjs';
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {pathToFileURL} from 'node:url';
